@@ -1,0 +1,3188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reginald SHERQ Services</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --sherq-blue: #1a365d;
+            --sherq-blue-mid: #24409E;
+            --sherq-green: #99cc33;
+            --sherq-bg: #f4f6f9;
+            --line: #E6E9EF;
+            --ink-soft: #6B7280;
+        }
+        * { box-sizing: border-box; }
+        body { font-family: 'Archivo', Arial, sans-serif; background-color: var(--sherq-bg); margin: 0; padding: 0; }
+        #loginScreen { display: grid; grid-template-columns: 1fr 1fr; min-height: 100vh; }
+        .brand { position: relative; background: radial-gradient(circle at 15% 12%, rgba(153,204,51,0.16), transparent 40%), linear-gradient(160deg, var(--sherq-blue) 0%, var(--sherq-blue-mid) 100%); color: #fff; padding: 56px 56px 44px; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; }
+        .dotgrid { position: absolute; inset: 0; background-image: radial-gradient(rgba(255,255,255,0.10) 1.4px, transparent 1.4px); background-size: 22px 22px; mask-image: radial-gradient(circle at 75% 70%, black 0%, transparent 65%); pointer-events: none; }
+        .logo-mark { position: relative; z-index: 2; display: flex; align-items: center; gap: 14px; }
+        .company-logo { height: 38px; width: auto; object-fit: contain; }
+        .logo-text-group { display: flex; flex-direction: column; }
+        .logo-word { font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 17px; letter-spacing: 0.2px; line-height: 1.15; color: #FFFFFF; }
+        .logo-word .sherq-part { color: var(--sherq-green); }
+        .logo-sub { font-family: 'IBM Plex Mono', monospace; font-size: 9.5px; letter-spacing: 2.5px; color: rgba(255,255,255,0.55); margin-top: 3px; text-transform: uppercase; display: block; }
+        .brand-hero { position: relative; z-index: 2; margin-top: 40px; }
+        .brand-eyebrow { font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--sherq-green); margin-bottom: 18px; display: flex; align-items: center; gap: 10px; }
+        .brand-eyebrow::before { content: ""; width: 22px; height: 1.5px; background: var(--sherq-green); display: inline-block; }
+        .brand-hero h1 { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 44px; line-height: 1.04; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 18px; max-width: 460px; }
+        .brand-hero h1 em { color: var(--sherq-green); font-style: normal; }
+        .brand-hero p { font-size: 14.5px; line-height: 1.6; color: rgba(255,255,255,0.72); max-width: 380px; margin: 0; }
+        .pillars { position: relative; z-index: 2; display: flex; flex-direction: column; margin-top: 38px; border-top: 1px solid rgba(255,255,255,0.14); }
+        .pillar { display: flex; align-items: center; gap: 14px; padding: 13px 2px; border-bottom: 1px solid rgba(255,255,255,0.14); opacity: 0.42; transition: opacity .5s ease; }
+        .pillar.active { opacity: 1; }
+        .pillar .dot { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,0.4); flex-shrink: 0; transition: background .5s ease, box-shadow .5s ease; }
+        .pillar.active .dot { background: var(--sherq-green); box-shadow: 0 0 0 4px rgba(153,204,51,0.18); }
+        .pillar .label { font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; letter-spacing: 1.5px; text-transform: uppercase; flex: 1; }
+        .pillar .status { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 1px; color: var(--sherq-green); opacity: 0; transition: opacity .4s ease; }
+        .pillar.active .status { opacity: 1; }
+        .brand-foot { position: relative; z-index: 2; font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; letter-spacing: 1px; color: rgba(255,255,255,0.4); margin-top: 40px; }
+        .formside { background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(10px); display: flex; align-items: center; justify-content: center; padding: 40px; }
+        .login-container { width: 100%; max-width: 420px; background: #ffffff; padding: 45px 40px; border-radius: 28px; box-shadow: 0 16px 36px rgba(26, 54, 93, 0.08), 0 4px 12px rgba(0, 0, 0, 0.03); border: 1px solid rgba(230, 233, 239, 0.8); }
+        .login-container .kicker { font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 2.5px; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 10px; }
+        .login-container h2 { color: var(--sherq-blue); font-family: 'Archivo', sans-serif; font-weight: 700; font-size: 25px; margin: 0 0 6px; text-align: left; }
+        .login-container .sub { font-size: 13.5px; color: var(--ink-soft); margin: 0 0 28px; }
+        .input-group-custom { position: relative; margin-bottom: 16px; }
+        input { width: 100%; padding: 12px 14px; border: 1.5px solid var(--line); border-radius: 10px; font-family: 'Archivo', sans-serif; font-size: 14px; background: #FCFDFE; transition: border-color .15s ease, box-shadow .15s ease; }
+        .password-input-wrapper { position: relative; }
+        .password-input-wrapper input { padding-right: 45px; margin-bottom: 0; }
+        .toggle-password { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--ink-soft); cursor: pointer; z-index: 5; font-size: 15px; }
+        .toggle-password:hover { color: var(--sherq-blue); }
+        input:focus { outline: none; border-color: var(--sherq-blue-mid); box-shadow: 0 0 0 3px rgba(36,64,158,0.12); }
+        .submit-btn { width: 100%; padding: 13px; background: var(--sherq-blue); color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: 700; font-size: 14.5px; letter-spacing: 0.3px; margin-top: 4px; transition: background .15s ease, transform .1s ease; }
+        .submit-btn:hover { background: var(--sherq-blue-mid); }
+        .submit-btn:active { transform: translateY(1px); }
+        .error { color: #DC2626; font-size: 13px; margin-bottom: 15px; text-align: center; min-height: 16px; }
+        .site-header { background-color: var(--sherq-blue); padding: 18px 30px; border-bottom: 4px solid var(--sherq-green); display: flex; align-items: center; justify-content: flex-start; }
+        .dashboard { display: flex; height: calc(100vh - 76px); }
+        .sidebar { width: 250px; background: var(--sherq-blue); color: white; padding: 20px; }
+        .content { flex-grow: 1; padding: 30px; background-color: var(--sherq-bg); overflow-y: auto; }
+        .nav-item { padding: 12px 0; cursor: pointer; border-bottom: 1px solid rgba(255, 255, 255, 0.1); font-size: 14px; }
+        .nav-item:hover { color: var(--sherq-green); }
+        @media (max-width: 880px) { #loginScreen { grid-template-columns: 1fr; } .brand { padding: 36px 28px; min-height: 260px; } .brand-hero h1 { font-size: 30px; } .pillars { display: none; } .formside { padding: 32px 24px; } }
+        .wf-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 24px; flex-wrap: wrap; gap: 14px; }
+        .wf-header h1 { color: var(--sherq-blue); margin: 0 0 4px; font-size: 24px; }
+        .wf-header p { color: var(--ink-soft); margin: 0; font-size: 13.5px; }
+        .wf-add-btn { background: var(--sherq-blue); color: #fff; border: none; padding: 11px 18px; border-radius: 8px; font-weight: 700; font-size: 13.5px; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: background .15s ease; }
+        .wf-add-btn:hover { background: var(--sherq-blue-mid); }
+        .wf-toolbar { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+        .wf-search { flex: 1; min-width: 220px; position: relative; }
+        .wf-search input { padding-left: 38px; margin-bottom: 0; }
+        .wf-search i { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); color: var(--ink-soft); font-size: 13px; }
+        .wf-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 24px; }
+        .wf-stat-card { background: #fff; border-radius: 12px; padding: 16px 18px; border: 1px solid var(--line); }
+        .wf-stat-card .label { font-size: 12px; color: var(--ink-soft); margin-bottom: 6px; }
+        .wf-stat-card .value { font-size: 26px; font-weight: 800; color: var(--sherq-blue); }
+        .wf-stat-card.active .value { color: var(--sherq-green); }
+        .wf-stat-card.inactive .value { color: #DC2626; }
+        .wf-table-wrap { background: #fff; border-radius: 12px; border: 1px solid var(--line); overflow: hidden; }
+        table.wf-table { width: 100%; border-collapse: collapse; }
+        table.wf-table th { text-align: left; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--ink-soft); background: #FAFBFC; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+        table.wf-table td { padding: 13px 16px; font-size: 13.5px; color: #1D2333; border-bottom: 1px solid var(--line); }
+        table.wf-table tr:last-child td { border-bottom: none; }
+        table.wf-table tbody tr { cursor: pointer; }
+        table.wf-table tbody tr:hover { background: #FAFBFC; }
+        .wf-badge { display: inline-block; padding: 4px 11px; border-radius: 20px; font-size: 11.5px; font-weight: 700; }
+        .wf-badge.active-badge { background: rgba(153,204,51,0.15); color: #5C7A1D; }
+        .wf-badge.inactive-badge { background: rgba(220,38,38,0.1); color: #DC2626; }
+        .wf-action-btn { border: none; background: none; cursor: pointer; font-size: 13px; padding: 5px 8px; border-radius: 6px; margin-right: 4px; }
+        .wf-action-btn.deactivate { color: #B45309; }
+        .wf-action-btn.deactivate:hover { background: #FEF3C7; }
+        .wf-action-btn.delete { color: #DC2626; }
+        .wf-action-btn.delete:hover { background: #FEE2E2; }
+        .wf-empty { text-align: center; padding: 40px; color: var(--ink-soft); font-size: 13.5px; }
+        .wf-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.5); z-index: 100; align-items: center; justify-content: center; padding: 20px; }
+        .wf-modal-overlay.open { display: flex; }
+        .wf-modal { background: #fff; border-radius: 16px; width: 100%; max-width: 640px; max-height: 88vh; display: flex; flex-direction: column; }
+        .wf-modal-header { padding: 20px 24px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; }
+        .wf-modal-header h2 { font-size: 18px; color: var(--sherq-blue); margin: 0; }
+        .wf-modal-step-label { font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--ink-soft); margin-top: 3px; }
+        .wf-modal-close { background: none; border: none; font-size: 18px; color: var(--ink-soft); cursor: pointer; }
+        .wf-modal-body { padding: 20px 24px; overflow-y: auto; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+        .wf-modal-body .full-width { grid-column: 1 / -1; }
+        .wf-field label { display: block; font-size: 12px; font-weight: 600; color: var(--sherq-blue); margin-bottom: 5px; }
+        .wf-field input, .wf-field select, .wf-field textarea { width: 100%; padding: 9px 11px; border: 1.5px solid var(--line); border-radius: 8px; font-family: 'Archivo', sans-serif; font-size: 13.5px; }
+        .wf-modal-footer { padding: 16px 24px; border-top: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+        .wf-btn-secondary { padding: 10px 18px; border-radius: 8px; border: 1.5px solid var(--line); background: #fff; color: var(--ink-soft); font-weight: 600; font-size: 13.5px; cursor: pointer; }
+        .wf-btn-primary { padding: 10px 18px; border-radius: 8px; border: none; background: var(--sherq-blue); color: #fff; font-weight: 700; font-size: 13.5px; cursor: pointer; }
+        .wf-btn-primary:hover { background: var(--sherq-blue-mid); }
+        .wf-btn-ghost { padding: 10px 16px; border-radius: 8px; border: none; background: none; color: var(--ink-soft); font-weight: 600; font-size: 13.5px; cursor: pointer; }
+        .wf-btn-ghost:hover { text-decoration: underline; }
+        .wf-account-note { grid-column: 1 / -1; background: #F0F4FF; border: 1px solid #DCE4FA; border-radius: 10px; padding: 12px 14px; font-size: 12.5px; color: var(--sherq-blue-mid); margin-bottom: 4px; }
+        .wf-password-row { display: flex; gap: 8px; }
+        .wf-password-row input { flex: 1; }
+        .wf-gen-btn { white-space: nowrap; padding: 0 12px; border-radius: 8px; border: 1.5px solid var(--line); background: #FAFBFC; color: var(--sherq-blue-mid); font-size: 12px; font-weight: 700; cursor: pointer; }
+        .wf-gen-btn:hover { background: #F0F4FF; }
+        .wf-doc-row { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border: 1.5px solid var(--line); border-radius: 10px; margin-bottom: 4px; }
+        .wf-doc-row .doc-label { font-size: 13px; font-weight: 700; color: var(--sherq-blue); display: flex; align-items: center; gap: 8px; }
+        .wf-doc-row input[type="file"] { font-size: 12px; padding: 4px; border: none; }
+        .ep-back { background: none; border: none; color: var(--sherq-blue-mid); font-size: 13.5px; font-weight: 600; cursor: pointer; margin-bottom: 20px; display: flex; align-items: center; gap: 8px; padding: 0; }
+        .ep-back:hover { text-decoration: underline; }
+        .ep-header { background: #fff; border-radius: 14px; border: 1px solid var(--line); padding: 26px; margin-bottom: 24px; display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 18px; }
+        .ep-header-left { display: flex; align-items: flex-start; gap: 18px; }
+        .ep-avatar { width: 72px; height: 72px; border-radius: 50%; background: var(--sherq-blue); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: 800; flex-shrink: 0; }
+        .ep-name-row { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; flex-wrap: wrap; }
+        .ep-name-row h1 { font-size: 24px; color: var(--sherq-blue); margin: 0; }
+        .ep-jobtitle { color: var(--ink-soft); font-size: 14.5px; margin: 0 0 12px; }
+        .ep-meta { display: flex; gap: 20px; flex-wrap: wrap; font-size: 13px; color: var(--ink-soft); }
+        .ep-meta span { display: flex; align-items: center; gap: 6px; }
+        .ep-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+        .ep-btn { padding: 9px 16px; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; border: none; display: flex; align-items: center; gap: 7px; }
+        .ep-btn-edit { background: var(--sherq-blue); color: #fff; }
+        .ep-btn-edit:hover { background: var(--sherq-blue-mid); }
+        .ep-btn-deactivate { background: #FEF3C7; color: #B45309; }
+        .ep-btn-deactivate:hover { background: #FDE68A; }
+        .ep-btn-delete { background: #FEE2E2; color: #DC2626; }
+        .ep-btn-delete:hover { background: #FECACA; }
+        .ep-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .ep-card { background: #fff; border-radius: 14px; border: 1px solid var(--line); padding: 22px; }
+        .ep-card h2 { font-size: 15px; color: var(--sherq-blue); margin: 0 0 16px; display: flex; align-items: center; justify-content: space-between; }
+        .ep-field { margin-bottom: 14px; }
+        .ep-field:last-child { margin-bottom: 0; }
+        .ep-field .l { font-size: 11.5px; color: var(--ink-soft); margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.4px; }
+        .ep-field .v { font-size: 14px; color: #1D2333; }
+        .ep-credentials-empty { font-size: 13px; color: var(--ink-soft); margin-bottom: 14px; }
+        .ep-small-btn { border: 1.5px solid var(--line); background: #fff; color: var(--sherq-blue-mid); font-size: 12px; font-weight: 700; padding: 6px 12px; border-radius: 7px; cursor: pointer; }
+        .ep-small-btn:hover { background: #F0F4FF; }
+        .ep-card.credentials-card { border-color: #DCE4FA; background: #FAFBFF; }
+        .ep-mono { font-family: 'IBM Plex Mono', monospace; }
+        .ep-doc-item { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--line); }
+        .ep-doc-item:last-child { border-bottom: none; }
+        .ep-doc-name { font-size: 13.5px; font-weight: 600; color: #1D2333; display: flex; align-items: center; gap: 8px; }
+        .ep-doc-status { font-size: 11.5px; font-weight: 700; padding: 3px 9px; border-radius: 20px; }
+        .ep-doc-status.uploaded { background: rgba(153,204,51,0.15); color: #5C7A1D; }
+        .ep-doc-status.missing { background: #F3F4F6; color: #6B7280; }
+        @media (max-width: 880px) { .ep-grid { grid-template-columns: 1fr; } }
+        #hrSubmenu .nav-item { padding-left: 6px; }
+        #hrChevron { transition: transform .2s ease; }
+
+        /* ============ LEAVE VIEW ============ */
+        .lv-section-title { font-size: 15px; color: var(--sherq-blue); font-weight: 700; margin: 28px 0 14px; }
+        .lv-section-title:first-child { margin-top: 0; }
+        .lv-section-title.clickable { cursor: pointer; display: flex; align-items: center; gap: 8px; user-select: none; }
+        .lv-section-title.clickable i { font-size: 12px; transition: transform .2s ease; }
+        .lv-section-title.clickable.collapsed i { transform: rotate(-90deg); }
+        .lv-balance-grid { display: grid; grid-template-columns: minmax(200px, 260px); gap: 14px; margin-bottom: 10px; }
+        .lv-balance-card { background: #fff; border-radius: 14px; border: 1px solid var(--line); padding: 18px; }
+        .lv-balance-card.unpaid-card { border-style: dashed; background: #FAFBFC; }
+        .lv-balance-card .lv-type { font-size: 12.5px; font-weight: 700; color: var(--sherq-blue); margin-bottom: 10px; }
+        .lv-balance-card .lv-remaining { font-size: 26px; font-weight: 800; color: var(--sherq-green); line-height: 1; }
+        .lv-balance-card.unpaid-card .lv-remaining { color: var(--ink-soft); font-size: 22px; }
+        .lv-balance-card .lv-remaining span { font-size: 12.5px; font-weight: 600; color: var(--ink-soft); }
+        .lv-progress-track { background: #F0F1F3; border-radius: 20px; height: 6px; margin-top: 12px; overflow: hidden; }
+        .lv-progress-fill { background: var(--sherq-green); height: 100%; border-radius: 20px; }
+        .lv-request-btn { background: var(--sherq-blue); color: #fff; border: none; padding: 10px 16px; border-radius: 8px; font-weight: 700; font-size: 13.5px; cursor: pointer; display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+        .lv-request-btn:hover { background: var(--sherq-blue-mid); }
+        .lv-status-badge { display: inline-block; padding: 4px 11px; border-radius: 20px; font-size: 11.5px; font-weight: 700; }
+        .lv-status-badge.status-Pending { background: rgba(217,119,6,0.12); color: #B45309; }
+        .lv-status-badge.status-Approved { background: rgba(153,204,51,0.15); color: #5C7A1D; }
+        .lv-status-badge.status-Rejected { background: rgba(220,38,38,0.1); color: #DC2626; }
+        .lv-approve-btn, .lv-reject-btn { border: none; border-radius: 6px; font-size: 12px; font-weight: 700; padding: 6px 12px; cursor: pointer; margin-right: 6px; }
+        .lv-approve-btn { background: rgba(153,204,51,0.15); color: #5C7A1D; }
+        .lv-approve-btn:hover { background: rgba(153,204,51,0.28); }
+        .lv-reject-btn { background: rgba(220,38,38,0.1); color: #DC2626; }
+        .lv-reject-btn:hover { background: rgba(220,38,38,0.2); }
+        .lv-form-note { grid-column: 1 / -1; background: #FAFBFC; border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; font-size: 12px; color: var(--ink-soft); }
+        .lv-form-header { grid-column: 1 / -1; display: flex; align-items: center; gap: 12px; padding-bottom: 14px; margin-bottom: 4px; border-bottom: 1px solid var(--line); }
+        .lv-form-header img { height: 34px; }
+        .lv-form-header .lf-name { font-weight: 800; font-size: 15px; color: var(--sherq-blue); }
+        .lv-form-header .lf-name span { color: var(--sherq-green); }
+        .lv-form-header .lf-sub { font-family: 'IBM Plex Mono', monospace; font-size: 8.5px; letter-spacing: 1.5px; color: var(--ink-soft); text-transform: uppercase; }
+        @media (max-width: 880px) { .lv-balance-grid { grid-template-columns: 1fr 1fr; } }
+
+        /* ============ MONTHLY ACCRUAL TABLE ============ */
+        .lv-frac-row { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+        .lv-frac-col { text-align: center; }
+        .lv-frac-num { font-size: 26px; font-weight: 800; color: var(--sherq-blue); line-height: 1; }
+        .lv-frac-num.used { color: var(--sherq-green); }
+        .lv-frac-label { font-size: 10px; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.4px; margin-top: 4px; }
+        .lv-frac-slash { font-size: 22px; color: var(--ink-soft); font-weight: 700; }
+        .training-topic-card { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 14px 18px; margin-bottom: 12px; }
+        .training-topic-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
+        .training-topic-title-input { flex: 1; border: none; background: transparent; font-weight: 700; font-size: 14.5px; color: var(--sherq-blue); padding: 5px 6px; border-radius: 6px; }
+        .training-topic-title-input:focus { outline: none; background: #F4F6F9; }
+        .training-progress-badge { display: inline-block; padding: 4px 11px; border-radius: 20px; font-size: 11.5px; font-weight: 700; white-space: nowrap; }
+        .training-progress-badge.tp-complete { background: rgba(153,204,51,0.15); color: #5C7A1D; }
+        .training-progress-badge.tp-inprogress { background: rgba(217,119,6,0.12); color: #B45309; }
+        .training-progress-badge.tp-pending { background: #F3F4F6; color: #6B7280; }
+        .training-category-count { font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; font-weight: 700; color: #fff; background: var(--sherq-green); padding: 3px 10px; border-radius: 20px; margin-left: 10px; }
+        .lv-monthly-note { font-size: 12.5px; color: var(--ink-soft); margin-bottom: 12px; }
+        .lv-monthly-note b { color: var(--sherq-blue); }
+        .th-edit-input { border: none; background: transparent; font-family: inherit; font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--ink-soft); padding: 2px 4px; border-radius: 4px; width: 100%; min-width: 60px; }
+        .th-edit-input:focus { outline: none; background: #fff; color: #1D2333; }
+        .lv-add-col-btn { border: 1.5px dashed var(--line); background: #FAFBFC; color: var(--sherq-blue-mid); width: 26px; height: 26px; border-radius: 6px; cursor: pointer; font-size: 11px; }
+        .lv-add-col-btn:hover { background: #F0F4FF; }
+        .lv-col-remove { border: none; background: none; color: #DC2626; cursor: pointer; font-size: 13px; margin-left: 6px; font-weight: 700; }
+        .lv-col-remove:hover { text-decoration: underline; }
+        .lv-cell-input { width: 100%; border: 1px solid transparent; background: transparent; font-family: 'Archivo', sans-serif; font-size: 13.5px; color: #1D2333; padding: 4px 6px; border-radius: 6px; }
+        .lv-cell-input:focus { outline: none; border-color: var(--sherq-blue-mid); background: #fff; }
+        tr.lv-custom-row { background: #FAFBFF; }
+
+        /* ============ INBOX VIEW (mail-app style) ============ */
+        .mail-list { background: #fff; border-radius: 12px; border: 1px solid var(--line); overflow: hidden; }
+        .mail-item { padding: 16px 20px; border-bottom: 1px solid var(--line); cursor: pointer; display: flex; gap: 12px; align-items: flex-start; }
+        .mail-item.unread-item { background: #F5F8FF; }
+        .mail-item.unread-item .mail-sender { font-weight: 800; }
+        .mail-item:last-child { border-bottom: none; }
+        .mail-item:hover { background: #FAFBFC; }
+        .mail-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--sherq-blue-mid); margin-top: 6px; flex-shrink: 0; }
+        .mail-dot.status-Pending { background: #D97706; }
+        .mail-dot.status-Approved { background: var(--sherq-green); }
+        .mail-dot.status-Rejected { background: #DC2626; }
+        .mail-content { flex: 1; min-width: 0; }
+        .mail-top-row { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+        .mail-sender { font-weight: 700; font-size: 14.5px; color: #1D2333; }
+        .mail-time { font-size: 12px; color: var(--ink-soft); white-space: nowrap; flex-shrink: 0; }
+        .mail-subject { font-size: 13.5px; font-weight: 600; color: var(--sherq-blue); margin-top: 3px; }
+        .mail-preview { font-size: 13px; color: var(--ink-soft); margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .inbox-detail { background: #fff; border-radius: 14px; border: 1px solid var(--line); padding: 24px; }
+        .lf-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; }
+        .lf-field .l { font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; color: var(--ink-soft); margin-bottom: 3px; }
+        .lf-field .v { font-size: 13.5px; color: #1D2333; font-weight: 600; }
+        .lf-field.full { grid-column: 1 / -1; }
+    </style>
+</head>
+<body>
+
+    <div id="loginScreen">
+        <div class="brand">
+            <div class="dotgrid"></div>
+            <div class="logo-mark">
+                <img src="https://static.wixstatic.com/media/48021b_d585e66e35b84171968a4275ccf39bdc~mv2.png" alt="RSS Logo" class="company-logo">
+                <div class="logo-text-group">
+                    <span class="logo-word">REGINALD<span class="sherq-part">SHERQ</span>SERVICES</span>
+                    <span class="logo-sub">SAFETY • HEALTH • ENVIRONMENT • RISK • QUALITY</span>
+                </div>
+            </div>
+            <div class="brand-hero">
+                <div class="brand-eyebrow">Staff Portal</div>
+                <h1>Stay Safe.<br>Stay <em>Compliant</em>.<br>Stay Competitive.</h1>
+                <p>Sign in to manage your organisation's Safety, Health, Environment, Risk and Quality performance — all in one integrated portal.</p>
+                <div class="pillars" id="pillars">
+                    <div class="pillar" data-i="0"><span class="dot"></span><span class="label">Safety</span><span class="status">Monitoring</span></div>
+                    <div class="pillar" data-i="1"><span class="dot"></span><span class="label">Health</span><span class="status">Monitoring</span></div>
+                    <div class="pillar" data-i="2"><span class="dot"></span><span class="label">Environment</span><span class="status">Monitoring</span></div>
+                    <div class="pillar" data-i="3"><span class="dot"></span><span class="label">Risk</span><span class="status">Monitoring</span></div>
+                    <div class="pillar" data-i="4"><span class="dot"></span><span class="label">Quality</span><span class="status">Monitoring</span></div>
+                </div>
+            </div>
+            <div class="brand-foot">©️ 2026 Reginald SHERQ Services</div>
+        </div>
+        <div class="formside">
+            <div class="login-container">
+                <div class="kicker">Staff Portal</div>
+                <h2><i class="fas fa-lock"></i> Sign In</h2>
+                <p class="sub">Sign in with your RSS credentials to continue.</p>
+                <div id="errorMsg" class="error"></div>
+                <div class="input-group-custom">
+                    <input type="text" id="username" placeholder="Username">
+                </div>
+                <div class="input-group-custom password-input-wrapper">
+                    <input type="password" id="password" placeholder="Password">
+                    <button type="button" class="toggle-password" onclick="togglePasswordVisibility()">
+                        <i class="fas fa-eye" id="eyeIcon"></i>
+                    </button>
+                </div>
+                <button class="submit-btn" onclick="handleLogin()">Sign In</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="dashboardScreen" style="display: none;">
+        <header class="site-header">
+            <div class="logo-mark" style="display: flex; align-items: center; gap: 14px;">
+                <img src="https://static.wixstatic.com/media/48021b_d585e66e35b84171968a4275ccf39bdc~mv2.png" alt="RSS Logo" class="company-logo">
+                <div class="logo-text-group">
+                    <span class="logo-word">REGINALD<span class="sherq-part">SHERQ</span>SERVICES</span>
+                    <span class="logo-sub">SAFETY • HEALTH • ENVIRONMENT • RISK • QUALITY</span>
+                </div>
+            </div>
+        </header>
+        <div class="dashboard">
+            <div class="sidebar">
+                <h3 id="welcomeUser" style="font-size: 15px; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 15px; margin-top: 0;"></h3>
+                <div id="impersonationBanner" style="display:none; background: rgba(153,204,51,0.15); border: 1px solid rgba(153,204,51,0.4); border-radius: 8px; padding: 10px 12px; margin-bottom: 16px; font-size: 12px;">
+                    <div style="color: var(--sherq-green); font-weight: 700; margin-bottom: 6px;"><i class="fas fa-user-secret"></i> Viewing as this account</div>
+                    <button class="nav-item" style="padding: 6px 10px; background: rgba(255,255,255,0.1); border-radius: 6px; border-bottom: none; font-size: 12px; margin: 0;" onclick="openSwitchBackModal()">Switch Back to Admin</button>
+                </div>
+                <div class="nav-item" onclick="showDashboardHome()">Dashboard</div>
+
+                <div id="hrSection" class="nav-item" onclick="toggleHrMenu()" style="display: none; color: #fff; font-weight: bold;">
+                    <i class="fas fa-users"></i> HR
+                    <i class="fas fa-chevron-down" id="hrChevron" style="display: none;"></i>
+                </div>
+                <div id="hrSubmenu" style="display: none; padding-left: 14px;">
+                    <div class="nav-item" id="hrEmployeesItem" style="font-size: 13px;">Employees</div>
+                    <div class="nav-item" onclick="showLeaveView()" style="font-size: 13px;">Leave</div>
+                    <div class="nav-item" onclick="showTrainingView()" style="font-size: 13px;">Training</div>
+                    <div class="nav-item" onclick="showHrPlaceholder('Timesheets')" style="font-size: 13px;">Timesheets</div>
+                </div>
+
+                <div id="financeSection" class="nav-item" style="display: none; color: #fff; font-weight: bold;">
+                    <i class="fas fa-wallet"></i> Finance 
+                </div>
+
+                <div id="rssTrainingSection" class="nav-item" onclick="toggleTrainingMenu()" style="display: none; color: #fff; font-weight: bold;">
+                    <i class="fas fa-hard-hat"></i> RSS Training
+                    <i class="fas fa-chevron-down" id="trainingChevron" style="display: none;"></i>
+                </div>
+                <div id="trainingSubmenu" style="display: none; padding-left: 14px;">
+                    <div class="nav-item" onclick="showHrPlaceholder('First Aid Training')" style="font-size: 13px;">First Aid Training</div>
+                    <div class="nav-item" onclick="showHrPlaceholder('Fire Fighting Training')" style="font-size: 13px;">Fire Fighting Training</div>
+                    <div class="nav-item" onclick="showHrPlaceholder('HSE Rep Training')" style="font-size: 13px;">HSE Rep Training</div>
+                </div>
+
+                <div id="inboxNavItem" class="nav-item" onclick="showInboxView()" style="display: none; color: #fff; font-weight: bold;">
+                    <i class="fas fa-inbox"></i> Inbox
+                </div>
+                <div class="nav-item" onclick="handleLogout()" style="margin-top: 50px; color: #94A3B8; border-bottom: none;">Logout</div>
+            </div>
+            <div class="content">
+                <div id="dashboardHomeView">
+                    <h1 id="pageTitle" style="color: var(--sherq-blue); margin-top: 0;">Dashboard Overview</h1>
+                    <p id="pageDescription" style="color: #475569;">Welcome to the portal.</p>
+                </div>
+
+                <div id="workforceView" style="display: none;">
+                    <div class="wf-header">
+                        <div>
+                            <h1>Employees</h1>
+                            <p>Manage employee records for your organisation</p>
+                        </div>
+                        <button class="wf-add-btn" onclick="openAddEmployeeModal()">
+                            <i class="fas fa-user-plus"></i> Add Employee
+                        </button>
+                    </div>
+                    <div class="wf-stats">
+                        <div class="wf-stat-card">
+                            <div class="label">Total Employees</div>
+                            <div class="value" id="wfTotalCount">0</div>
+                        </div>
+                        <div class="wf-stat-card active">
+                            <div class="label">Active</div>
+                            <div class="value" id="wfActiveCount">0</div>
+                        </div>
+                        <div class="wf-stat-card inactive">
+                            <div class="label">Inactive</div>
+                            <div class="value" id="wfInactiveCount">0</div>
+                        </div>
+                    </div>
+                    <div class="wf-toolbar">
+                        <div class="wf-search">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="wfSearchInput" placeholder="Search by name, email, or job title..." oninput="renderEmployeeTable()">
+                        </div>
+                    </div>
+                    <div class="wf-table-wrap">
+                        <table class="wf-table">
+                            <thead>
+                                <tr>
+                                    <th>Full Name</th>
+                                    <th>Email</th>
+                                    <th>Job Title</th>
+                                    <th>Department</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="wfTableBody"></tbody>
+                        </table>
+                        <div id="wfEmptyState" class="wf-empty" style="display:none;">No employees found.</div>
+                    </div>
+                </div>
+
+                <div id="hrPlaceholderView" style="display: none;">
+                    <h1 id="hrPlaceholderTitle" style="color: var(--sherq-blue); margin-top: 0;">—</h1>
+                    <p style="color: var(--ink-soft);">This section is under development.</p>
+                </div>
+
+                <!-- TRAINING VIEW -->
+                <div id="trainingView" style="display: none;">
+                    <div class="wf-header">
+                        <div>
+                            <h1>Training</h1>
+                            <p id="trainingViewSubtitle">YouTube Training, Yes Program, RSS In-House Training, and Presentation Day topics</p>
+                        </div>
+                    </div>
+
+                    <!-- Admin/Manager: pick an employee to view -->
+                    <div id="trainingEmployeeListView" style="display:none;">
+                        <div class="wf-toolbar">
+                            <div class="wf-search">
+                                <i class="fas fa-search"></i>
+                                <input type="text" id="trainingEmployeeSearchInput" placeholder="Search employees by name, job title, or department..." oninput="renderTrainingEmployeeList()">
+                            </div>
+                        </div>
+                        <div class="wf-table-wrap">
+                            <table class="wf-table">
+                                <thead>
+                                    <tr>
+                                        <th>Full Name</th>
+                                        <th>Job Title</th>
+                                        <th>Department</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="trainingEmployeeListBody"></tbody>
+                            </table>
+                            <div id="trainingEmployeeListEmpty" class="wf-empty" style="display:none;">No employees found.</div>
+                        </div>
+                    </div>
+
+                    <div id="trainingPersonalSection">
+                        <button class="ep-back" id="trainingBackToListBtn" onclick="backToTrainingEmployeeList()" style="display:none;">
+                            <i class="fas fa-arrow-left"></i> Back to Employees
+                        </button>
+                        <h2 id="trainingViewingWhoLabel" style="display:none; color: var(--sherq-blue); font-size: 18px; margin: 0 0 20px;"></h2>
+
+                        <div class="wf-stats" id="trainingProgressStats" style="grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); margin-bottom: 24px;"></div>
+
+                        <button class="wf-add-btn" id="addTrainingTopicBtn" style="margin-bottom: 20px; display:none;" onclick="openAddCategoryModal()">
+                            <i class="fas fa-plus"></i> Add Training Topic
+                        </button>
+
+                        <div id="trainingCategoriesContainer"></div>
+                    </div>
+                </div>
+
+                <!-- INBOX VIEW (Admin only) -->
+                <div id="inboxView" style="display: none;">
+                    <div id="inboxListView">
+                        <div class="wf-header">
+                            <div>
+                                <h1>Inbox</h1>
+                                <p>Leave requests and messages that need your attention</p>
+                            </div>
+                        </div>
+                        <div class="wf-toolbar">
+                            <div class="wf-search">
+                                <i class="fas fa-search"></i>
+                                <input type="text" id="inboxSearchInput" placeholder="Search by name, leave type, or reason..." oninput="renderInboxList()">
+                            </div>
+                        </div>
+                        <div class="mail-list" id="inboxList"></div>
+                    </div>
+
+                    <div id="inboxDetailView" style="display:none;">
+                        <button class="ep-back" onclick="backToInboxList()">
+                            <i class="fas fa-arrow-left"></i> Back to Inbox
+                        </button>
+                        <div id="inboxDetailContent"></div>
+                    </div>
+                </div>
+
+                <!-- LEAVE VIEW -->
+                <div id="leaveView" style="display: none;">
+                    <div class="wf-header">
+                        <div>
+                            <h1>Leave Management</h1>
+                            <p id="leaveViewSubtitle">View leave balances, request leave, and track history</p>
+                        </div>
+                    </div>
+
+                    <!-- Admin/Manager: pick an employee to view -->
+                    <div id="leaveEmployeeListView" style="display:none;">
+                        <div class="wf-toolbar">
+                            <div class="wf-search">
+                                <i class="fas fa-search"></i>
+                                <input type="text" id="leaveEmployeeSearchInput" placeholder="Search employees by name, job title, or department..." oninput="renderLeaveEmployeeList()">
+                            </div>
+                        </div>
+                        <div class="wf-table-wrap">
+                            <table class="wf-table">
+                                <thead>
+                                    <tr>
+                                        <th>Full Name</th>
+                                        <th>Job Title</th>
+                                        <th>Department</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="leaveEmployeeListBody"></tbody>
+                            </table>
+                            <div id="leaveEmployeeListEmpty" class="wf-empty" style="display:none;">No employees found.</div>
+                        </div>
+                    </div>
+
+                    <div id="lvPersonalSection">
+                        <button class="ep-back" id="lvBackToListBtn" onclick="backToLeaveEmployeeList()" style="display:none;">
+                            <i class="fas fa-arrow-left"></i> Back to Employees
+                        </button>
+                        <h2 id="lvViewingWhoLabel" style="display:none; color: var(--sherq-blue); font-size: 18px; margin: 0 0 20px;"></h2>
+
+                        <div class="lv-section-title clickable" id="lvSummaryToggle" onclick="toggleLeaveSummary()">
+                            <i class="fas fa-chevron-down"></i> Summary of Leave
+                        </div>
+                        <div id="lvSummaryContainer" style="display:block;">
+                            <div class="wf-table-wrap" style="padding: 20px 24px; margin-bottom: 24px;">
+                                <ul style="margin:0; padding-left: 18px; font-size: 13.5px; color: #1D2333; line-height: 1.7;">
+                                    <li><b>NOTE: You are entitled to 15 days of leave</b>
+                                        <ul>
+                                            <li>1 day is the 8 hours</li>
+                                            <li>This gives you 1.25 days in a month.</li>
+                                            <li>2 hours calculated in a month gives you a Day over 4 months</li>
+                                            <li>0.25 day is equal to 2 hours in a month</li>
+                                        </ul>
+                                    </li>
+                                    <li style="margin-top:10px;"><b>NOTE: You are entitled to 10 days of paid leave</b>
+                                        <ul>
+                                            <li>Sick leave start in month 3</li>
+                                            <li>You get 0,83 days in a month which is = 6.64 hours</li>
+                                        </ul>
+                                    </li>
+                                    <li style="margin-top:10px;"><b>NOTE: You are entitled to 3 days of Family Responsibility leave</b>
+                                        <ul>
+                                            <li>When your child is born or sick</li>
+                                            <li>In the event of Death</li>
+                                        </ul>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="lv-section-title"><i class="fas fa-umbrella-beach"></i> Your Leave Balance</div>
+                        <div class="lv-balance-grid" id="lvBalanceGrid"></div>
+
+                        <div style="display:flex; gap:10px; margin-bottom: 4px; flex-wrap: wrap;">
+                            <button class="lv-request-btn" id="lvRequestLeaveBtn" onclick="openLeaveRequestModal()">
+                                <i class="fas fa-plus"></i> Request Leave
+                            </button>
+                            <button class="lv-request-btn" onclick="openLeaveHistoryModal()">
+                                <i class="fas fa-history"></i> View Leave History
+                            </button>
+                        </div>
+
+                        <div class="lv-section-title">Monthly Leave Accrual</div>
+                        <p class="lv-monthly-note">Your 12-month cycle, starting from your employment date: <b id="lvStartDateLabel">—</b></p>
+                        <div class="wf-table-wrap" style="margin-bottom: 10px; overflow-x: auto;">
+                            <table class="wf-table">
+                                <thead>
+                                    <tr id="lvMonthlyHeadRow">
+                                        <th>Month</th>
+                                        <th>Leave Days Taken</th>
+                                        <th>Reason for Leave</th>
+                                        <th>Leave Days Granted</th>
+                                        <th>Sick Leave Days Granted</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="lvMonthlyBody"></tbody>
+                            </table>
+                        </div>
+                        <button class="wf-btn-secondary" onclick="addCustomRow()" style="margin-bottom: 24px;">
+                            <i class="fas fa-plus"></i> Add Row
+                        </button>
+                    </div>
+                </div>
+
+                <div id="profileView" style="display: none;">
+                    <button class="ep-back" onclick="backFromProfile()">
+                        <i class="fas fa-arrow-left"></i> Back
+                    </button>
+                    <div class="ep-header">
+                        <div class="ep-header-left">
+                            <div class="ep-avatar" id="epAvatar">--</div>
+                            <div>
+                                <div class="ep-name-row">
+                                    <h1 id="epName">—</h1>
+                                    <span class="wf-badge" id="epStatusBadge">—</span>
+                                </div>
+                                <p class="ep-jobtitle" id="epJobTitle">—</p>
+                                <div class="ep-meta">
+                                    <span><i class="fas fa-envelope"></i> <span id="epEmail">—</span></span>
+                                    <span><i class="fas fa-phone"></i> <span id="epMobile">—</span></span>
+                                    <span><i class="fas fa-building"></i> <span id="epDepartment">—</span></span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="ep-actions" id="epActionsBar">
+                            <button class="ep-btn" style="background: rgba(153,204,51,0.15); color: #5C7A1D;" id="epSwitchBtn" onclick="switchToEmployeeAccount()"><i class="fas fa-user-secret"></i> Switch to this account</button>
+                            <button class="ep-btn ep-btn-edit" onclick="openEditFromProfile()"><i class="fas fa-edit"></i> Edit Profile</button>
+                            <button class="ep-btn ep-btn-deactivate" onclick="deactivateFromProfile()"><i class="fas fa-user-slash"></i> Deactivate</button>
+                            <button class="ep-btn ep-btn-delete" onclick="deleteFromProfile()"><i class="fas fa-trash"></i> Delete</button>
+                        </div>
+                    </div>
+                    <div class="ep-grid">
+                        <div class="ep-card">
+                            <h2>Personal Information</h2>
+                            <div class="ep-field"><div class="l">Full Name</div><div class="v" id="epFullName">—</div></div>
+                            <div class="ep-field"><div class="l">Date of Birth</div><div class="v" id="epDob">—</div></div>
+                            <div class="ep-field"><div class="l">ID Number</div><div class="v" id="epIdNumber">—</div></div>
+                            <div class="ep-field"><div class="l">Gender</div><div class="v" id="epGender">—</div></div>
+                            <div class="ep-field"><div class="l">Nationality</div><div class="v" id="epNationality">—</div></div>
+                        </div>
+                        <div class="ep-card">
+                            <h2>Contact Information</h2>
+                            <div class="ep-field"><div class="l">Email</div><div class="v" id="epEmail2">—</div></div>
+                            <div class="ep-field"><div class="l">Office Phone</div><div class="v" id="epPhone">—</div></div>
+                            <div class="ep-field"><div class="l">Mobile Phone</div><div class="v" id="epMobile2">—</div></div>
+                            <div class="ep-field"><div class="l">Address</div><div class="v" id="epAddress">—</div></div>
+                        </div>
+                        <div class="ep-card">
+                            <h2>Employment Details</h2>
+                            <div class="ep-field"><div class="l">Job Title</div><div class="v" id="epJobTitle2">—</div></div>
+                            <div class="ep-field"><div class="l">Department</div><div class="v" id="epDepartment2">—</div></div>
+                            <div class="ep-field"><div class="l">Employment Type</div><div class="v" id="epEmploymentType">—</div></div>
+                            <div class="ep-field"><div class="l">Start Date</div><div class="v" id="epStartDate">—</div></div>
+                            <div class="ep-field"><div class="l">Contract End Date</div><div class="v" id="epContractEnd">—</div></div>
+                            <div class="ep-field"><div class="l">Salary Grade</div><div class="v" id="epSalaryGrade">—</div></div>
+                            <div class="ep-field"><div class="l">Work Schedule</div><div class="v" id="epWorkSchedule">—</div></div>
+                        </div>
+                        <div class="ep-card">
+                            <h2>Emergency Contact</h2>
+                            <div class="ep-field"><div class="l">Contact Name</div><div class="v" id="epEmergencyContact">—</div></div>
+                            <div class="ep-field"><div class="l">Phone Number</div><div class="v" id="epEmergencyPhone">—</div></div>
+                        </div>
+                        <div class="ep-card credentials-card full-width" style="grid-column: 1 / -1;">
+                            <h2>
+                                <span><i class="fas fa-key"></i> Login Credentials</span>
+                                <button class="ep-small-btn" id="epCredentialsBtn" onclick="openCredentialsModal()">Create Login</button>
+                            </h2>
+                            <div id="epCredentialsEmpty" class="ep-credentials-empty">No login account has been created for this employee yet.</div>
+                            <div id="epCredentialsFilled" style="display:none;">
+                                <div class="ep-field"><div class="l">Username</div><div class="v ep-mono" id="epLoginUsername">—</div></div>
+                                <div class="ep-field"><div class="l">Password</div><div class="v ep-mono" id="epLoginPassword">—</div></div>
+                                <div class="ep-field"><div class="l">Role</div><div class="v" id="epLoginRole">—</div></div>
+                            </div>
+                        </div>
+                        <div class="ep-card full-width" style="grid-column: 1 / -1;">
+                            <h2>
+                                <span><i class="fas fa-folder-open"></i> Documents</span>
+                                <button class="ep-small-btn" id="epDocsUploadBtn" onclick="openDocumentsModal()">Upload / Replace</button>
+                            </h2>
+                            <div class="ep-doc-item">
+                                <span class="ep-doc-name"><i class="fas fa-id-card"></i> ID Document</span>
+                                <span id="epDocIdStatus"></span>
+                            </div>
+                            <div class="ep-doc-item">
+                                <span class="ep-doc-name"><i class="fas fa-file-signature"></i> Employment Contract</span>
+                                <span id="epDocEmploymentStatus"></span>
+                            </div>
+                            <div class="ep-doc-item">
+                                <span class="ep-doc-name"><i class="fas fa-file-contract"></i> RSS Contract</span>
+                                <span id="epDocRssStatus"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="wf-modal-overlay" id="wfModalOverlay">
+        <div class="wf-modal">
+            <div class="wf-modal-header">
+                <div>
+                    <h2 id="wfModalTitle">Add Employee</h2>
+                    <div class="wf-modal-step-label" id="wfModalStepLabel" style="display:none;">Step 1 of 3 — Employee Details</div>
+                </div>
+                <button class="wf-modal-close" onclick="closeAddEmployeeModal()">✕</button>
+            </div>
+            <div class="wf-modal-body" id="wfStep1Body">
+                <div class="wf-field"><label>First Name</label><input type="text" id="f_first_name"></div>
+                <div class="wf-field"><label>Last Name</label><input type="text" id="f_last_name"></div>
+                <div class="wf-field"><label>Email</label><input type="email" id="f_email"></div>
+                <div class="wf-field"><label>Job Title</label><input type="text" id="f_job_title"></div>
+                <div class="wf-field"><label>Date of Birth</label><input type="date" id="f_date_of_birth"></div>
+                <div class="wf-field"><label>ID Number</label><input type="text" id="f_id_number"></div>
+                <div class="wf-field">
+                    <label>Gender</label>
+                    <select id="f_gender"><option value="">Select</option><option>Male</option><option>Female</option></select>
+                </div>
+                <div class="wf-field"><label>Nationality</label><input type="text" id="f_nationality"></div>
+                <div class="wf-field"><label>Phone</label><input type="text" id="f_phone"></div>
+                <div class="wf-field"><label>Mobile</label><input type="text" id="f_mobile"></div>
+                <div class="wf-field full-width"><label>Address</label><input type="text" id="f_address"></div>
+                <div class="wf-field"><label>Department</label><input type="text" id="f_department"></div>
+                <div class="wf-field"><label>Employment Type</label><input type="text" id="f_employment_type" placeholder="e.g. Full-time"></div>
+                <div class="wf-field"><label>Start Date</label><input type="date" id="f_start_date"></div>
+                <div class="wf-field"><label>Contract End Date</label><input type="date" id="f_contract_end_date"></div>
+                <div class="wf-field"><label>Salary Grade</label><input type="text" id="f_salary_grade"></div>
+                <div class="wf-field">
+                    <label>Status</label>
+                    <select id="f_employement_status"><option value="Active">Active</option><option value="Inactive">Inactive</option></select>
+                </div>
+                <div class="wf-field full-width"><label>Work Schedule</label><input type="text" id="f_work_schedule"></div>
+                <div class="wf-field"><label>Emergency Contact</label><input type="text" id="f_emergency_contact"></div>
+                <div class="wf-field"><label>Emergency Phone</label><input type="text" id="f_emergency_phone"></div>
+            </div>
+            <div class="wf-modal-body" id="wfStep2Body" style="display:none;">
+                <div class="wf-account-note">Optional — create login credentials now so this employee can sign in, or skip and add them later from their profile.</div>
+                <div class="wf-field"><label>Username</label><input type="text" id="acc_username" placeholder="e.g. j.dlamini"></div>
+                <div class="wf-field">
+                    <label>Role</label>
+                    <select id="acc_role"><option value="intern">Intern</option><option value="manager">Manager</option><option value="admin">Admin</option></select>
+                </div>
+                <div class="wf-field full-width">
+                    <label>Password</label>
+                    <div class="wf-password-row">
+                        <input type="text" id="acc_password" placeholder="Click Generate or type your own">
+                        <button type="button" class="wf-gen-btn" onclick="generatePassword('acc_password')">Generate</button>
+                    </div>
+                </div>
+            </div>
+            <div class="wf-modal-body" id="wfStep3Body" style="display:none;">
+                <div class="wf-account-note">Optional — upload documents now, or add them later from the employee's profile.</div>
+                <div class="wf-doc-row">
+                    <span class="doc-label"><i class="fas fa-id-card"></i> ID Document</span>
+                    <input type="file" id="doc_id_document" accept=".pdf,.jpg,.jpeg,.png">
+                </div>
+                <div class="wf-doc-row">
+                    <span class="doc-label"><i class="fas fa-file-signature"></i> Employment Contract</span>
+                    <input type="file" id="doc_employment_contract" accept=".pdf,.jpg,.jpeg,.png">
+                </div>
+                <div class="wf-doc-row">
+                    <span class="doc-label"><i class="fas fa-file-contract"></i> RSS Contract</span>
+                    <input type="file" id="doc_rss_contract" accept=".pdf,.jpg,.jpeg,.png">
+                </div>
+            </div>
+            <div class="wf-modal-footer">
+                <button class="wf-btn-secondary" onclick="closeAddEmployeeModal()">Cancel</button>
+                <div style="display:flex; gap:10px;">
+                    <button class="wf-btn-ghost" id="wfBackBtn" style="display:none;" onclick="goToStep(currentStep - 1)">← Back</button>
+                    <button class="wf-btn-ghost" id="wfSkipBtn" style="display:none;" onclick="goToStep(currentStep + 1)">Skip →</button>
+                    <button class="wf-btn-primary" id="wfModalSaveBtn" onclick="handleModalPrimaryAction()">Next →</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="wf-modal-overlay" id="credModalOverlay">
+        <div class="wf-modal" style="max-width: 420px;">
+            <div class="wf-modal-header">
+                <h2 id="credModalTitle">Create Login</h2>
+                <button class="wf-modal-close" onclick="closeCredentialsModal()">✕</button>
+            </div>
+            <div class="wf-modal-body" style="grid-template-columns: 1fr;">
+                <div class="wf-field"><label>Username</label><input type="text" id="cr_username"></div>
+                <div class="wf-field">
+                    <label>Role</label>
+                    <select id="cr_role"><option value="intern">Intern</option><option value="manager">Manager</option><option value="admin">Admin</option></select>
+                </div>
+                <div class="wf-field">
+                    <label>Password <span id="crPasswordHint" style="font-weight:400; color:var(--ink-soft);"></span></label>
+                    <div class="wf-password-row">
+                        <input type="text" id="cr_password" placeholder="Leave blank to keep current password">
+                        <button type="button" class="wf-gen-btn" onclick="generatePassword('cr_password')">Generate</button>
+                    </div>
+                </div>
+            </div>
+            <div class="wf-modal-footer">
+                <button class="wf-btn-secondary" onclick="closeCredentialsModal()">Cancel</button>
+                <button class="wf-btn-primary" onclick="saveCredentials()">Save Login</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="wf-modal-overlay" id="docModalOverlay">
+        <div class="wf-modal" style="max-width: 480px;">
+            <div class="wf-modal-header">
+                <h2>Upload / Replace Documents</h2>
+                <button class="wf-modal-close" onclick="closeDocumentsModal()">✕</button>
+            </div>
+            <div class="wf-modal-body" style="grid-template-columns: 1fr;">
+                <div class="wf-account-note">Only choose a file for the document(s) you want to upload or replace — leave others blank to keep what's already there.</div>
+                <div class="wf-doc-row">
+                    <span class="doc-label"><i class="fas fa-id-card"></i> ID Document</span>
+                    <input type="file" id="modal_doc_id_document" accept=".pdf,.jpg,.jpeg,.png">
+                </div>
+                <div class="wf-doc-row">
+                    <span class="doc-label"><i class="fas fa-file-signature"></i> Employment Contract</span>
+                    <input type="file" id="modal_doc_employment_contract" accept=".pdf,.jpg,.jpeg,.png">
+                </div>
+                <div class="wf-doc-row">
+                    <span class="doc-label"><i class="fas fa-file-contract"></i> RSS Contract</span>
+                    <input type="file" id="modal_doc_rss_contract" accept=".pdf,.jpg,.jpeg,.png">
+                </div>
+            </div>
+            <div class="wf-modal-footer">
+                <button class="wf-btn-secondary" onclick="closeDocumentsModal()">Cancel</button>
+                <button class="wf-btn-primary" onclick="saveDocumentsFromProfile()">Upload</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- REQUEST LEAVE MODAL (matches RSS "Application for Leave" template, with logo) -->
+    <div class="wf-modal-overlay" id="leaveModalOverlay">
+        <div class="wf-modal" style="max-width: 560px;">
+            <div class="wf-modal-header">
+                <h2>Application for Leave</h2>
+                <button class="wf-modal-close" onclick="closeLeaveRequestModal()">✕</button>
+            </div>
+            <div class="wf-modal-body">
+                <div class="lv-form-header">
+                    <img src="https://static.wixstatic.com/media/48021b_d585e66e35b84171968a4275ccf39bdc~mv2.png" alt="RSS Logo">
+                    <div>
+                        <div class="lf-name">REGINALD<span>SHERQ</span>SERVICES</div>
+                        <div class="lf-sub">Safety • Health • Environment • Risk • Quality</div>
+                    </div>
+                </div>
+                <div class="wf-field full-width">
+                    <label>Leave Type</label>
+                    <select id="lv_leave_type">
+                        <option value="Paid Leave">Paid Leave</option>
+                        <option value="Unpaid Leave">Unpaid Leave</option>
+                        <option value="Sick Leave">Sick Leave</option>
+                        <option value="Family Responsibility Leave">Family Responsibility Leave</option>
+                    </select>
+                </div>
+                <div class="wf-field full-width"><label>Name of Employee</label><input type="text" id="lv_employee_name" readonly style="background:#F4F6F9;"></div>
+                <div class="wf-field"><label>From</label><input type="date" id="lv_start_date" onchange="recalculateLeaveDays()" required></div>
+                <div class="wf-field"><label>To</label><input type="date" id="lv_end_date" onchange="recalculateLeaveDays()" required></div>
+                <div class="wf-field full-width"><label>Amount of Days Required</label><input type="number" id="lv_days_requested" min="1" readonly style="background:#F4F6F9;" required></div>
+                <div class="wf-field full-width"><label>Reason for Leave</label><textarea id="lv_reason" rows="2" required></textarea></div>
+                <div class="wf-field"><label>My Present Address</label><input type="text" id="lv_present_address" required></div>
+                <div class="wf-field"><label>My Address During Leave</label><input type="text" id="lv_address_during_leave" required></div>
+                <div class="wf-field full-width"><label>Contact Number During Leave</label><input type="text" id="lv_contact_during_leave" required></div>
+                <div class="lv-form-note">If you're taking Sick Leave, remember to bring a sick note. For a family funeral, a death certificate is required.</div>
+            </div>
+            <div class="wf-modal-footer">
+                <button class="wf-btn-secondary" onclick="closeLeaveRequestModal()">Cancel</button>
+                <button class="wf-btn-primary" onclick="submitLeaveRequest()">Submit Request</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- LEAVE HISTORY MODAL -->
+    <div class="wf-modal-overlay" id="leaveHistoryModalOverlay">
+        <div class="wf-modal" style="max-width: 640px;">
+            <div class="wf-modal-header">
+                <h2>Leave History</h2>
+                <button class="wf-modal-close" onclick="closeLeaveHistoryModal()">✕</button>
+            </div>
+            <div class="wf-modal-body" style="grid-template-columns: 1fr; padding: 0;">
+                <div class="wf-table-wrap" style="border: none; border-radius: 0;">
+                    <table class="wf-table">
+                        <thead>
+                            <tr>
+                                <th>Type</th>
+                                <th>Dates</th>
+                                <th>Days</th>
+                                <th>Reason</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="lvHistoryBody"></tbody>
+                    </table>
+                    <div id="lvHistoryEmpty" class="wf-empty" style="display:none;">No leave history yet.</div>
+                </div>
+            </div>
+            <div class="wf-modal-footer" style="justify-content: flex-end;">
+                <button class="wf-btn-secondary" onclick="closeLeaveHistoryModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MONTHLY LEAVE DETAIL MODAL -->
+    <div class="wf-modal-overlay" id="monthlyDetailModalOverlay">
+        <div class="wf-modal" style="max-width: 620px;">
+            <div class="wf-modal-header">
+                <h2 id="monthlyDetailTitle">Leave Details</h2>
+                <button class="wf-modal-close" onclick="closeMonthlyDetailModal()">✕</button>
+            </div>
+            <div class="wf-modal-body" style="grid-template-columns: 1fr; padding: 20px 24px;" id="monthlyDetailBody"></div>
+            <div class="wf-modal-footer" style="justify-content: flex-end;">
+                <button class="wf-btn-secondary" onclick="closeMonthlyDetailModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- REJECT LEAVE COMMENT MODAL -->
+    <div class="wf-modal-overlay" id="rejectCommentModalOverlay">
+        <div class="wf-modal" style="max-width: 460px;">
+            <div class="wf-modal-header">
+                <h2>Reject Leave Request</h2>
+                <button class="wf-modal-close" onclick="closeRejectCommentModal()">✕</button>
+            </div>
+            <div class="wf-modal-body" style="grid-template-columns: 1fr;">
+                <div class="wf-field">
+                    <label>Reason for rejection</label>
+                    <textarea id="rejectCommentInput" rows="4" placeholder="e.g. Dates clash with a client deadline"></textarea>
+                </div>
+            </div>
+            <div class="wf-modal-footer">
+                <button class="wf-btn-secondary" onclick="closeRejectCommentModal()">Cancel</button>
+                <button class="lv-reject-btn" style="padding:10px 18px; font-size:13.5px;" onclick="confirmRejectWithComment()">Confirm Reject</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ADD TRAINING MODAL -->
+    <div class="wf-modal-overlay" id="trainingModalOverlay">
+        <div class="wf-modal" style="max-width: 500px;">
+            <div class="wf-modal-header">
+                <h2 id="trModalTitle">Add Training</h2>
+                <button class="wf-modal-close" onclick="closeAddTrainingModal()">✕</button>
+            </div>
+            <div class="wf-modal-body" style="grid-template-columns: 1fr;">
+                <div class="wf-field"><label id="tr_title_label">Topic of Training</label><input type="text" id="tr_title" placeholder="e.g. Growth Mindset"></div>
+                <div class="wf-field"><label id="tr_date_label">Date of Training</label><input type="date" id="tr_date"></div>
+            </div>
+            <div class="wf-modal-footer">
+                <button class="wf-btn-secondary" onclick="closeAddTrainingModal()">Cancel</button>
+                <button class="wf-btn-primary" id="trSubmitBtn" onclick="submitNewTraining()">Add Training</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ADD TRAINING TOPIC (CATEGORY) MODAL -->
+    <div class="wf-modal-overlay" id="addCategoryModalOverlay">
+        <div class="wf-modal" style="max-width: 420px;">
+            <div class="wf-modal-header">
+                <h2 id="addCategoryModalTitle">Add Training Topic</h2>
+                <button class="wf-modal-close" onclick="closeAddCategoryModal()">✕</button>
+            </div>
+            <div class="wf-modal-body" style="grid-template-columns: 1fr;">
+                <div class="wf-field"><label>Topic Name</label><input type="text" id="new_category_name" placeholder="e.g. Safety Induction Training"></div>
+            </div>
+            <div class="wf-modal-footer">
+                <button class="wf-btn-secondary" onclick="closeAddCategoryModal()">Cancel</button>
+                <button class="wf-btn-primary" onclick="confirmAddCategory()">Add Topic</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ADD TRAINING COLUMN MODAL -->
+    <div class="wf-modal-overlay" id="addColumnModalOverlay">
+        <div class="wf-modal" style="max-width: 400px;">
+            <div class="wf-modal-header">
+                <h2>Add Column</h2>
+                <button class="wf-modal-close" onclick="closeAddColumnModal()">✕</button>
+            </div>
+            <div class="wf-modal-body" style="grid-template-columns: 1fr;">
+                <div class="wf-field"><label>Column Name</label><input type="text" id="newColumnNameInput" placeholder="e.g. Certificate Number"></div>
+            </div>
+            <div class="wf-modal-footer">
+                <button class="wf-btn-secondary" onclick="closeAddColumnModal()">Cancel</button>
+                <button class="wf-btn-primary" onclick="confirmAddTrainingColumn()">Add Column</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TRAINING DETAIL MODAL -->
+    <div class="wf-modal-overlay" id="trainingDetailModalOverlay">
+        <div class="wf-modal" style="max-width: 560px;">
+            <div class="wf-modal-header">
+                <h2 id="tdModalTitle">Training Details</h2>
+                <button class="wf-modal-close" onclick="closeTrainingDetailModal()">✕</button>
+            </div>
+            <div class="wf-modal-body" style="grid-template-columns: 1fr;">
+                <div class="wf-field"><label id="td_title_label">Topic of Training</label><input type="text" id="td_title" onchange="saveTrainingDetailField('title')"></div>
+                <div class="wf-field"><label id="td_date_label">Date of Training</label><input type="date" id="td_date" onchange="saveTrainingDetailField('training_date')"></div>
+                <div id="td_tasks_wrap" style="margin-top: 6px;"></div>
+            </div>
+            <div class="wf-modal-footer">
+                <button class="lv-reject-btn" id="td_delete_btn" style="padding:10px 18px; font-size:13.5px;" onclick="deleteTrainingFromModal()">Delete Training</button>
+                <button class="wf-btn-primary" onclick="closeTrainingDetailModal()">Done</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SWITCH BACK TO ADMIN MODAL -->
+    <div class="wf-modal-overlay" id="switchBackModalOverlay">
+        <div class="wf-modal" style="max-width: 400px;">
+            <div class="wf-modal-header">
+                <h2>Switch Back to Admin</h2>
+                <button class="wf-modal-close" onclick="closeSwitchBackModal()">✕</button>
+            </div>
+            <div class="wf-modal-body" style="grid-template-columns: 1fr;">
+                <p style="font-size: 13px; color: var(--ink-soft); margin: 0 0 4px;">Enter your admin password (<b id="switchBackAdminName"></b>) to confirm switching back.</p>
+                <div class="wf-field"><label>Password</label><input type="password" id="switchBackPassword"></div>
+                <div id="switchBackError" style="color: #DC2626; font-size: 12.5px;"></div>
+            </div>
+            <div class="wf-modal-footer">
+                <button class="wf-btn-secondary" onclick="closeSwitchBackModal()">Cancel</button>
+                <button class="wf-btn-primary" onclick="confirmSwitchBack()">Switch Back</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- IN-APP CONFIRM MODAL -->
+    <div class="wf-modal-overlay" id="appConfirmModalOverlay">
+        <div class="wf-modal" style="max-width: 400px;">
+            <div class="wf-modal-header">
+                <h2>Please Confirm</h2>
+                <button class="wf-modal-close" onclick="closeAppConfirmModal()">✕</button>
+            </div>
+            <div class="wf-modal-body" style="grid-template-columns: 1fr;">
+                <p id="appConfirmMessage" style="font-size: 14px; color: #1D2333; margin: 0;"></p>
+            </div>
+            <div class="wf-modal-footer">
+                <button class="wf-btn-secondary" onclick="closeAppConfirmModal()">Cancel</button>
+                <button class="lv-reject-btn" style="padding:10px 18px; font-size:13.5px;" onclick="confirmAppConfirmModal()">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'https://scheme-absurd-seduce.ngrok-free.dev';
+        const API_HEADERS = { 'ngrok-skip-browser-warning': 'true' };
+
+        let pendingConfirmCallback = null;
+
+        function showAppConfirm(message, callback) {
+            document.getElementById('appConfirmMessage').innerText = message;
+            pendingConfirmCallback = callback;
+            document.getElementById('appConfirmModalOverlay').classList.add('open');
+        }
+
+        function closeAppConfirmModal() {
+            document.getElementById('appConfirmModalOverlay').classList.remove('open');
+            pendingConfirmCallback = null;
+        }
+
+        function confirmAppConfirmModal() {
+            const cb = pendingConfirmCallback;
+            closeAppConfirmModal();
+            if (cb) cb();
+        }
+
+        function togglePasswordVisibility() {
+            const passwordInput = document.getElementById('password');
+            const eyeIcon = document.getElementById('eyeIcon');
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                eyeIcon.classList.remove('fa-eye');
+                eyeIcon.classList.add('fa-eye-slash');
+            } else {
+                passwordInput.type = 'password';
+                eyeIcon.classList.remove('fa-eye-slash');
+                eyeIcon.classList.add('fa-eye');
+            }
+        }
+
+        let currentUserRole = null;
+        let currentUserEmployeeId = null;
+        let currentUserFullName = '';
+
+        let originalAdminSession = null;
+        let originalAdminUsername = null;
+
+        function applyRoleVisibility(role, displayName) {
+            const isManagement = (role === 'admin' || role === 'manager');
+            const isAdmin = role === 'admin';
+
+            document.getElementById('welcomeUser').innerText = `Hello, ${displayName} (${role})`;
+            document.getElementById('hrSection').style.display = 'block';
+            document.getElementById('financeSection').style.display = isManagement ? 'block' : 'none';
+            document.getElementById('rssTrainingSection').style.display = isAdmin ? 'block' : 'none';
+            document.getElementById('inboxNavItem').style.display = isAdmin ? 'block' : 'none';
+
+            // Reset submenus so leftover open/closed state from a previous role doesn't leak through
+            document.getElementById('hrSubmenu').style.display = 'none';
+            document.getElementById('hrChevron').style.transform = 'rotate(0deg)';
+            document.getElementById('trainingSubmenu').style.display = 'none';
+            document.getElementById('trainingChevron').style.transform = 'rotate(0deg)';
+
+            const hrEmployeesItem = document.getElementById('hrEmployeesItem');
+            if (isManagement) {
+                hrEmployeesItem.innerText = 'Employees';
+                hrEmployeesItem.onclick = showWorkforce;
+            } else {
+                hrEmployeesItem.innerText = 'Employee';
+                hrEmployeesItem.onclick = viewOwnEmployeeProfile;
+            }
+
+            if (role === 'admin') {
+                document.getElementById('pageDescription').innerText = 'Admin Portal: You have full access to HR and Finance management.';
+            } else if (role === 'manager') {
+                document.getElementById('pageDescription').innerText = 'Manager Portal: You have access to HR and Finance management.';
+            } else {
+                document.getElementById('pageDescription').innerText = 'Intern Portal: Welcome to your dashboard.';
+            }
+        }
+
+        async function handleLogin() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const errorMsg = document.getElementById('errorMsg');
+            try {
+                const response = await fetch(`${API_BASE}/api/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', ...API_HEADERS },
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    errorMsg.innerText = data.error || 'Login failed';
+                    return;
+                }
+                document.getElementById('loginScreen').style.display = 'none';
+                document.getElementById('dashboardScreen').style.display = 'block';
+
+                const role = data.user.role;
+                currentUserRole = role;
+                currentUserEmployeeId = data.user.employee_id || null;
+                if (role === 'admin') {
+                    originalAdminUsername = data.user.username;
+                }
+
+                applyRoleVisibility(role, data.user.username);
+
+                if (currentUserEmployeeId) {
+                    try {
+                        const empResp = await fetch(`${API_BASE}/api/employees/${currentUserEmployeeId}`, { headers: API_HEADERS });
+                        if (empResp.ok) {
+                            const emp = await empResp.json();
+                            currentUserFullName = `${emp.first_name || ''} ${emp.last_name || ''}`.trim();
+                        }
+                    } catch (e) { /* non-fatal */ }
+                }
+            } catch (err) {
+                console.error(err);
+                errorMsg.innerText = 'Server error. Is your backend running?';
+            }
+        }
+
+        function handleLogout() { location.reload(); }
+
+        const pillars = document.querySelectorAll('.pillar');
+        let pillarIndex = 0;
+        function tickPillars() {
+            pillars.forEach(p => p.classList.remove('active'));
+            pillars[pillarIndex].classList.add('active');
+            pillarIndex = (pillarIndex + 1) % pillars.length;
+        }
+        tickPillars();
+        setInterval(tickPillars, 1400);
+
+        let employeeList = [];
+        let editingEmployeeId = null;
+        let currentProfileId = null;
+        let currentProfileHasLogin = false;
+        let isOwnProfileReadOnly = false;
+        let currentStep = 1;
+
+        function hideAllContentViews() {
+            document.getElementById('dashboardHomeView').style.display = 'none';
+            document.getElementById('workforceView').style.display = 'none';
+            document.getElementById('profileView').style.display = 'none';
+            document.getElementById('hrPlaceholderView').style.display = 'none';
+            document.getElementById('leaveView').style.display = 'none';
+            document.getElementById('inboxView').style.display = 'none';
+            document.getElementById('trainingView').style.display = 'none';
+            document.getElementById('inboxListView').style.display = 'block';
+            document.getElementById('inboxDetailView').style.display = 'none';
+        }
+
+        function showDashboardHome() {
+            hideAllContentViews();
+            document.getElementById('dashboardHomeView').style.display = 'block';
+        }
+
+        async function showWorkforce() {
+            hideAllContentViews();
+            document.getElementById('workforceView').style.display = 'block';
+            await fetchEmployees();
+        }
+
+        function toggleHrMenu() {
+            const submenu = document.getElementById('hrSubmenu');
+            const chevron = document.getElementById('hrChevron');
+            const isOpen = submenu.style.display === 'block';
+            submenu.style.display = isOpen ? 'none' : 'block';
+            chevron.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
+        }
+
+        function toggleTrainingMenu() {
+            const submenu = document.getElementById('trainingSubmenu');
+            const chevron = document.getElementById('trainingChevron');
+            const isOpen = submenu.style.display === 'block';
+            submenu.style.display = isOpen ? 'none' : 'block';
+            chevron.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
+        }
+
+        function showHrPlaceholder(sectionName) {
+            hideAllContentViews();
+            document.getElementById('hrPlaceholderTitle').innerText = sectionName;
+            document.getElementById('hrPlaceholderView').style.display = 'block';
+        }
+
+        // ============ INBOX (Admin only, mail-app style) ============
+        let inboxItems = [];
+
+        async function showInboxView() {
+            hideAllContentViews();
+            document.getElementById('inboxView').style.display = 'block';
+            document.getElementById('inboxListView').style.display = 'block';
+            document.getElementById('inboxDetailView').style.display = 'none';
+            await fetchInboxItems();
+        }
+
+        async function fetchInboxItems() {
+            try {
+                const response = await fetch(`${API_BASE}/api/leave/all`, { headers: API_HEADERS });
+                inboxItems = await response.json();
+                renderInboxList();
+            } catch (err) {
+                console.error('Error fetching inbox items:', err);
+            }
+        }
+
+        function timeAgoOrDate(dateStr) {
+            if (!dateStr) return '';
+            const d = new Date(dateStr);
+            const now = new Date();
+            const sameDay = d.toDateString() === now.toDateString();
+            if (sameDay) {
+                return d.toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' });
+            }
+            return d.toLocaleDateString('en-ZA', { day: 'numeric', month: 'short' });
+        }
+
+        function renderInboxList() {
+            const list = document.getElementById('inboxList');
+            const search = (document.getElementById('inboxSearchInput').value || '').toLowerCase();
+
+            const filtered = inboxItems.filter(item => {
+                const name = `${item.first_name} ${item.last_name}`.toLowerCase();
+                return (
+                    search === '' ||
+                    name.includes(search) ||
+                    (item.leave_type || '').toLowerCase().includes(search) ||
+                    (item.reason || '').toLowerCase().includes(search)
+                );
+            });
+
+            if (filtered.length === 0) {
+                list.innerHTML = '<div class="wf-empty">No messages found.</div>';
+                return;
+            }
+            list.innerHTML = '';
+            filtered.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'mail-item' + (!item.is_read ? ' unread-item' : '');
+                div.onclick = () => selectInboxItem(item.id);
+                div.innerHTML = `
+                    <span class="mail-dot status-${item.status}"></span>
+                    <div class="mail-content">
+                        <div class="mail-top-row">
+                            <span class="mail-sender">${item.first_name} ${item.last_name}</span>
+                            <span class="mail-time">${timeAgoOrDate(item.requested_at)}</span>
+                        </div>
+                        <div class="mail-subject">Leave Request — ${item.leave_type} <span class="lv-status-badge status-${item.status}" style="margin-left:6px;">${item.status}</span></div>
+                        <div class="mail-preview">${item.status === 'Rejected' && item.admin_comment ? `Rejected: ${item.admin_comment}` : `${item.days_requested} day(s) · ${item.reason || 'No reason given'}`}</div>
+                    </div>
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        function requestDetailCardHtml(item) {
+            return `
+                <div class="lv-form-header">
+                    <img src="https://static.wixstatic.com/media/48021b_d585e66e35b84171968a4275ccf39bdc~mv2.png" alt="RSS Logo">
+                    <div>
+                        <div class="lf-name">REGINALD<span>SHERQ</span>SERVICES</div>
+                        <div class="lf-sub">Safety • Health • Environment • Risk • Quality</div>
+                    </div>
+                </div>
+                <h2 style="color:var(--sherq-blue); margin: 14px 0 0;">Application for Leave</h2>
+                <div class="lf-grid">
+                    ${item.first_name ? `<div class="lf-field"><div class="l">Name of Employee</div><div class="v">${item.first_name} ${item.last_name}</div></div>` : ''}
+                    <div class="lf-field"><div class="l">Leave Type</div><div class="v">${item.leave_type}</div></div>
+                    <div class="lf-field"><div class="l">Status</div><div class="v"><span class="lv-status-badge status-${item.status}">${item.status}</span></div></div>
+                    <div class="lf-field"><div class="l">From</div><div class="v">${formatDate(item.start_date)}</div></div>
+                    <div class="lf-field"><div class="l">To</div><div class="v">${formatDate(item.end_date)}</div></div>
+                    <div class="lf-field"><div class="l">Amount of Days Required</div><div class="v">${item.days_requested}</div></div>
+                    <div class="lf-field"><div class="l">Contact Number During Leave</div><div class="v">${item.contact_during_leave || '—'}</div></div>
+                    <div class="lf-field full"><div class="l">Reason for Leave</div><div class="v">${item.reason || '—'}</div></div>
+                    <div class="lf-field"><div class="l">My Present Address</div><div class="v">${item.present_address || '—'}</div></div>
+                    <div class="lf-field"><div class="l">My Address During Leave</div><div class="v">${item.address_during_leave || '—'}</div></div>
+                    ${item.status === 'Rejected' ? `
+                        <div class="lf-field full">
+                            <div class="l" style="color:#DC2626;">Reason for Rejection</div>
+                            <div class="v" style="color:#DC2626;">${item.admin_comment || 'No reason was given.'}</div>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        function selectInboxItem(id) {
+            const item = inboxItems.find(i => i.id === id);
+            if (!item) return;
+
+            if (!item.is_read) {
+                item.is_read = true;
+                fetch(`${API_BASE}/api/leave/${id}/read`, { method: 'PATCH', headers: API_HEADERS }).catch(err => console.error('Error marking as read:', err));
+            }
+
+            document.getElementById('inboxListView').style.display = 'none';
+            document.getElementById('inboxDetailView').style.display = 'block';
+
+            const detail = document.getElementById('inboxDetailContent');
+            detail.innerHTML = `
+                <div class="inbox-detail">
+                    ${requestDetailCardHtml(item)}
+                    <div style="margin-top:20px; display:flex; align-items:center; gap:10px;">
+                        ${item.status === 'Pending' ? `
+                            <button class="lv-approve-btn" style="padding:10px 18px; font-size:13.5px;" onclick="approveFromInbox(${item.id})">Approve</button>
+                            <button class="lv-reject-btn" style="padding:10px 18px; font-size:13.5px;" onclick="openRejectCommentModal(${item.id})">Reject</button>
+                        ` : `
+                            ${item.decided_at ? `<span style="font-size:12.5px; color:var(--ink-soft);">Decided on ${formatDate(item.decided_at)}</span>` : ''}
+                        `}
+                    </div>
+                </div>
+            `;
+        }
+
+        function backToInboxList() {
+            document.getElementById('inboxDetailView').style.display = 'none';
+            document.getElementById('inboxListView').style.display = 'block';
+            renderInboxList();
+        }
+
+        let pendingRejectId = null;
+
+        function openRejectCommentModal(requestId) {
+            pendingRejectId = requestId;
+            document.getElementById('rejectCommentInput').value = '';
+            document.getElementById('rejectCommentModalOverlay').classList.add('open');
+        }
+
+        function closeRejectCommentModal() {
+            document.getElementById('rejectCommentModalOverlay').classList.remove('open');
+            pendingRejectId = null;
+        }
+
+        async function confirmRejectWithComment() {
+            const comment = document.getElementById('rejectCommentInput').value.trim();
+            if (!pendingRejectId) return;
+            await rejectFromInbox(pendingRejectId, comment);
+            closeRejectCommentModal();
+        }
+
+        async function approveFromInbox(requestId) {
+            try {
+                await fetch(`${API_BASE}/api/leave/${requestId}/approve`, { method: 'PATCH', headers: API_HEADERS });
+                backToInboxList();
+                await fetchInboxItems();
+            } catch (err) {
+                console.error('Error approving from inbox:', err);
+            }
+        }
+
+        async function rejectFromInbox(requestId, comment) {
+            try {
+                await fetch(`${API_BASE}/api/leave/${requestId}/reject`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json', ...API_HEADERS },
+                    body: JSON.stringify({ comment: comment || null })
+                });
+                backToInboxList();
+                await fetchInboxItems();
+            } catch (err) {
+                console.error('Error rejecting from inbox:', err);
+            }
+        }
+
+        // ============ LEAVE VIEW ============
+        let viewingLeaveEmployeeId = null;
+        let leaveEmployeeList = [];
+
+        async function showLeaveView() {
+            hideAllContentViews();
+            document.getElementById('leaveView').style.display = 'block';
+
+            const isManagement = (currentUserRole === 'admin' || currentUserRole === 'manager');
+
+            if (isManagement) {
+                document.getElementById('leaveViewSubtitle').innerText = 'Select an employee to view their leave balances, accrual, and history';
+                document.getElementById('leaveEmployeeListView').style.display = 'block';
+                document.getElementById('lvPersonalSection').style.display = 'none';
+                await fetchLeaveEmployeeList();
+            } else {
+                document.getElementById('leaveViewSubtitle').innerText = 'View leave balances, request leave, and track history';
+                document.getElementById('leaveEmployeeListView').style.display = 'none';
+                document.getElementById('lvBackToListBtn').style.display = 'none';
+                document.getElementById('lvViewingWhoLabel').style.display = 'none';
+                document.getElementById('lvRequestLeaveBtn').style.display = 'inline-flex';
+                if (currentUserEmployeeId) {
+                    document.getElementById('lvPersonalSection').style.display = 'block';
+                    viewingLeaveEmployeeId = currentUserEmployeeId;
+                    await fetchLeaveForEmployee(currentUserEmployeeId);
+                } else {
+                    document.getElementById('lvPersonalSection').style.display = 'none';
+                }
+            }
+        }
+
+        async function fetchLeaveEmployeeList() {
+            try {
+                const response = await fetch(`${API_BASE}/api/employees`, { headers: API_HEADERS });
+                leaveEmployeeList = await response.json();
+                renderLeaveEmployeeList();
+            } catch (err) {
+                console.error('Error fetching employees for leave list:', err);
+            }
+        }
+
+        function renderLeaveEmployeeList() {
+            const search = (document.getElementById('leaveEmployeeSearchInput').value || '').toLowerCase();
+            const tbody = document.getElementById('leaveEmployeeListBody');
+            const empty = document.getElementById('leaveEmployeeListEmpty');
+
+            const filtered = leaveEmployeeList.filter(emp => {
+                const fullName = `${emp.first_name || ''} ${emp.last_name || ''}`.toLowerCase();
+                return (
+                    search === '' ||
+                    fullName.includes(search) ||
+                    (emp.job_title || '').toLowerCase().includes(search) ||
+                    (emp.department || '').toLowerCase().includes(search)
+                );
+            });
+
+            tbody.innerHTML = '';
+            if (filtered.length === 0) {
+                empty.style.display = 'block';
+            } else {
+                empty.style.display = 'none';
+                filtered.forEach(emp => {
+                    const row = document.createElement('tr');
+                    row.onclick = () => selectEmployeeForLeave(emp.id, `${emp.first_name || ''} ${emp.last_name || ''}`.trim());
+                    row.innerHTML = `
+                        <td>${emp.first_name || ''} ${emp.last_name || ''}</td>
+                        <td>${emp.job_title || '—'}</td>
+                        <td>${emp.department || '—'}</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            }
+        }
+
+        async function selectEmployeeForLeave(employeeId, employeeName) {
+            viewingLeaveEmployeeId = employeeId;
+            document.getElementById('leaveEmployeeListView').style.display = 'none';
+            document.getElementById('lvPersonalSection').style.display = 'block';
+            document.getElementById('lvBackToListBtn').style.display = 'flex';
+            document.getElementById('lvViewingWhoLabel').style.display = 'block';
+            document.getElementById('lvViewingWhoLabel').innerText = `Viewing leave for: ${employeeName}`;
+            document.getElementById('lvRequestLeaveBtn').style.display = 'none';
+            await fetchLeaveForEmployee(employeeId);
+        }
+
+        function backToLeaveEmployeeList() {
+            viewingLeaveEmployeeId = null;
+            document.getElementById('lvPersonalSection').style.display = 'none';
+            document.getElementById('leaveEmployeeListView').style.display = 'block';
+        }
+
+        let customColumns = [];
+        let customRows = [];
+
+        async function fetchLeaveForEmployee(employeeId) {
+            try {
+                const response = await fetch(`${API_BASE}/api/employees/${employeeId}/leave`, { headers: API_HEADERS });
+                const data = await response.json();
+                renderLeaveBalances(data.balances);
+                renderLeaveHistory(data.history);
+                renderMonthlyAccrual(data.start_date, data.history);
+
+                const customResp = await fetch(`${API_BASE}/api/employees/${employeeId}/leave-table-custom`, { headers: API_HEADERS });
+                const customData = await customResp.json();
+                customColumns = customData.custom_columns || [];
+                customRows = customData.custom_rows || [];
+                renderCustomTableExtras();
+            } catch (err) {
+                console.error('Error fetching leave data:', err);
+            }
+        }
+
+        function renderLeaveBalances(balances) {
+            const grid = document.getElementById('lvBalanceGrid');
+            grid.innerHTML = '';
+            const b = balances['Paid Leave'];
+            if (!b) return;
+
+            const card = document.createElement('div');
+            card.className = 'lv-balance-card';
+            card.innerHTML = `
+                <div class="lv-type">Leave Days</div>
+                <div class="lv-frac-row">
+                    <div class="lv-frac-col">
+                        <div class="lv-frac-num">${b.entitlement}</div>
+                        <div class="lv-frac-label">Entitled</div>
+                    </div>
+                    <div class="lv-frac-slash">/</div>
+                    <div class="lv-frac-col">
+                        <div class="lv-frac-num used">${b.used}</div>
+                        <div class="lv-frac-label">Taken</div>
+                    </div>
+                </div>
+            `;
+            grid.appendChild(card);
+        }
+
+        function toggleLeaveSummary() {
+            const container = document.getElementById('lvSummaryContainer');
+            const toggle = document.getElementById('lvSummaryToggle');
+            const isHidden = container.style.display === 'none';
+            container.style.display = isHidden ? 'block' : 'none';
+            toggle.classList.toggle('collapsed', !isHidden);
+        }
+
+        function openLeaveHistoryModal() {
+            document.getElementById('leaveHistoryModalOverlay').classList.add('open');
+        }
+
+        function closeLeaveHistoryModal() {
+            document.getElementById('leaveHistoryModalOverlay').classList.remove('open');
+        }
+
+        function renderLeaveHistory(history) {
+            const tbody = document.getElementById('lvHistoryBody');
+            const empty = document.getElementById('lvHistoryEmpty');
+            tbody.innerHTML = '';
+            if (history.length === 0) {
+                empty.style.display = 'block';
+                return;
+            }
+            empty.style.display = 'none';
+            history.forEach(req => {
+                const row = document.createElement('tr');
+                row.style.cursor = 'pointer';
+                row.onclick = () => openHistoryRequestDetail(req);
+                row.innerHTML = `
+                    <td>${req.leave_type}</td>
+                    <td>${formatDate(req.start_date)} – ${formatDate(req.end_date)}</td>
+                    <td>${req.days_requested}</td>
+                    <td>${req.reason || '—'}</td>
+                    <td>
+                        <span class="lv-status-badge status-${req.status}">${req.status}</span>
+                        ${req.status === 'Rejected' && req.admin_comment ? `<div style="font-size:11.5px; color:#DC2626; margin-top:4px;">${req.admin_comment}</div>` : ''}
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // Formats a number the South African way (comma as decimal separator), e.g. 1.25 -> "1,25"
+        function formatDaysZA(n) {
+            return String(n).replace('.', ',');
+        }
+
+        // Builds exactly 12 rows starting from the employee's start month.
+        // "Leave Days Granted" and "Sick Leave Days Granted" show the FLAT monthly rate
+        // (not a running total) — matching the company's official leave form.
+        // "Leave Days Taken" / "Reason" auto-fill from APPROVED requests that start in that month.
+        let monthlyAccrualData = {};
+
+        function renderMonthlyAccrual(startDateStr, history) {
+            const tbody = document.getElementById('lvMonthlyBody');
+            const label = document.getElementById('lvStartDateLabel');
+            tbody.innerHTML = '';
+            monthlyAccrualData = {};
+
+            if (!startDateStr) {
+                label.innerText = 'Not set';
+                return;
+            }
+
+            const start = new Date(startDateStr);
+            label.innerText = formatDate(startDateStr);
+
+            const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            const approved = history.filter(r => r.status === 'Approved');
+
+            const PAID_RATE = formatDaysZA(1.25) + ' days';
+            const SICK_RATE = formatDaysZA(0.83) + ' days';
+
+            for (let i = 0; i < 12; i++) {
+                const rowDate = new Date(start.getFullYear(), start.getMonth() + i, 1);
+                const monthLabel = `${monthNames[rowDate.getMonth()]} ${rowDate.getFullYear()}`;
+
+                const matches = approved.filter(req => {
+                    const reqDate = new Date(req.start_date);
+                    return reqDate.getFullYear() === rowDate.getFullYear() && reqDate.getMonth() === rowDate.getMonth();
+                });
+                const daysTaken = matches.reduce((sum, r) => sum + Number(r.days_requested), 0);
+                const reasons = matches.map(r => r.reason).filter(Boolean).join(', ');
+
+                monthlyAccrualData[i] = { monthLabel, matches };
+
+                const row = document.createElement('tr');
+                row.className = 'lv-auto-row';
+                if (matches.length > 0) {
+                    row.style.cursor = 'pointer';
+                    row.onclick = () => openMonthlyDetailModal(i);
+                    row.title = 'Click to view full details';
+                }
+                row.innerHTML = `
+                    <td>${monthLabel}</td>
+                    <td>${daysTaken > 0 ? daysTaken : ''}</td>
+                    <td>${reasons || ''}</td>
+                    <td>${PAID_RATE}</td>
+                    <td>${SICK_RATE}</td>
+                `;
+                tbody.appendChild(row);
+            }
+        }
+
+        function openHistoryRequestDetail(req) {
+            document.getElementById('monthlyDetailTitle').innerText = 'Leave Details';
+            document.getElementById('monthlyDetailBody').innerHTML = `
+                <div style="border: 1px solid var(--line); border-radius: 10px; padding: 16px;">
+                    ${requestDetailCardHtml(req)}
+                </div>
+            `;
+            document.getElementById('monthlyDetailModalOverlay').classList.add('open');
+        }
+
+        function openMonthlyDetailModal(rowIndex) {
+            const data = monthlyAccrualData[rowIndex];
+            if (!data) return;
+
+            document.getElementById('monthlyDetailTitle').innerText = `Leave Details — ${data.monthLabel}`;
+
+            const body = document.getElementById('monthlyDetailBody');
+            body.innerHTML = data.matches.map(req => `
+                <div style="border: 1px solid var(--line); border-radius: 10px; padding: 16px; margin-bottom: 12px;">
+                    <div class="lf-grid" style="margin-top: 0;">
+                        <div class="lf-field"><div class="l">Leave Type</div><div class="v">${req.leave_type}</div></div>
+                        <div class="lf-field"><div class="l">Status</div><div class="v">${req.status}</div></div>
+                        <div class="lf-field"><div class="l">From</div><div class="v">${formatDate(req.start_date)}</div></div>
+                        <div class="lf-field"><div class="l">To</div><div class="v">${formatDate(req.end_date)}</div></div>
+                        <div class="lf-field"><div class="l">Days Taken</div><div class="v">${req.days_requested}</div></div>
+                        <div class="lf-field"><div class="l">Contact Number During Leave</div><div class="v">${req.contact_during_leave || '—'}</div></div>
+                        <div class="lf-field full"><div class="l">Reason for Leave</div><div class="v">${req.reason || '—'}</div></div>
+                        <div class="lf-field"><div class="l">My Present Address</div><div class="v">${req.present_address || '—'}</div></div>
+                        <div class="lf-field"><div class="l">My Address During Leave</div><div class="v">${req.address_during_leave || '—'}</div></div>
+                    </div>
+                </div>
+            `).join('');
+
+            document.getElementById('monthlyDetailModalOverlay').classList.add('open');
+        }
+
+        function closeMonthlyDetailModal() {
+            document.getElementById('monthlyDetailModalOverlay').classList.remove('open');
+        }
+
+        function renderCustomTableExtras() {
+            const headRow = document.getElementById('lvMonthlyHeadRow');
+            headRow.innerHTML = `
+                <th>Month</th>
+                <th>Leave Days Taken</th>
+                <th>Reason for Leave</th>
+                <th>Leave Days Granted</th>
+                <th>Sick Leave Days Granted</th>
+                ${customColumns.map(col => `<th>${col}<button class="lv-col-remove" onclick="removeCustomColumn('${col.replace(/'/g, "\\'")}')" title="Remove column">&times;</button></th>`).join('')}
+                <th style="width:44px;"><button class="lv-add-col-btn" onclick="addCustomColumn()" title="Add column"><i class="fas fa-plus"></i></button></th>
+            `;
+
+            document.querySelectorAll('#lvMonthlyBody tr.lv-auto-row').forEach(tr => {
+                while (tr.children.length > 5) tr.removeChild(tr.lastChild);
+                customColumns.forEach(() => tr.appendChild(document.createElement('td')));
+                tr.appendChild(document.createElement('td'));
+            });
+
+            const tbody = document.getElementById('lvMonthlyBody');
+            document.querySelectorAll('#lvMonthlyBody tr.lv-custom-row').forEach(tr => tr.remove());
+
+            customRows.forEach(row => {
+                const tr = document.createElement('tr');
+                tr.className = 'lv-custom-row';
+                const baseKeys = ['month', 'taken', 'reason', 'granted', 'sickGranted'];
+                baseKeys.forEach(key => {
+                    const td = document.createElement('td');
+                    const val = (row.cells && row.cells[key]) ? row.cells[key] : '';
+                    td.innerHTML = `<input type="text" class="lv-cell-input" value="${val.replace(/"/g, '&quot;')}" onchange="updateCustomCell('${row.id}','${key}', this.value)">`;
+                    tr.appendChild(td);
+                });
+                customColumns.forEach(col => {
+                    const td = document.createElement('td');
+                    const val = (row.cells && row.cells[col]) ? row.cells[col] : '';
+                    td.innerHTML = `<input type="text" class="lv-cell-input" value="${val.replace(/"/g, '&quot;')}" onchange="updateCustomCell('${row.id}','${col.replace(/'/g, "\\'")}', this.value)">`;
+                    tr.appendChild(td);
+                });
+                const actionTd = document.createElement('td');
+                actionTd.innerHTML = `<button class="lv-col-remove" onclick="removeCustomRow('${row.id}')" title="Remove row">&times;</button>`;
+                tr.appendChild(actionTd);
+                tbody.appendChild(tr);
+            });
+        }
+
+        function addCustomColumn() {
+            const name = prompt('New column name:');
+            if (!name || !name.trim()) return;
+            if (customColumns.includes(name.trim())) { alert('That column already exists.'); return; }
+            customColumns.push(name.trim());
+            renderCustomTableExtras();
+            saveCustomTable();
+        }
+
+        function removeCustomColumn(name) {
+            if (!confirm(`Remove the "${name}" column? This will also delete its data from every row.`)) return;
+            customColumns = customColumns.filter(c => c !== name);
+            customRows.forEach(row => { if (row.cells) delete row.cells[name]; });
+            renderCustomTableExtras();
+            saveCustomTable();
+        }
+
+        function addCustomRow() {
+            const newRow = { id: 'row_' + Date.now(), cells: {} };
+            customRows.push(newRow);
+            renderCustomTableExtras();
+            saveCustomTable();
+        }
+
+        function removeCustomRow(rowId) {
+            if (!confirm('Remove this row?')) return;
+            customRows = customRows.filter(r => r.id !== rowId);
+            renderCustomTableExtras();
+            saveCustomTable();
+        }
+
+        function updateCustomCell(rowId, key, value) {
+            const row = customRows.find(r => r.id === rowId);
+            if (!row) return;
+            if (!row.cells) row.cells = {};
+            row.cells[key] = value;
+            saveCustomTable();
+        }
+
+        async function saveCustomTable() {
+            if (!viewingLeaveEmployeeId) return;
+            try {
+                await fetch(`${API_BASE}/api/employees/${viewingLeaveEmployeeId}/leave-table-custom`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', ...API_HEADERS },
+                    body: JSON.stringify({ custom_columns: customColumns, custom_rows: customRows })
+                });
+            } catch (err) {
+                console.error('Error saving table customizations:', err);
+            }
+        }
+
+        // ============ TRAINING ============
+        let allTrainings = [];
+        let TRAINING_CATEGORIES = [];
+        let trainingCategoryObjects = [];
+        let viewingTrainingEmployeeId = null;
+        let isTrainingReadOnly = false;
+        let trainingEmployeeList = [];
+
+        async function fetchTrainingCategories() {
+            try {
+                const response = await fetch(`${API_BASE}/api/training-categories`, { headers: API_HEADERS });
+                const rows = await response.json();
+                trainingCategoryObjects = rows;
+                TRAINING_CATEGORIES = rows.map(r => r.name);
+            } catch (err) {
+                console.error('Error fetching training categories:', err);
+            }
+        }
+
+        function getCategoryId(name) {
+            const obj = trainingCategoryObjects.find(c => c.name === name);
+            return obj ? obj.id : null;
+        }
+
+        async function showTrainingView() {
+            hideAllContentViews();
+            document.getElementById('trainingView').style.display = 'block';
+            await fetchTrainingCategories();
+
+            const isManagement = (currentUserRole === 'admin' || currentUserRole === 'manager');
+
+            if (isManagement) {
+                document.getElementById('trainingViewSubtitle').innerText = 'Select an employee to view their training progress';
+                document.getElementById('trainingEmployeeListView').style.display = 'block';
+                document.getElementById('trainingPersonalSection').style.display = 'none';
+                await fetchTrainingEmployeeList();
+            } else {
+                document.getElementById('trainingViewSubtitle').innerText = 'YouTube Training, Yes Program, RSS In-House Training, and Presentation Day topics';
+                document.getElementById('trainingEmployeeListView').style.display = 'none';
+                document.getElementById('trainingPersonalSection').style.display = 'block';
+                document.getElementById('trainingBackToListBtn').style.display = 'none';
+                document.getElementById('trainingViewingWhoLabel').style.display = 'none';
+                document.getElementById('addTrainingTopicBtn').style.display = 'none';
+                viewingTrainingEmployeeId = currentUserEmployeeId;
+                isTrainingReadOnly = false;
+                await fetchTrainings();
+            }
+        }
+
+        async function fetchTrainingEmployeeList() {
+            try {
+                const response = await fetch(`${API_BASE}/api/employees`, { headers: API_HEADERS });
+                trainingEmployeeList = await response.json();
+                renderTrainingEmployeeList();
+            } catch (err) {
+                console.error('Error fetching employees for training list:', err);
+            }
+        }
+
+        function renderTrainingEmployeeList() {
+            const search = (document.getElementById('trainingEmployeeSearchInput').value || '').toLowerCase();
+            const tbody = document.getElementById('trainingEmployeeListBody');
+            const empty = document.getElementById('trainingEmployeeListEmpty');
+
+            const filtered = trainingEmployeeList.filter(emp => {
+                const fullName = `${emp.first_name || ''} ${emp.last_name || ''}`.toLowerCase();
+                return (
+                    search === '' ||
+                    fullName.includes(search) ||
+                    (emp.job_title || '').toLowerCase().includes(search) ||
+                    (emp.department || '').toLowerCase().includes(search)
+                );
+            });
+
+            tbody.innerHTML = '';
+            if (filtered.length === 0) {
+                empty.style.display = 'block';
+            } else {
+                empty.style.display = 'none';
+                filtered.forEach(emp => {
+                    const row = document.createElement('tr');
+                    row.onclick = () => selectEmployeeForTraining(emp.id, `${emp.first_name || ''} ${emp.last_name || ''}`.trim());
+                    row.innerHTML = `
+                        <td>${emp.first_name || ''} ${emp.last_name || ''}</td>
+                        <td>${emp.job_title || '—'}</td>
+                        <td>${emp.department || '—'}</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            }
+        }
+
+        async function selectEmployeeForTraining(employeeId, employeeName) {
+            viewingTrainingEmployeeId = employeeId;
+            isTrainingReadOnly = true;
+            document.getElementById('trainingEmployeeListView').style.display = 'none';
+            document.getElementById('trainingPersonalSection').style.display = 'block';
+            document.getElementById('trainingBackToListBtn').style.display = 'flex';
+            document.getElementById('trainingViewingWhoLabel').style.display = 'block';
+            document.getElementById('trainingViewingWhoLabel').innerText = `Viewing training for: ${employeeName}`;
+            document.getElementById('addTrainingTopicBtn').style.display = 'inline-flex';
+            await fetchTrainings();
+        }
+
+        function backToTrainingEmployeeList() {
+            viewingTrainingEmployeeId = null;
+            isTrainingReadOnly = false;
+            document.getElementById('trainingPersonalSection').style.display = 'none';
+            document.getElementById('trainingEmployeeListView').style.display = 'block';
+        }
+
+        async function fetchTrainings() {
+            try {
+                const url = viewingTrainingEmployeeId
+                    ? `${API_BASE}/api/trainings?employee_id=${viewingTrainingEmployeeId}&owner_id=${viewingTrainingEmployeeId}`
+                    : `${API_BASE}/api/trainings`;
+                const response = await fetch(url, { headers: API_HEADERS });
+                allTrainings = await response.json();
+                renderTrainingCategories();
+                renderTrainingProgress();
+            } catch (err) {
+                console.error('Error fetching trainings:', err);
+            }
+        }
+
+        function renderTrainingProgress() {
+            const container = document.getElementById('trainingProgressStats');
+            container.innerHTML = TRAINING_CATEGORIES.map(cat => {
+                const completedCount = allTrainings.filter(t => t.category === cat && t.completed).length;
+                return `
+                    <div class="wf-stat-card active">
+                        <div class="label">${cat}</div>
+                        <div class="value">${completedCount}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderTrainingCategories() {
+            const container = document.getElementById('trainingCategoriesContainer');
+            container.innerHTML = '';
+            TRAINING_CATEGORIES.forEach(cat => {
+                const safeId = 'trcat-' + cat.replace(/\s+/g, '-');
+                const items = allTrainings.filter(t => t.category === cat);
+                const section = document.createElement('div');
+                section.style.marginBottom = '28px';
+                const addBtnLabel = (cat === 'Presentation Day Topics') ? 'Add Presentation Topic' : 'Add Training';
+                const unitWord = (cat === 'Presentation Day Topics') ? 'presentation' : 'training';
+                section.innerHTML = `
+                    <div class="lv-section-title clickable collapsed" id="${safeId}-toggle" onclick="toggleTrainingCategory('${cat.replace(/'/g, "\\'")}')">
+                        <i class="fas fa-chevron-down"></i> ${cat}
+                        <span class="training-category-count" id="${safeId}-count">${items.length} ${unitWord}${items.length === 1 ? '' : 's'}</span>
+                        ${isTrainingReadOnly ? `
+                            <button class="lv-col-remove" style="color:var(--sherq-blue-mid); margin-left:10px;" onclick="event.stopPropagation(); toggleTopicMenu('${safeId}')" title="Topic options"><i class="fas fa-ellipsis-vertical"></i></button>
+                            <span id="${safeId}-menu" style="display:none;">
+                                <button class="wf-btn-secondary" style="padding:4px 10px; font-size:11.5px; margin-left:8px;" onclick="event.stopPropagation(); openRenameCategoryModal('${cat.replace(/'/g, "\\'")}')">Rename Topic</button>
+                                <button class="wf-btn-secondary" style="padding:4px 10px; font-size:11.5px; color:#DC2626; margin-left:6px;" onclick="event.stopPropagation(); removeCategory('${cat.replace(/'/g, "\\'")}')">Delete Topic</button>
+                            </span>
+                        ` : ''}
+                    </div>
+                    <div id="${safeId}-body" style="display:none;">
+                        <div class="wf-table-wrap" style="margin-bottom: 10px;">
+                            <table class="wf-table">
+                                <thead>
+                                    <tr>
+                                        <th>Date of Training</th>
+                                        <th>Topic of Training</th>
+                                        <th>Progress</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="${safeId}-tbody"></tbody>
+                            </table>
+                        </div>
+                        <button class="wf-add-btn" onclick="openAddTrainingModal('${cat.replace(/'/g, "\\'")}')">
+                            <i class="fas fa-plus"></i> ${addBtnLabel}
+                        </button>
+                    </div>
+                `;
+                container.appendChild(section);
+                renderCategoryTable(cat);
+            });
+        }
+
+        function toggleTopicMenu(safeId) {
+            const menu = document.getElementById(`${safeId}-menu`);
+            menu.style.display = (menu.style.display === 'none') ? 'inline' : 'none';
+        }
+
+        function toggleTrainingCategory(cat) {
+            const safeId = 'trcat-' + cat.replace(/\s+/g, '-');
+            const body = document.getElementById(`${safeId}-body`);
+            const toggle = document.getElementById(`${safeId}-toggle`);
+            const isHidden = body.style.display === 'none';
+            body.style.display = isHidden ? 'block' : 'none';
+            toggle.classList.toggle('collapsed', !isHidden);
+        }
+
+        function progressBadgeHtml(pct, completed) {
+            if (completed) return `<span class="training-progress-badge tp-complete">Completed &middot; 100%</span>`;
+            if (pct > 0) return `<span class="training-progress-badge tp-inprogress">In Progress &middot; ${pct}%</span>`;
+            return `<span class="training-progress-badge tp-pending">Pending &middot; 0%</span>`;
+        }
+
+        async function renderCategoryTable(cat) {
+            const safeId = 'trcat-' + cat.replace(/\s+/g, '-');
+            const tbody = document.getElementById(`${safeId}-tbody`);
+            const theadRow = document.querySelector(`#${safeId}-body thead tr`);
+            const countBadge = document.getElementById(`${safeId}-count`);
+            const items = allTrainings.filter(t => t.category === cat);
+
+            if (countBadge) {
+                const unitWord = (cat === 'Presentation Day Topics') ? 'presentation' : 'training';
+                countBadge.innerText = `${items.length} ${unitWord}${items.length === 1 ? '' : 's'}`;
+            }
+
+            let columns = [];
+            try {
+                const colResponse = await fetch(`${API_BASE}/api/training-columns?category=${encodeURIComponent(cat)}`, { headers: API_HEADERS });
+                columns = await colResponse.json();
+            } catch (err) {
+                console.error('Error fetching training columns:', err);
+            }
+            trainingCustomColumns[cat] = columns;
+
+            if (theadRow) {
+                theadRow.innerHTML = `
+                    <th>Date of Training</th>
+                    <th>Topic of Training</th>
+                    ${columns.map(c => `
+                        <th>
+                            <div style="display:flex; align-items:center; gap:4px;">
+                                <input type="text" class="th-edit-input" value="${c.column_name.replace(/"/g, '&quot;')}" onchange="renameColumnInline(${c.id}, this.value, '${cat.replace(/'/g, "\\'")}')">
+                                <button class="lv-col-remove" style="font-size:12px;" onclick="removeTrainingColumn(${c.id}, '${cat.replace(/'/g, "\\'")}')" title="Remove column">&times;</button>
+                            </div>
+                        </th>
+                    `).join('')}
+                    <th>Progress</th>
+                    <th style="width:36px;"><button class="lv-add-col-btn" onclick="openAddColumnModal('${cat.replace(/'/g, "\\'")}')" title="Add column"><i class="fas fa-plus"></i></button></th>
+                `;
+            }
+
+            const totalCols = 4 + columns.length;
+
+            if (items.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="${totalCols}" class="wf-empty">No training added yet in this category.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = '';
+            for (const item of items) {
+                let totalPct = 0;
+                if (viewingTrainingEmployeeId) {
+                    try {
+                        const response = await fetch(`${API_BASE}/api/trainings/${item.id}/progress?employee_id=${viewingTrainingEmployeeId}`, { headers: API_HEADERS });
+                        const progress = await response.json();
+                        totalPct = progress.percentage || 0;
+                    } catch (err) {
+                        console.error('Error fetching progress for row:', err);
+                    }
+                }
+                const dateStr = item.training_date ? formatDate(item.training_date) : '—';
+                const row = document.createElement('tr');
+                row.style.cursor = 'pointer';
+                row.onclick = () => openTrainingDetailModal(item.id);
+
+                let cellsHtml = `
+                    <td>${dateStr}</td>
+                    <td>${item.title || '(untitled)'}</td>
+                `;
+                columns.forEach(c => {
+                    const val = (item.extra_data && item.extra_data[c.column_name]) ? item.extra_data[c.column_name] : '';
+                    cellsHtml += `<td onclick="event.stopPropagation()"><input type="text" class="lv-cell-input" value="${val.replace(/"/g, '&quot;')}" onchange="saveTrainingCell(${item.id}, '${c.column_name.replace(/'/g, "\\'")}', this.value)"></td>`;
+                });
+                cellsHtml += `<td>${progressBadgeHtml(totalPct, item.completed)}</td><td></td>`;
+
+                row.innerHTML = cellsHtml;
+                tbody.appendChild(row);
+            }
+        }
+
+        let currentTrainingDetailId = null;
+
+        async function openTrainingDetailModal(trainingId) {
+            currentTrainingDetailId = trainingId;
+            const item = allTrainings.find(t => t.id === trainingId);
+            if (!item) return;
+            const isPresentation = (item.category === 'Presentation Day Topics');
+            document.getElementById('tdModalTitle').innerText = isPresentation ? 'Presentation Details' : 'Training Details';
+            document.getElementById('td_title_label').innerText = isPresentation ? 'Presentation Topic' : 'Topic of Training';
+            document.getElementById('td_date_label').innerText = isPresentation ? 'Date of Presentation' : 'Date of Training';
+            document.getElementById('td_title').value = item.title || '';
+            document.getElementById('td_date').value = item.training_date ? item.training_date.split('T')[0] : '';
+            document.getElementById('td_title').disabled = isTrainingReadOnly;
+            document.getElementById('td_date').disabled = isTrainingReadOnly;
+            document.getElementById('td_delete_btn').style.display = isTrainingReadOnly ? 'none' : 'inline-block';
+            document.getElementById('trainingDetailModalOverlay').classList.add('open');
+            await loadProgressForTraining(trainingId);
+        }
+
+        function closeTrainingDetailModal() {
+            document.getElementById('trainingDetailModalOverlay').classList.remove('open');
+            if (currentTrainingDetailId) {
+                const item = allTrainings.find(t => t.id === currentTrainingDetailId);
+                if (item) renderCategoryTable(item.category);
+            }
+            currentTrainingDetailId = null;
+        }
+
+        async function saveTrainingDetailField(field) {
+            if (!currentTrainingDetailId || isTrainingReadOnly) return;
+            const value = field === 'title' ? document.getElementById('td_title').value : document.getElementById('td_date').value;
+            await updateTrainingField(currentTrainingDetailId, field, value);
+        }
+
+        async function deleteTrainingFromModal() {
+            if (!currentTrainingDetailId || isTrainingReadOnly) return;
+            const id = currentTrainingDetailId;
+            document.getElementById('trainingDetailModalOverlay').classList.remove('open');
+            currentTrainingDetailId = null;
+            await removeTrainingRow(id);
+        }
+
+        async function loadProgressForTraining(trainingId) {
+            if (!viewingTrainingEmployeeId) return;
+            try {
+                const response = await fetch(`${API_BASE}/api/trainings/${trainingId}/progress?employee_id=${viewingTrainingEmployeeId}`, { headers: API_HEADERS });
+                const progress = await response.json();
+                renderProgressControl(trainingId, progress);
+            } catch (err) {
+                console.error('Error loading training progress:', err);
+            }
+        }
+
+        function renderProgressControl(trainingId, progress) {
+            const item = allTrainings.find(t => t.id === trainingId);
+            const isPresentation = item && item.category === 'Presentation Day Topics';
+            const container = document.getElementById('td_tasks_wrap');
+            const pct = progress.percentage || 0;
+            const hasDocument = !!progress.document_path;
+
+            if (isPresentation) {
+                let bodyHtml = '';
+
+                if (hasDocument) {
+                    bodyHtml = `
+                        <div style="font-size:13px; font-weight:700; color:#5C7A1D; margin-bottom:8px;">
+                            <i class="fas fa-check-circle"></i> Finished this presentation${progress.completed_date ? ' on ' + formatDate(progress.completed_date) : ''}
+                        </div>
+                        <a href="${API_BASE}/${progress.document_path}" target="_blank" style="font-size:12.5px; color:var(--sherq-blue-mid); display:inline-block; margin-bottom:14px;">
+                            <i class="fas fa-file"></i> View uploaded document
+                        </a>
+                        <div class="wf-field" style="margin-top:4px;">
+                            <label style="font-size:12px;">Uploaded the wrong file? Replace it:</label>
+                            <input type="file" id="td_document_file" style="font-size:12px; margin-bottom:8px;" ${isTrainingReadOnly ? 'disabled' : ''}>
+                            <br>
+                            <button class="wf-btn-secondary" style="font-size:12px; padding:7px 14px;" ${isTrainingReadOnly ? 'disabled' : ''} onclick="uploadPresentationDocument(${trainingId})">Replace Document</button>
+                        </div>
+                    `;
+                } else if (pct >= 100) {
+                    bodyHtml = `
+                        <div style="background:#FEF3C7; border:1px solid #FDE68A; border-radius:8px; padding:12px 14px;">
+                            <div style="font-size:12.5px; font-weight:700; color:#B45309; margin-bottom:8px;">
+                                <i class="fas fa-exclamation-circle"></i> Please upload your presentation document to finish this presentation
+                            </div>
+                            <input type="file" id="td_document_file" style="font-size:12px; margin-bottom:8px;">
+                            <br>
+                            <button class="wf-btn-primary" style="font-size:12px; padding:7px 14px;" onclick="uploadPresentationDocument(${trainingId})">Upload Document</button>
+                        </div>
+                    `;
+                } else {
+                    bodyHtml = `
+                        <button class="wf-btn-primary" ${isTrainingReadOnly ? 'disabled' : ''} onclick="markPresentationDone(${trainingId})">
+                            <i class="fas fa-check"></i> Mark Done
+                        </button>
+                    `;
+                }
+
+                container.innerHTML = `
+                    <div class="lv-section-title" style="margin: 10px 0 8px;">Progress</div>
+                    ${bodyHtml}
+                `;
+                return;
+            }
+
+            // Non-presentation categories keep the percentage field
+            const documentLinkHtml = hasDocument ? `
+                <a href="${API_BASE}/${progress.document_path}" target="_blank" style="font-size:12.5px; color:var(--sherq-blue-mid); margin-top:6px; display:inline-block;">
+                    <i class="fas fa-file"></i> View uploaded document
+                </a>
+            ` : '';
+
+            let statusHtml = '';
+            if (pct >= 100 && progress.completed_date) {
+                statusHtml = `<div style="margin-top:8px; font-size:13px; font-weight:700; color:#5C7A1D;"><i class="fas fa-check-circle"></i> Finished this training on ${formatDate(progress.completed_date)}</div>${documentLinkHtml}`;
+            } else if (hasDocument) {
+                statusHtml = documentLinkHtml;
+            }
+
+            container.innerHTML = `
+                <div class="lv-section-title" style="margin: 10px 0 8px;">Progress</div>
+                <div class="wf-field">
+                    <label>How far along are ${isTrainingReadOnly ? 'they' : 'you'}?</label>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <input type="number" min="0" max="100" step="5" id="td_percentage" value="${pct}" style="width:100px;" ${isTrainingReadOnly ? 'disabled' : ''} onchange="updateTrainingProgress(${trainingId}, this.value)">
+                        <span style="font-size:13px; color:var(--ink-soft);">%</span>
+                    </div>
+                </div>
+                <div id="td_completed_note">${statusHtml}</div>
+            `;
+        }
+
+        async function markPresentationDone(trainingId) {
+            await updateTrainingProgress(trainingId, 100);
+        }
+
+        async function updateTrainingProgress(trainingId, percentageValue) {
+            if (isTrainingReadOnly) return;
+            try {
+                const response = await fetch(`${API_BASE}/api/trainings/${trainingId}/progress`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', ...API_HEADERS },
+                    body: JSON.stringify({ employee_id: viewingTrainingEmployeeId, percentage: parseInt(percentageValue, 10) || 0 })
+                });
+                const progress = await response.json();
+                renderProgressControl(trainingId, progress);
+
+                const item = allTrainings.find(t => t.id === trainingId);
+                if (item) {
+                    item.completed = (progress.percentage >= 100);
+                    renderTrainingProgress();
+                }
+            } catch (err) {
+                console.error('Error updating training progress:', err);
+            }
+        }
+
+        async function uploadPresentationDocument(trainingId) {
+            const fileInput = document.getElementById('td_document_file');
+            const file = fileInput ? fileInput.files[0] : null;
+            if (!file) { alert('Please choose a file first.'); return; }
+            const formData = new FormData();
+            formData.append('document', file);
+            formData.append('employee_id', viewingTrainingEmployeeId);
+            try {
+                const response = await fetch(`${API_BASE}/api/trainings/${trainingId}/document`, {
+                    method: 'POST',
+                    headers: API_HEADERS,
+                    body: formData
+                });
+                if (!response.ok) { alert('Failed to upload document'); return; }
+                await loadProgressForTraining(trainingId);
+                const item = allTrainings.find(t => t.id === trainingId);
+                if (item) {
+                    item.completed = true;
+                    renderTrainingProgress();
+                }
+            } catch (err) {
+                console.error('Error uploading presentation document:', err);
+                alert('Server error while uploading document');
+            }
+        }
+
+        let pendingRenameColumnId = null;
+
+        function openRenameColumnModal(columnId, currentName) {
+            pendingRenameColumnId = columnId;
+            document.getElementById('addColumnModalOverlay').querySelector('h2').innerText = 'Rename Column';
+            document.getElementById('newColumnNameInput').value = currentName;
+            document.getElementById('addColumnModalOverlay').classList.add('open');
+        }
+
+        let trainingCustomColumns = {};
+        let pendingColumnCategory = null;
+
+        function openAddColumnModal(cat) {
+            pendingColumnCategory = cat;
+            pendingRenameColumnId = null;
+            document.getElementById('addColumnModalOverlay').querySelector('h2').innerText = 'Add Column';
+            document.getElementById('newColumnNameInput').value = '';
+            document.getElementById('addColumnModalOverlay').classList.add('open');
+        }
+
+        function closeAddColumnModal() {
+            document.getElementById('addColumnModalOverlay').classList.remove('open');
+        }
+
+        async function confirmAddTrainingColumn() {
+            const name = document.getElementById('newColumnNameInput').value.trim();
+            if (!name) return;
+
+            if (pendingRenameColumnId) {
+                try {
+                    await fetch(`${API_BASE}/api/training-columns/${pendingRenameColumnId}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json', ...API_HEADERS },
+                        body: JSON.stringify({ column_name: name })
+                    });
+                    closeAddColumnModal();
+                    for (const cat of TRAINING_CATEGORIES) await renderCategoryTable(cat);
+                } catch (err) {
+                    console.error('Error renaming training column:', err);
+                }
+                return;
+            }
+
+            if (!pendingColumnCategory) return;
+            try {
+                await fetch(`${API_BASE}/api/training-columns`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', ...API_HEADERS },
+                    body: JSON.stringify({ category: pendingColumnCategory, column_name: name })
+                });
+                closeAddColumnModal();
+                await renderCategoryTable(pendingColumnCategory);
+            } catch (err) {
+                console.error('Error adding training column:', err);
+            }
+        }
+
+        async function renameColumnInline(columnId, newName, cat) {
+            const name = newName.trim();
+            if (!name) return;
+            try {
+                await fetch(`${API_BASE}/api/training-columns/${columnId}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json', ...API_HEADERS },
+                    body: JSON.stringify({ column_name: name })
+                });
+                await renderCategoryTable(cat);
+            } catch (err) {
+                console.error('Error renaming training column:', err);
+            }
+        }
+
+        async function removeTrainingColumn(columnId, cat) {
+            if (!confirm('Remove this column?')) return;
+            try {
+                await fetch(`${API_BASE}/api/training-columns/${columnId}`, { method: 'DELETE', headers: API_HEADERS });
+                await renderCategoryTable(cat);
+            } catch (err) {
+                console.error('Error removing training column:', err);
+            }
+        }
+
+        async function saveTrainingCell(trainingId, columnName, value) {
+            try {
+                await fetch(`${API_BASE}/api/trainings/${trainingId}/extra`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json', ...API_HEADERS },
+                    body: JSON.stringify({ column_name: columnName, value })
+                });
+            } catch (err) {
+                console.error('Error saving training cell:', err);
+            }
+        }
+
+        async function updateTrainingField(trainingId, field, value) {
+            const item = allTrainings.find(t => t.id === trainingId);
+            if (!item) return;
+            const title = field === 'title' ? value : (item.title || '');
+            const training_date = field === 'training_date' ? value : (item.training_date ? item.training_date.split('T')[0] : '');
+            try {
+                await fetch(`${API_BASE}/api/trainings/${trainingId}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json', ...API_HEADERS },
+                    body: JSON.stringify({ title, training_date })
+                });
+                item.title = title;
+                item.training_date = training_date;
+            } catch (err) {
+                console.error('Error updating training field:', err);
+            }
+        }
+
+        async function addBlankTrainingRow(cat) {
+            try {
+                const response = await fetch(`${API_BASE}/api/trainings`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', ...API_HEADERS },
+                    body: JSON.stringify({ category: cat, title: '', created_by: currentUserEmployeeId })
+                });
+                const newTraining = await response.json();
+                allTrainings.push(newTraining);
+                await renderCategoryTable(cat);
+                renderTrainingProgress();
+            } catch (err) {
+                console.error('Error adding training row:', err);
+            }
+        }
+
+        async function removeTrainingRow(trainingId) {
+            showAppConfirm('Remove this training entry?', async () => {
+                const item = allTrainings.find(t => t.id === trainingId);
+                const cat = item ? item.category : null;
+                allTrainings = allTrainings.filter(t => t.id !== trainingId);
+                renderTrainingProgress();
+                if (cat) await renderCategoryTable(cat);
+                try {
+                    await fetch(`${API_BASE}/api/trainings/${trainingId}`, { method: 'DELETE', headers: API_HEADERS });
+                } catch (err) {
+                    console.error('Error deleting training row:', err);
+                }
+            });
+        }
+
+        async function toggleTrainingComplete(trainingId, isCurrentlyComplete) {
+            if (!currentUserEmployeeId) {
+                alert('No employee record is linked to your account yet.');
+                return;
+            }
+            try {
+                if (isCurrentlyComplete) {
+                    await fetch(`${API_BASE}/api/trainings/${trainingId}/complete/${currentUserEmployeeId}`, { method: 'DELETE', headers: API_HEADERS });
+                } else {
+                    await fetch(`${API_BASE}/api/trainings/${trainingId}/complete`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', ...API_HEADERS },
+                        body: JSON.stringify({ employee_id: currentUserEmployeeId })
+                    });
+                }
+                await fetchTrainings();
+            } catch (err) {
+                console.error('Error toggling training completion:', err);
+            }
+        }
+
+        let currentTopicOptionsCategory = null;
+
+        async function openTopicOptionsModal(cat) {
+            currentTopicOptionsCategory = cat;
+            document.getElementById('topicOptionsTitle').innerText = cat;
+            await renderTopicOptionsColumns(cat);
+            document.getElementById('topicOptionsModalOverlay').classList.add('open');
+        }
+
+        function closeTopicOptionsModal() {
+            document.getElementById('topicOptionsModalOverlay').classList.remove('open');
+            currentTopicOptionsCategory = null;
+        }
+
+        async function renderTopicOptionsColumns(cat) {
+            const list = document.getElementById('topicOptionsColumnsList');
+            let columns = [];
+            try {
+                const response = await fetch(`${API_BASE}/api/training-columns?category=${encodeURIComponent(cat)}`, { headers: API_HEADERS });
+                columns = await response.json();
+            } catch (err) {
+                console.error('Error fetching columns for topic options:', err);
+            }
+
+            if (columns.length === 0) {
+                list.innerHTML = `<div style="padding:12px 14px; font-size:12.5px; color:var(--ink-soft);">No custom columns yet.</div>`;
+                return;
+            }
+
+            list.innerHTML = columns.map((c, i) => `
+                <div style="display:flex; align-items:center; justify-content:space-between; padding:10px 14px; ${i > 0 ? 'border-top:1px solid var(--line);' : ''}">
+                    <span style="font-size:13px; color:#1D2333;">${c.column_name}</span>
+                    <div>
+                        <button class="lv-col-remove" style="color:var(--sherq-blue-mid);" onclick="topicOptionsRenameColumn(${c.id}, '${c.column_name.replace(/'/g, "\\'")}')" title="Rename column"><i class="fas fa-pen"></i></button>
+                        <button class="lv-col-remove" onclick="topicOptionsDeleteColumn(${c.id})" title="Remove column">&times;</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function topicOptionsRename() {
+            const cat = currentTopicOptionsCategory;
+            closeTopicOptionsModal();
+            openRenameCategoryModal(cat);
+        }
+
+        function topicOptionsDelete() {
+            const cat = currentTopicOptionsCategory;
+            closeTopicOptionsModal();
+            removeCategory(cat);
+        }
+
+        function topicOptionsAddColumn() {
+            const cat = currentTopicOptionsCategory;
+            closeTopicOptionsModal();
+            openAddColumnModal(cat);
+        }
+
+        function topicOptionsRenameColumn(columnId, currentName) {
+            closeTopicOptionsModal();
+            openRenameColumnModal(columnId, currentName);
+        }
+
+        async function topicOptionsDeleteColumn(columnId) {
+            const cat = currentTopicOptionsCategory;
+            showAppConfirm('Remove this column? This will also delete its data from every row.', async () => {
+                try {
+                    await fetch(`${API_BASE}/api/training-columns/${columnId}`, { method: 'DELETE', headers: API_HEADERS });
+                    await renderTopicOptionsColumns(cat);
+                    await renderCategoryTable(cat);
+                } catch (err) {
+                    console.error('Error removing training column:', err);
+                }
+            });
+        }
+
+        let pendingRenameCategoryId = null;
+
+        function openAddCategoryModal() {
+            pendingRenameCategoryId = null;
+            document.getElementById('addCategoryModalTitle').innerText = 'Add Training Topic';
+            document.getElementById('new_category_name').value = '';
+            document.getElementById('addCategoryModalOverlay').classList.add('open');
+        }
+
+        function openRenameCategoryModal(name) {
+            pendingRenameCategoryId = getCategoryId(name);
+            document.getElementById('addCategoryModalTitle').innerText = 'Rename Training Topic';
+            document.getElementById('new_category_name').value = name;
+            document.getElementById('addCategoryModalOverlay').classList.add('open');
+        }
+
+        function closeAddCategoryModal() {
+            document.getElementById('addCategoryModalOverlay').classList.remove('open');
+        }
+
+        async function confirmAddCategory() {
+            const name = document.getElementById('new_category_name').value.trim();
+            if (!name) { alert('Please enter a topic name.'); return; }
+
+            if (pendingRenameCategoryId) {
+                try {
+                    const response = await fetch(`${API_BASE}/api/training-categories/${pendingRenameCategoryId}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json', ...API_HEADERS },
+                        body: JSON.stringify({ name })
+                    });
+                    if (!response.ok) { alert('Failed to rename training topic'); return; }
+                    closeAddCategoryModal();
+                    await fetchTrainingCategories();
+                    await fetchTrainings();
+                } catch (err) {
+                    console.error('Error renaming training topic:', err);
+                    alert('Server error while renaming training topic');
+                }
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/api/training-categories`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', ...API_HEADERS },
+                    body: JSON.stringify({ name, created_by: viewingTrainingEmployeeId })
+                });
+                if (!response.ok) { alert('Failed to add training topic'); return; }
+                closeAddCategoryModal();
+                await fetchTrainingCategories();
+                await fetchTrainings();
+            } catch (err) {
+                console.error('Error adding training topic:', err);
+                alert('Server error while adding training topic');
+            }
+        }
+
+        function removeCategory(name) {
+            const id = getCategoryId(name);
+            if (!id) return;
+            showAppConfirm(`Remove the "${name}" topic? This will also delete every training inside it.`, async () => {
+                try {
+                    await fetch(`${API_BASE}/api/training-categories/${id}`, { method: 'DELETE', headers: API_HEADERS });
+                    await fetchTrainingCategories();
+                    await fetchTrainings();
+                } catch (err) {
+                    console.error('Error removing training topic:', err);
+                }
+            });
+        }
+
+        let pendingTrainingCategory = null;
+
+        function openAddTrainingModal(category) {
+            pendingTrainingCategory = category;
+            const isPresentation = (category === 'Presentation Day Topics');
+            document.getElementById('trModalTitle').innerText = isPresentation ? 'Add Presentation Topic' : 'Add Training';
+            document.getElementById('trSubmitBtn').innerText = isPresentation ? 'Add Presentation Topic' : 'Add Training';
+            document.getElementById('tr_title_label').innerText = isPresentation ? 'Presentation Topic' : 'Topic of Training';
+            document.getElementById('tr_date_label').innerText = isPresentation ? 'Date of Presentation' : 'Date of Training';
+            document.getElementById('tr_title').placeholder = isPresentation ? 'e.g. Fire Safety Awareness' : 'e.g. Growth Mindset';
+            document.getElementById('tr_title').value = '';
+            document.getElementById('tr_date').value = '';
+            document.getElementById('trainingModalOverlay').classList.add('open');
+        }
+
+        function closeAddTrainingModal() {
+            document.getElementById('trainingModalOverlay').classList.remove('open');
+        }
+
+        async function submitNewTraining() {
+            const category = pendingTrainingCategory;
+            const title = document.getElementById('tr_title').value.trim();
+            const training_date = document.getElementById('tr_date').value;
+            if (!title) { alert('Please enter a topic.'); return; }
+            try {
+                const response = await fetch(`${API_BASE}/api/trainings`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', ...API_HEADERS },
+                    body: JSON.stringify({ category, title, training_date, created_by: viewingTrainingEmployeeId })
+                });
+                if (!response.ok) { alert('Failed to add training'); return; }
+                closeAddTrainingModal();
+                await fetchTrainings();
+            } catch (err) {
+                console.error('Error adding training:', err);
+                alert('Server error while adding training');
+            }
+        }
+
+        function openLeaveRequestModal() {
+            document.getElementById('lv_leave_type').value = 'Paid Leave';
+            document.getElementById('lv_employee_name').value = currentUserFullName;
+            document.getElementById('lv_start_date').value = '';
+            document.getElementById('lv_end_date').value = '';
+            document.getElementById('lv_days_requested').value = '';
+            document.getElementById('lv_reason').value = '';
+            document.getElementById('lv_present_address').value = '';
+            document.getElementById('lv_address_during_leave').value = '';
+            document.getElementById('lv_contact_during_leave').value = '';
+            document.getElementById('leaveModalOverlay').classList.add('open');
+        }
+
+        function closeLeaveRequestModal() {
+            document.getElementById('leaveModalOverlay').classList.remove('open');
+        }
+
+        function recalculateLeaveDays() {
+            const start = document.getElementById('lv_start_date').value;
+            const end = document.getElementById('lv_end_date').value;
+            if (!start || !end) return;
+            const startD = new Date(start);
+            const endD = new Date(end);
+            const diffMs = endD - startD;
+            const days = Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1;
+            document.getElementById('lv_days_requested').value = days > 0 ? days : '';
+        }
+
+        async function submitLeaveRequest() {
+            const leave_type = document.getElementById('lv_leave_type').value;
+            const start_date = document.getElementById('lv_start_date').value;
+            const end_date = document.getElementById('lv_end_date').value;
+            const days_requested = document.getElementById('lv_days_requested').value;
+            const reason = document.getElementById('lv_reason').value.trim();
+            const present_address = document.getElementById('lv_present_address').value.trim();
+            const address_during_leave = document.getElementById('lv_address_during_leave').value.trim();
+            const contact_during_leave = document.getElementById('lv_contact_during_leave').value.trim();
+
+            const missing = [];
+            if (!leave_type) missing.push('Leave Type');
+            if (!start_date) missing.push('From date');
+            if (!end_date) missing.push('To date');
+            if (!days_requested) missing.push('Amount of Days Required');
+            if (!reason) missing.push('Reason for Leave');
+            if (!present_address) missing.push('My Present Address');
+            if (!address_during_leave) missing.push('My Address During Leave');
+            if (!contact_during_leave) missing.push('Contact Number During Leave');
+
+            if (missing.length > 0) {
+                alert('Please fill in the following before submitting:\n\n' + missing.join('\n'));
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/api/employees/${viewingLeaveEmployeeId}/leave`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', ...API_HEADERS },
+                    body: JSON.stringify({
+                        leave_type, start_date, end_date,
+                        days_requested: parseInt(days_requested, 10),
+                        reason, present_address, address_during_leave, contact_during_leave
+                    })
+                });
+                if (!response.ok) { alert('Failed to submit leave request'); return; }
+                closeLeaveRequestModal();
+                await fetchLeaveForEmployee(viewingLeaveEmployeeId);
+            } catch (err) {
+                console.error('Error submitting leave request:', err);
+                alert('Server error while submitting leave request');
+            }
+        }
+
+        async function fetchEmployees() {
+            try {
+                const response = await fetch(`${API_BASE}/api/employees`, { headers: API_HEADERS });
+                employeeList = await response.json();
+                renderEmployeeTable();
+            } catch (err) {
+                console.error('Error fetching employees:', err);
+            }
+        }
+
+        function renderEmployeeTable() {
+            const search = document.getElementById('wfSearchInput').value.toLowerCase();
+            const tbody = document.getElementById('wfTableBody');
+            const emptyState = document.getElementById('wfEmptyState');
+            const filtered = employeeList.filter(emp => {
+                const fullName = `${emp.first_name || ''} ${emp.last_name || ''}`.toLowerCase();
+                return (
+                    search === '' ||
+                    fullName.includes(search) ||
+                    (emp.email || '').toLowerCase().includes(search) ||
+                    (emp.job_title || '').toLowerCase().includes(search)
+                );
+            });
+            tbody.innerHTML = '';
+            if (filtered.length === 0) {
+                emptyState.style.display = 'block';
+            } else {
+                emptyState.style.display = 'none';
+                filtered.forEach(emp => {
+                    const isActive = (emp.employement_status || 'Active') === 'Active';
+                    const row = document.createElement('tr');
+                    row.onclick = () => viewEmployeeProfile(emp.id, false);
+                    row.innerHTML = `
+                        <td>${emp.first_name || ''} ${emp.last_name || ''}</td>
+                        <td>${emp.email || ''}</td>
+                        <td>${emp.job_title || ''}</td>
+                        <td>${emp.department || ''}</td>
+                        <td><span class="wf-badge ${isActive ? 'active-badge' : 'inactive-badge'}">${emp.employement_status || 'Active'}</span></td>
+                        <td onclick="event.stopPropagation()">
+                            <button class="wf-action-btn deactivate" onclick="deactivateEmployee(${emp.id})" title="Deactivate"><i class="fas fa-user-slash"></i></button>
+                            <button class="wf-action-btn delete" onclick="deleteEmployee(${emp.id})" title="Delete"><i class="fas fa-trash"></i></button>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            }
+            document.getElementById('wfTotalCount').innerText = employeeList.length;
+            document.getElementById('wfActiveCount').innerText = employeeList.filter(e => (e.employement_status || 'Active') === 'Active').length;
+            document.getElementById('wfInactiveCount').innerText = employeeList.filter(e => e.employement_status === 'Inactive').length;
+        }
+
+        function clearEmployeeForm() {
+            const ids = ['f_first_name','f_last_name','f_email','f_job_title','f_date_of_birth',
+                'f_id_number','f_gender','f_nationality','f_phone','f_mobile','f_address',
+                'f_department','f_employment_type','f_start_date','f_contract_end_date',
+                'f_salary_grade','f_work_schedule','f_emergency_contact','f_emergency_phone'];
+            ids.forEach(id => document.getElementById(id).value = '');
+            document.getElementById('f_employement_status').value = 'Active';
+            document.getElementById('acc_username').value = '';
+            document.getElementById('acc_password').value = '';
+            document.getElementById('acc_role').value = 'intern';
+            document.getElementById('doc_id_document').value = '';
+            document.getElementById('doc_employment_contract').value = '';
+            document.getElementById('doc_rss_contract').value = '';
+        }
+
+        function fillEmployeeForm(emp) {
+            document.getElementById('f_first_name').value = emp.first_name || '';
+            document.getElementById('f_last_name').value = emp.last_name || '';
+            document.getElementById('f_email').value = emp.email || '';
+            document.getElementById('f_job_title').value = emp.job_title || '';
+            document.getElementById('f_date_of_birth').value = emp.date_of_birth ? emp.date_of_birth.split('T')[0] : '';
+            document.getElementById('f_id_number').value = emp.id_number || '';
+            document.getElementById('f_gender').value = emp.gender || '';
+            document.getElementById('f_nationality').value = emp.nationality || '';
+            document.getElementById('f_phone').value = emp.phone || '';
+            document.getElementById('f_mobile').value = emp.mobile || '';
+            document.getElementById('f_address').value = emp.address || '';
+            document.getElementById('f_department').value = emp.department || '';
+            document.getElementById('f_employment_type').value = emp.employment_type || '';
+            document.getElementById('f_start_date').value = emp.start_date ? emp.start_date.split('T')[0] : '';
+            document.getElementById('f_contract_end_date').value = emp.contract_end_date ? emp.contract_end_date.split('T')[0] : '';
+            document.getElementById('f_salary_grade').value = emp.salary_grade || '';
+            document.getElementById('f_employement_status').value = emp.employement_status || 'Active';
+            document.getElementById('f_work_schedule').value = emp.work_schedule || '';
+            document.getElementById('f_emergency_contact').value = emp.emergency_contact || '';
+            document.getElementById('f_emergency_phone').value = emp.emergency_phone || '';
+        }
+
+        const stepLabels = {
+            1: 'Step 1 of 3 — Employee Details',
+            2: 'Step 2 of 3 — Login Account (optional)',
+            3: 'Step 3 of 3 — Documents (optional)'
+        };
+
+        function goToStep(step) {
+            currentStep = step;
+            document.getElementById('wfStep1Body').style.display = step === 1 ? 'grid' : 'none';
+            document.getElementById('wfStep2Body').style.display = step === 2 ? 'grid' : 'none';
+            document.getElementById('wfStep3Body').style.display = step === 3 ? 'grid' : 'none';
+            document.getElementById('wfBackBtn').style.display = step > 1 ? 'inline-block' : 'none';
+            document.getElementById('wfSkipBtn').style.display = step === 2 ? 'inline-block' : 'none';
+            document.getElementById('wfModalStepLabel').innerText = stepLabels[step];
+            document.getElementById('wfModalSaveBtn').innerText = step < 3 ? 'Next →' : 'Save Employee';
+        }
+
+        function openAddEmployeeModal() {
+            editingEmployeeId = null;
+            clearEmployeeForm();
+            document.getElementById('wfModalTitle').innerText = 'Add Employee';
+            document.getElementById('wfModalStepLabel').style.display = 'block';
+            goToStep(1);
+            document.getElementById('wfModalOverlay').classList.add('open');
+        }
+
+        function openEditEmployeeModal(emp) {
+            editingEmployeeId = emp.id;
+            fillEmployeeForm(emp);
+            document.getElementById('wfModalTitle').innerText = 'Edit Employee';
+            document.getElementById('wfModalStepLabel').style.display = 'none';
+            document.getElementById('wfStep1Body').style.display = 'grid';
+            document.getElementById('wfStep2Body').style.display = 'none';
+            document.getElementById('wfStep3Body').style.display = 'none';
+            document.getElementById('wfBackBtn').style.display = 'none';
+            document.getElementById('wfSkipBtn').style.display = 'none';
+            document.getElementById('wfModalSaveBtn').innerText = 'Save Changes';
+            document.getElementById('wfModalOverlay').classList.add('open');
+        }
+
+        function closeAddEmployeeModal() {
+            document.getElementById('wfModalOverlay').classList.remove('open');
+        }
+
+        function getEmployeeFormPayload() {
+            return {
+                first_name: document.getElementById('f_first_name').value,
+                last_name: document.getElementById('f_last_name').value,
+                email: document.getElementById('f_email').value,
+                job_title: document.getElementById('f_job_title').value,
+                date_of_birth: document.getElementById('f_date_of_birth').value,
+                id_number: document.getElementById('f_id_number').value,
+                gender: document.getElementById('f_gender').value,
+                nationality: document.getElementById('f_nationality').value,
+                phone: document.getElementById('f_phone').value,
+                mobile: document.getElementById('f_mobile').value,
+                address: document.getElementById('f_address').value,
+                department: document.getElementById('f_department').value,
+                employment_type: document.getElementById('f_employment_type').value,
+                start_date: document.getElementById('f_start_date').value,
+                contract_end_date: document.getElementById('f_contract_end_date').value,
+                salary_grade: document.getElementById('f_salary_grade').value,
+                employement_status: document.getElementById('f_employement_status').value,
+                work_schedule: document.getElementById('f_work_schedule').value,
+                emergency_contact: document.getElementById('f_emergency_contact').value,
+                emergency_phone: document.getElementById('f_emergency_phone').value
+            };
+        }
+
+        function handleModalPrimaryAction() {
+            if (editingEmployeeId !== null) {
+                saveEmployeeEdit();
+                return;
+            }
+            if (currentStep < 3) {
+                goToStep(currentStep + 1);
+            } else {
+                finalSaveNewEmployee();
+            }
+        }
+
+        async function saveEmployeeEdit() {
+            const payload = getEmployeeFormPayload();
+            try {
+                const response = await fetch(`${API_BASE}/api/employees/${editingEmployeeId}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json', ...API_HEADERS },
+                    body: JSON.stringify(payload)
+                });
+                if (!response.ok) { alert('Failed to save employee'); return; }
+                closeAddEmployeeModal();
+                if (currentProfileId === editingEmployeeId) {
+                    await viewEmployeeProfile(editingEmployeeId, isOwnProfileReadOnly);
+                } else {
+                    await fetchEmployees();
+                }
+            } catch (err) {
+                console.error('Error saving employee:', err);
+                alert('Server error while saving employee');
+            }
+        }
+
+        async function finalSaveNewEmployee() {
+            const payload = getEmployeeFormPayload();
+            try {
+                const response = await fetch(`${API_BASE}/api/employees`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', ...API_HEADERS },
+                    body: JSON.stringify(payload)
+                });
+                if (!response.ok) { alert('Failed to save employee'); return; }
+                const newEmployee = await response.json();
+
+                const username = document.getElementById('acc_username').value.trim();
+                const password = document.getElementById('acc_password').value.trim();
+                const role = document.getElementById('acc_role').value;
+                if (username && password) {
+                    await fetch(`${API_BASE}/api/employees/${newEmployee.id}/account`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', ...API_HEADERS },
+                        body: JSON.stringify({ username, password, role })
+                    });
+                }
+
+                const idFile = document.getElementById('doc_id_document').files[0];
+                const empFile = document.getElementById('doc_employment_contract').files[0];
+                const rssFile = document.getElementById('doc_rss_contract').files[0];
+                if (idFile || empFile || rssFile) {
+                    const formData = new FormData();
+                    if (idFile) formData.append('id_document', idFile);
+                    if (empFile) formData.append('employment_contract', empFile);
+                    if (rssFile) formData.append('rss_contract', rssFile);
+                    await fetch(`${API_BASE}/api/employees/${newEmployee.id}/documents`, {
+                        method: 'POST',
+                        headers: API_HEADERS,
+                        body: formData
+                    });
+                }
+
+                closeAddEmployeeModal();
+                await fetchEmployees();
+            } catch (err) {
+                console.error('Error saving employee:', err);
+                alert('Server error while saving employee');
+            }
+        }
+
+        async function deactivateEmployee(id) {
+            if (!confirm('Deactivate this employee?')) return;
+            try {
+                await fetch(`${API_BASE}/api/employees/${id}/deactivate`, { method: 'PATCH', headers: API_HEADERS });
+                await fetchEmployees();
+            } catch (err) {
+                console.error('Error deactivating employee:', err);
+            }
+        }
+
+        async function deleteEmployee(id) {
+            if (!confirm('Permanently delete this employee? This cannot be undone.')) return;
+            try {
+                await fetch(`${API_BASE}/api/employees/${id}`, { method: 'DELETE', headers: API_HEADERS });
+                await fetchEmployees();
+            } catch (err) {
+                console.error('Error deleting employee:', err);
+            }
+        }
+
+        function generatePassword(targetInputId) {
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%';
+            let pwd = '';
+            for (let i = 0; i < 10; i++) {
+                pwd += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            document.getElementById(targetInputId).value = pwd;
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '—';
+            const d = new Date(dateStr);
+            if (isNaN(d)) return dateStr;
+            return d.toLocaleDateString('en-ZA', { year: 'numeric', month: 'long', day: 'numeric' });
+        }
+
+        async function viewEmployeeProfile(id, readOnly) {
+            isOwnProfileReadOnly = readOnly;
+            try {
+                const response = await fetch(`${API_BASE}/api/employees/${id}`, { headers: API_HEADERS });
+                if (!response.ok) {
+                    alert('Employee not found');
+                    return;
+                }
+                const emp = await response.json();
+                currentProfileId = emp.id;
+                populateProfileView(emp);
+                hideAllContentViews();
+                document.getElementById('profileView').style.display = 'block';
+            } catch (err) {
+                console.error('Error loading employee profile:', err);
+            }
+        }
+
+        function viewOwnEmployeeProfile() {
+            if (!currentUserEmployeeId) {
+                alert('No employee record is linked to your account yet. Please contact your administrator.');
+                return;
+            }
+            viewEmployeeProfile(currentUserEmployeeId, true);
+        }
+
+        function docStatusHtml(path) {
+            if (path) {
+                return `<a href="${API_BASE}/${path}" target="_blank" class="ep-doc-status uploaded" style="text-decoration:none;">Uploaded — View</a>`;
+            }
+            return `<span class="ep-doc-status missing">Not uploaded</span>`;
+        }
+
+        function populateProfileView(emp) {
+            const fullName = `${emp.first_name || ''} ${emp.last_name || ''}`.trim() || 'Unknown';
+            const initials = fullName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+            const isActive = (emp.employement_status || 'Active') === 'Active';
+            document.getElementById('epAvatar').innerText = initials;
+            document.getElementById('epName').innerText = fullName;
+            document.getElementById('epJobTitle').innerText = emp.job_title || '—';
+            document.getElementById('epEmail').innerText = emp.email || '—';
+            document.getElementById('epMobile').innerText = emp.mobile || '—';
+            document.getElementById('epDepartment').innerText = emp.department || '—';
+            const badge = document.getElementById('epStatusBadge');
+            badge.innerText = emp.employement_status || 'Active';
+            badge.className = 'wf-badge ' + (isActive ? 'active-badge' : 'inactive-badge');
+            document.getElementById('epFullName').innerText = fullName;
+            document.getElementById('epDob').innerText = formatDate(emp.date_of_birth);
+            document.getElementById('epIdNumber').innerText = emp.id_number || '—';
+            document.getElementById('epGender').innerText = emp.gender || '—';
+            document.getElementById('epNationality').innerText = emp.nationality || '—';
+            document.getElementById('epEmail2').innerText = emp.email || '—';
+            document.getElementById('epPhone').innerText = emp.phone || '—';
+            document.getElementById('epMobile2').innerText = emp.mobile || '—';
+            document.getElementById('epAddress').innerText = emp.address || '—';
+            document.getElementById('epJobTitle2').innerText = emp.job_title || '—';
+            document.getElementById('epDepartment2').innerText = emp.department || '—';
+            document.getElementById('epEmploymentType').innerText = emp.employment_type || '—';
+            document.getElementById('epStartDate').innerText = formatDate(emp.start_date);
+            document.getElementById('epContractEnd').innerText = emp.contract_end_date ? formatDate(emp.contract_end_date) : 'N/A — Permanent';
+            document.getElementById('epSalaryGrade').innerText = emp.salary_grade || '—';
+            document.getElementById('epWorkSchedule').innerText = emp.work_schedule || '—';
+            document.getElementById('epEmergencyContact').innerText = emp.emergency_contact || '—';
+            document.getElementById('epEmergencyPhone').innerText = emp.emergency_phone || '—';
+
+            currentProfileHasLogin = !!emp.login_username;
+            const credBtn = document.getElementById('epCredentialsBtn');
+            if (currentProfileHasLogin) {
+                document.getElementById('epCredentialsEmpty').style.display = 'none';
+                document.getElementById('epCredentialsFilled').style.display = 'block';
+                document.getElementById('epLoginUsername').innerText = emp.login_username;
+                document.getElementById('epLoginPassword').innerText = emp.login_password;
+                document.getElementById('epLoginRole').innerText = emp.login_role || '—';
+                credBtn.innerText = 'Edit Login';
+            } else {
+                document.getElementById('epCredentialsEmpty').style.display = 'block';
+                document.getElementById('epCredentialsFilled').style.display = 'none';
+                credBtn.innerText = 'Create Login';
+            }
+
+            document.getElementById('epDocIdStatus').innerHTML = docStatusHtml(emp.id_document_path);
+            document.getElementById('epDocEmploymentStatus').innerHTML = docStatusHtml(emp.employment_contract_path);
+            document.getElementById('epDocRssStatus').innerHTML = docStatusHtml(emp.rss_contract_path);
+
+            document.getElementById('epActionsBar').style.display = isOwnProfileReadOnly ? 'none' : 'flex';
+            document.getElementById('epCredentialsBtn').style.display = isOwnProfileReadOnly ? 'none' : 'inline-block';
+            document.getElementById('epDocsUploadBtn').style.display = isOwnProfileReadOnly ? 'none' : 'inline-block';
+
+            const canSwitch = (currentUserRole === 'admin' && !isOwnProfileReadOnly && emp.login_username && emp.id !== currentUserEmployeeId);
+            document.getElementById('epSwitchBtn').style.display = canSwitch ? 'inline-flex' : 'none';
+
+            document.getElementById('profileView').dataset.employee = JSON.stringify(emp);
+        }
+
+        function switchToEmployeeAccount() {
+            const emp = JSON.parse(document.getElementById('profileView').dataset.employee);
+            if (!emp.login_username) {
+                alert('This employee has no login account, so you cannot switch to it.');
+                return;
+            }
+            if (currentUserRole !== 'admin') {
+                alert('Only admin can switch to another account.');
+                return;
+            }
+
+            originalAdminSession = {
+                username: originalAdminUsername,
+                role: currentUserRole,
+                employee_id: currentUserEmployeeId,
+                fullName: currentUserFullName
+            };
+
+            currentUserRole = emp.login_role || 'intern';
+            currentUserEmployeeId = emp.id;
+            currentUserFullName = `${emp.first_name || ''} ${emp.last_name || ''}`.trim();
+
+            applyRoleVisibility(currentUserRole, emp.login_username);
+            document.getElementById('impersonationBanner').style.display = 'block';
+
+            showDashboardHome();
+        }
+
+        function openSwitchBackModal() {
+            document.getElementById('switchBackAdminName').innerText = originalAdminSession ? originalAdminSession.username : '';
+            document.getElementById('switchBackPassword').value = '';
+            document.getElementById('switchBackError').innerText = '';
+            document.getElementById('switchBackModalOverlay').classList.add('open');
+        }
+
+        function closeSwitchBackModal() {
+            document.getElementById('switchBackModalOverlay').classList.remove('open');
+        }
+
+        async function confirmSwitchBack() {
+            if (!originalAdminSession) { closeSwitchBackModal(); return; }
+            const password = document.getElementById('switchBackPassword').value;
+            const errorEl = document.getElementById('switchBackError');
+            if (!password) { errorEl.innerText = 'Please enter your password.'; return; }
+
+            try {
+                const response = await fetch(`${API_BASE}/api/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', ...API_HEADERS },
+                    body: JSON.stringify({ username: originalAdminSession.username, password })
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    errorEl.innerText = data.error || 'Incorrect password.';
+                    return;
+                }
+
+                currentUserRole = originalAdminSession.role;
+                currentUserEmployeeId = originalAdminSession.employee_id;
+                currentUserFullName = originalAdminSession.fullName;
+                applyRoleVisibility(currentUserRole, originalAdminSession.username);
+                document.getElementById('impersonationBanner').style.display = 'none';
+                originalAdminSession = null;
+
+                closeSwitchBackModal();
+                showDashboardHome();
+            } catch (err) {
+                console.error('Error switching back:', err);
+                errorEl.innerText = 'Server error. Please try again.';
+            }
+        }
+
+        function backFromProfile() {
+            currentProfileId = null;
+            if (isOwnProfileReadOnly) {
+                showDashboardHome();
+            } else {
+                showWorkforce();
+            }
+        }
+
+        function openEditFromProfile() {
+            const emp = JSON.parse(document.getElementById('profileView').dataset.employee);
+            openEditEmployeeModal(emp);
+        }
+
+        async function deactivateFromProfile() {
+            if (!confirm('Deactivate this employee?')) return;
+            try {
+                await fetch(`${API_BASE}/api/employees/${currentProfileId}/deactivate`, { method: 'PATCH', headers: API_HEADERS });
+                await viewEmployeeProfile(currentProfileId, false);
+            } catch (err) {
+                console.error('Error deactivating employee:', err);
+            }
+        }
+
+        async function deleteFromProfile() {
+            if (!confirm('Permanently delete this employee? This cannot be undone.')) return;
+            try {
+                await fetch(`${API_BASE}/api/employees/${currentProfileId}`, { method: 'DELETE', headers: API_HEADERS });
+                backFromProfile();
+            } catch (err) {
+                console.error('Error deleting employee:', err);
+            }
+        }
+
+        function openCredentialsModal() {
+            const emp = JSON.parse(document.getElementById('profileView').dataset.employee);
+            document.getElementById('credModalTitle').innerText = currentProfileHasLogin ? 'Edit Login' : 'Create Login';
+            document.getElementById('cr_username').value = emp.login_username || '';
+            document.getElementById('cr_role').value = emp.login_role || 'intern';
+            document.getElementById('cr_password').value = '';
+            document.getElementById('crPasswordHint').innerText = currentProfileHasLogin ? '(leave blank to keep current)' : '';
+            document.getElementById('credModalOverlay').classList.add('open');
+        }
+
+        function closeCredentialsModal() {
+            document.getElementById('credModalOverlay').classList.remove('open');
+        }
+
+        async function saveCredentials() {
+            const username = document.getElementById('cr_username').value.trim();
+            const password = document.getElementById('cr_password').value.trim();
+            const role = document.getElementById('cr_role').value;
+            if (!username) { alert('Username is required'); return; }
+            if (!currentProfileHasLogin && !password) { alert('Password is required when creating a new login'); return; }
+            try {
+                const response = await fetch(`${API_BASE}/api/employees/${currentProfileId}/account`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', ...API_HEADERS },
+                    body: JSON.stringify({ username, password, role })
+                });
+                if (!response.ok) { alert('Failed to save login credentials'); return; }
+                closeCredentialsModal();
+                await viewEmployeeProfile(currentProfileId, isOwnProfileReadOnly);
+            } catch (err) {
+                console.error('Error saving credentials:', err);
+                alert('Server error while saving login credentials');
+            }
+        }
+
+        function openDocumentsModal() {
+            document.getElementById('modal_doc_id_document').value = '';
+            document.getElementById('modal_doc_employment_contract').value = '';
+            document.getElementById('modal_doc_rss_contract').value = '';
+            document.getElementById('docModalOverlay').classList.add('open');
+        }
+
+        function closeDocumentsModal() {
+            document.getElementById('docModalOverlay').classList.remove('open');
+        }
+
+        async function saveDocumentsFromProfile() {
+            const idFile = document.getElementById('modal_doc_id_document').files[0];
+            const empFile = document.getElementById('modal_doc_employment_contract').files[0];
+            const rssFile = document.getElementById('modal_doc_rss_contract').files[0];
+            if (!idFile && !empFile && !rssFile) { alert('Choose at least one file to upload'); return; }
+            const formData = new FormData();
+            if (idFile) formData.append('id_document', idFile);
+            if (empFile) formData.append('employment_contract', empFile);
+            if (rssFile) formData.append('rss_contract', rssFile);
+            try {
+                const response = await fetch(`${API_BASE}/api/employees/${currentProfileId}/documents`, {
+                    method: 'POST',
+                    headers: API_HEADERS,
+                    body: formData
+                });
+                if (!response.ok) { alert('Failed to upload documents'); return; }
+                closeDocumentsModal();
+                await viewEmployeeProfile(currentProfileId, isOwnProfileReadOnly);
+            } catch (err) {
+                console.error('Error uploading documents:', err);
+                alert('Server error while uploading documents');
+            }
+        }
+    </script>
+</body>
+</html>

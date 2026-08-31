@@ -1,0 +1,1467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reginald SHERQ Services</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --sherq-blue: #1a365d;
+            --sherq-blue-mid: #24409E;
+            --sherq-green: #99cc33;
+            --sherq-bg: #f4f6f9;
+            --line: #E6E9EF;
+            --ink-soft: #6B7280;
+        }
+        * { box-sizing: border-box; }
+        body { font-family: 'Archivo', Arial, sans-serif; background-color: var(--sherq-bg); margin: 0; padding: 0; }
+        #loginScreen { display: grid; grid-template-columns: 1fr 1fr; min-height: 100vh; }
+        .brand { position: relative; background: radial-gradient(circle at 15% 12%, rgba(153,204,51,0.16), transparent 40%), linear-gradient(160deg, var(--sherq-blue) 0%, var(--sherq-blue-mid) 100%); color: #fff; padding: 56px 56px 44px; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; }
+        .dotgrid { position: absolute; inset: 0; background-image: radial-gradient(rgba(255,255,255,0.10) 1.4px, transparent 1.4px); background-size: 22px 22px; mask-image: radial-gradient(circle at 75% 70%, black 0%, transparent 65%); pointer-events: none; }
+        .logo-mark { position: relative; z-index: 2; display: flex; align-items: center; gap: 14px; }
+        .company-logo { height: 38px; width: auto; object-fit: contain; }
+        .logo-text-group { display: flex; flex-direction: column; }
+        .logo-word { font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 17px; letter-spacing: 0.2px; line-height: 1.15; color: #FFFFFF; }
+        .logo-word .sherq-part { color: var(--sherq-green); }
+        .logo-sub { font-family: 'IBM Plex Mono', monospace; font-size: 9.5px; letter-spacing: 2.5px; color: rgba(255,255,255,0.55); margin-top: 3px; text-transform: uppercase; display: block; }
+        .brand-hero { position: relative; z-index: 2; margin-top: 40px; }
+        .brand-eyebrow { font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--sherq-green); margin-bottom: 18px; display: flex; align-items: center; gap: 10px; }
+        .brand-eyebrow::before { content: ""; width: 22px; height: 1.5px; background: var(--sherq-green); display: inline-block; }
+        .brand-hero h1 { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 44px; line-height: 1.04; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 18px; max-width: 460px; }
+        .brand-hero h1 em { color: var(--sherq-green); font-style: normal; }
+        .brand-hero p { font-size: 14.5px; line-height: 1.6; color: rgba(255,255,255,0.72); max-width: 380px; margin: 0; }
+        .pillars { position: relative; z-index: 2; display: flex; flex-direction: column; margin-top: 38px; border-top: 1px solid rgba(255,255,255,0.14); }
+        .pillar { display: flex; align-items: center; gap: 14px; padding: 13px 2px; border-bottom: 1px solid rgba(255,255,255,0.14); opacity: 0.42; transition: opacity .5s ease; }
+        .pillar.active { opacity: 1; }
+        .pillar .dot { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,0.4); flex-shrink: 0; transition: background .5s ease, box-shadow .5s ease; }
+        .pillar.active .dot { background: var(--sherq-green); box-shadow: 0 0 0 4px rgba(153,204,51,0.18); }
+        .pillar .label { font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; letter-spacing: 1.5px; text-transform: uppercase; flex: 1; }
+        .pillar .status { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 1px; color: var(--sherq-green); opacity: 0; transition: opacity .4s ease; }
+        .pillar.active .status { opacity: 1; }
+        .brand-foot { position: relative; z-index: 2; font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; letter-spacing: 1px; color: rgba(255,255,255,0.4); margin-top: 40px; }
+        .formside { background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(10px); display: flex; align-items: center; justify-content: center; padding: 40px; }
+        .login-container { width: 100%; max-width: 420px; background: #ffffff; padding: 45px 40px; border-radius: 28px; box-shadow: 0 16px 36px rgba(26, 54, 93, 0.08), 0 4px 12px rgba(0, 0, 0, 0.03); border: 1px solid rgba(230, 233, 239, 0.8); }
+        .login-container .kicker { font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 2.5px; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 10px; }
+        .login-container h2 { color: var(--sherq-blue); font-family: 'Archivo', sans-serif; font-weight: 700; font-size: 25px; margin: 0 0 6px; text-align: left; }
+        .login-container .sub { font-size: 13.5px; color: var(--ink-soft); margin: 0 0 28px; }
+        .input-group-custom { position: relative; margin-bottom: 16px; }
+        input { width: 100%; padding: 12px 14px; border: 1.5px solid var(--line); border-radius: 10px; font-family: 'Archivo', sans-serif; font-size: 14px; background: #FCFDFE; transition: border-color .15s ease, box-shadow .15s ease; }
+        .password-input-wrapper { position: relative; }
+        .password-input-wrapper input { padding-right: 45px; margin-bottom: 0; }
+        .toggle-password { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--ink-soft); cursor: pointer; z-index: 5; font-size: 15px; }
+        .toggle-password:hover { color: var(--sherq-blue); }
+        input:focus { outline: none; border-color: var(--sherq-blue-mid); box-shadow: 0 0 0 3px rgba(36,64,158,0.12); }
+        .submit-btn { width: 100%; padding: 13px; background: var(--sherq-blue); color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: 700; font-size: 14.5px; letter-spacing: 0.3px; margin-top: 4px; transition: background .15s ease, transform .1s ease; }
+        .submit-btn:hover { background: var(--sherq-blue-mid); }
+        .submit-btn:active { transform: translateY(1px); }
+        .error { color: #DC2626; font-size: 13px; margin-bottom: 15px; text-align: center; min-height: 16px; }
+        .site-header { background-color: var(--sherq-blue); padding: 18px 30px; border-bottom: 4px solid var(--sherq-green); display: flex; align-items: center; justify-content: flex-start; }
+        .dashboard { display: flex; height: calc(100vh - 76px); }
+        .sidebar { width: 250px; background: var(--sherq-blue); color: white; padding: 20px; }
+        .content { flex-grow: 1; padding: 30px; background-color: var(--sherq-bg); overflow-y: auto; }
+        .nav-item { padding: 12px 0; cursor: pointer; border-bottom: 1px solid rgba(255, 255, 255, 0.1); font-size: 14px; }
+        .nav-item:hover { color: var(--sherq-green); }
+        @media (max-width: 880px) { #loginScreen { grid-template-columns: 1fr; } .brand { padding: 36px 28px; min-height: 260px; } .brand-hero h1 { font-size: 30px; } .pillars { display: none; } .formside { padding: 32px 24px; } }
+        .wf-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 24px; flex-wrap: wrap; gap: 14px; }
+        .wf-header h1 { color: var(--sherq-blue); margin: 0 0 4px; font-size: 24px; }
+        .wf-header p { color: var(--ink-soft); margin: 0; font-size: 13.5px; }
+        .wf-add-btn { background: var(--sherq-blue); color: #fff; border: none; padding: 11px 18px; border-radius: 8px; font-weight: 700; font-size: 13.5px; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: background .15s ease; }
+        .wf-add-btn:hover { background: var(--sherq-blue-mid); }
+        .wf-toolbar { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+        .wf-search { flex: 1; min-width: 220px; position: relative; }
+        .wf-search input { padding-left: 38px; margin-bottom: 0; }
+        .wf-search i { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); color: var(--ink-soft); font-size: 13px; }
+        .wf-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 24px; }
+        .wf-stat-card { background: #fff; border-radius: 12px; padding: 16px 18px; border: 1px solid var(--line); }
+        .wf-stat-card .label { font-size: 12px; color: var(--ink-soft); margin-bottom: 6px; }
+        .wf-stat-card .value { font-size: 26px; font-weight: 800; color: var(--sherq-blue); }
+        .wf-stat-card.active .value { color: var(--sherq-green); }
+        .wf-stat-card.inactive .value { color: #DC2626; }
+        .wf-table-wrap { background: #fff; border-radius: 12px; border: 1px solid var(--line); overflow: hidden; }
+        table.wf-table { width: 100%; border-collapse: collapse; }
+        table.wf-table th { text-align: left; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--ink-soft); background: #FAFBFC; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+        table.wf-table td { padding: 13px 16px; font-size: 13.5px; color: #1D2333; border-bottom: 1px solid var(--line); }
+        table.wf-table tr:last-child td { border-bottom: none; }
+        table.wf-table tbody tr { cursor: pointer; }
+        table.wf-table tbody tr:hover { background: #FAFBFC; }
+        .wf-badge { display: inline-block; padding: 4px 11px; border-radius: 20px; font-size: 11.5px; font-weight: 700; }
+        .wf-badge.active-badge { background: rgba(153,204,51,0.15); color: #5C7A1D; }
+        .wf-badge.inactive-badge { background: rgba(220,38,38,0.1); color: #DC2626; }
+        .wf-action-btn { border: none; background: none; cursor: pointer; font-size: 13px; padding: 5px 8px; border-radius: 6px; margin-right: 4px; }
+        .wf-action-btn.deactivate { color: #B45309; }
+        .wf-action-btn.deactivate:hover { background: #FEF3C7; }
+        .wf-action-btn.delete { color: #DC2626; }
+        .wf-action-btn.delete:hover { background: #FEE2E2; }
+        .wf-empty { text-align: center; padding: 40px; color: var(--ink-soft); font-size: 13.5px; }
+        .wf-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.5); z-index: 100; align-items: center; justify-content: center; padding: 20px; }
+        .wf-modal-overlay.open { display: flex; }
+        .wf-modal { background: #fff; border-radius: 16px; width: 100%; max-width: 640px; max-height: 88vh; display: flex; flex-direction: column; }
+        .wf-modal-header { padding: 20px 24px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; }
+        .wf-modal-header h2 { font-size: 18px; color: var(--sherq-blue); margin: 0; }
+        .wf-modal-step-label { font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--ink-soft); margin-top: 3px; }
+        .wf-modal-close { background: none; border: none; font-size: 18px; color: var(--ink-soft); cursor: pointer; }
+        .wf-modal-body { padding: 20px 24px; overflow-y: auto; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+        .wf-modal-body .full-width { grid-column: 1 / -1; }
+        .wf-field label { display: block; font-size: 12px; font-weight: 600; color: var(--sherq-blue); margin-bottom: 5px; }
+        .wf-field input, .wf-field select, .wf-field textarea { width: 100%; padding: 9px 11px; border: 1.5px solid var(--line); border-radius: 8px; font-family: 'Archivo', sans-serif; font-size: 13.5px; }
+        .wf-modal-footer { padding: 16px 24px; border-top: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+        .wf-btn-secondary { padding: 10px 18px; border-radius: 8px; border: 1.5px solid var(--line); background: #fff; color: var(--ink-soft); font-weight: 600; font-size: 13.5px; cursor: pointer; }
+        .wf-btn-primary { padding: 10px 18px; border-radius: 8px; border: none; background: var(--sherq-blue); color: #fff; font-weight: 700; font-size: 13.5px; cursor: pointer; }
+        .wf-btn-primary:hover { background: var(--sherq-blue-mid); }
+        .wf-btn-ghost { padding: 10px 16px; border-radius: 8px; border: none; background: none; color: var(--ink-soft); font-weight: 600; font-size: 13.5px; cursor: pointer; }
+        .wf-btn-ghost:hover { text-decoration: underline; }
+        .wf-account-note { grid-column: 1 / -1; background: #F0F4FF; border: 1px solid #DCE4FA; border-radius: 10px; padding: 12px 14px; font-size: 12.5px; color: var(--sherq-blue-mid); margin-bottom: 4px; }
+        .wf-password-row { display: flex; gap: 8px; }
+        .wf-password-row input { flex: 1; }
+        .wf-gen-btn { white-space: nowrap; padding: 0 12px; border-radius: 8px; border: 1.5px solid var(--line); background: #FAFBFC; color: var(--sherq-blue-mid); font-size: 12px; font-weight: 700; cursor: pointer; }
+        .wf-gen-btn:hover { background: #F0F4FF; }
+        .wf-doc-row { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border: 1.5px solid var(--line); border-radius: 10px; margin-bottom: 4px; }
+        .wf-doc-row .doc-label { font-size: 13px; font-weight: 700; color: var(--sherq-blue); display: flex; align-items: center; gap: 8px; }
+        .wf-doc-row input[type="file"] { font-size: 12px; padding: 4px; border: none; }
+        .ep-back { background: none; border: none; color: var(--sherq-blue-mid); font-size: 13.5px; font-weight: 600; cursor: pointer; margin-bottom: 20px; display: flex; align-items: center; gap: 8px; padding: 0; }
+        .ep-back:hover { text-decoration: underline; }
+        .ep-header { background: #fff; border-radius: 14px; border: 1px solid var(--line); padding: 26px; margin-bottom: 24px; display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 18px; }
+        .ep-header-left { display: flex; align-items: flex-start; gap: 18px; }
+        .ep-avatar { width: 72px; height: 72px; border-radius: 50%; background: var(--sherq-blue); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: 800; flex-shrink: 0; }
+        .ep-name-row { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; flex-wrap: wrap; }
+        .ep-name-row h1 { font-size: 24px; color: var(--sherq-blue); margin: 0; }
+        .ep-jobtitle { color: var(--ink-soft); font-size: 14.5px; margin: 0 0 12px; }
+        .ep-meta { display: flex; gap: 20px; flex-wrap: wrap; font-size: 13px; color: var(--ink-soft); }
+        .ep-meta span { display: flex; align-items: center; gap: 6px; }
+        .ep-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+        .ep-btn { padding: 9px 16px; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; border: none; display: flex; align-items: center; gap: 7px; }
+        .ep-btn-edit { background: var(--sherq-blue); color: #fff; }
+        .ep-btn-edit:hover { background: var(--sherq-blue-mid); }
+        .ep-btn-deactivate { background: #FEF3C7; color: #B45309; }
+        .ep-btn-deactivate:hover { background: #FDE68A; }
+        .ep-btn-delete { background: #FEE2E2; color: #DC2626; }
+        .ep-btn-delete:hover { background: #FECACA; }
+        .ep-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .ep-card { background: #fff; border-radius: 14px; border: 1px solid var(--line); padding: 22px; }
+        .ep-card h2 { font-size: 15px; color: var(--sherq-blue); margin: 0 0 16px; display: flex; align-items: center; justify-content: space-between; }
+        .ep-field { margin-bottom: 14px; }
+        .ep-field:last-child { margin-bottom: 0; }
+        .ep-field .l { font-size: 11.5px; color: var(--ink-soft); margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.4px; }
+        .ep-field .v { font-size: 14px; color: #1D2333; }
+        .ep-credentials-empty { font-size: 13px; color: var(--ink-soft); margin-bottom: 14px; }
+        .ep-small-btn { border: 1.5px solid var(--line); background: #fff; color: var(--sherq-blue-mid); font-size: 12px; font-weight: 700; padding: 6px 12px; border-radius: 7px; cursor: pointer; }
+        .ep-small-btn:hover { background: #F0F4FF; }
+        .ep-card.credentials-card { border-color: #DCE4FA; background: #FAFBFF; }
+        .ep-mono { font-family: 'IBM Plex Mono', monospace; }
+        .ep-doc-item { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--line); }
+        .ep-doc-item:last-child { border-bottom: none; }
+        .ep-doc-name { font-size: 13.5px; font-weight: 600; color: #1D2333; display: flex; align-items: center; gap: 8px; }
+        .ep-doc-status { font-size: 11.5px; font-weight: 700; padding: 3px 9px; border-radius: 20px; }
+        .ep-doc-status.uploaded { background: rgba(153,204,51,0.15); color: #5C7A1D; }
+        .ep-doc-status.missing { background: #F3F4F6; color: #6B7280; }
+        @media (max-width: 880px) { .ep-grid { grid-template-columns: 1fr; } }
+        #hrSubmenu .nav-item { padding-left: 6px; }
+        #hrChevron { transition: transform .2s ease; }
+
+        /* ============ LEAVE VIEW ============ */
+        .lv-section-title {
+            font-size: 15px;
+            color: var(--sherq-blue);
+            font-weight: 700;
+            margin: 28px 0 14px;
+        }
+        .lv-section-title:first-child { margin-top: 0; }
+        .lv-balance-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 14px;
+            margin-bottom: 10px;
+        }
+        .lv-balance-card {
+            background: #fff;
+            border-radius: 14px;
+            border: 1px solid var(--line);
+            padding: 18px;
+        }
+        .lv-balance-card .lv-type {
+            font-size: 12.5px;
+            font-weight: 700;
+            color: var(--sherq-blue);
+            margin-bottom: 10px;
+        }
+        .lv-balance-card .lv-remaining {
+            font-size: 28px;
+            font-weight: 800;
+            color: var(--sherq-green);
+            line-height: 1;
+        }
+        .lv-balance-card .lv-remaining span {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--ink-soft);
+        }
+        .lv-progress-track {
+            background: #F0F1F3;
+            border-radius: 20px;
+            height: 6px;
+            margin-top: 12px;
+            overflow: hidden;
+        }
+        .lv-progress-fill {
+            background: var(--sherq-green);
+            height: 100%;
+            border-radius: 20px;
+        }
+        .lv-request-btn {
+            background: var(--sherq-blue);
+            color: #fff;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 13.5px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 4px;
+        }
+        .lv-request-btn:hover { background: var(--sherq-blue-mid); }
+        .lv-status-badge {
+            display: inline-block;
+            padding: 4px 11px;
+            border-radius: 20px;
+            font-size: 11.5px;
+            font-weight: 700;
+        }
+        .lv-status-badge.status-Pending { background: rgba(217,119,6,0.12); color: #B45309; }
+        .lv-status-badge.status-Approved { background: rgba(153,204,51,0.15); color: #5C7A1D; }
+        .lv-status-badge.status-Rejected { background: rgba(220,38,38,0.1); color: #DC2626; }
+        .lv-approve-btn, .lv-reject-btn {
+            border: none;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 700;
+            padding: 6px 12px;
+            cursor: pointer;
+            margin-right: 6px;
+        }
+        .lv-approve-btn { background: rgba(153,204,51,0.15); color: #5C7A1D; }
+        .lv-approve-btn:hover { background: rgba(153,204,51,0.28); }
+        .lv-reject-btn { background: rgba(220,38,38,0.1); color: #DC2626; }
+        .lv-reject-btn:hover { background: rgba(220,38,38,0.2); }
+        @media (max-width: 880px) { .lv-balance-grid { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+
+    <div id="loginScreen">
+        <div class="brand">
+            <div class="dotgrid"></div>
+            <div class="logo-mark">
+                <img src="https://static.wixstatic.com/media/48021b_d585e66e35b84171968a4275ccf39bdc~mv2.png" alt="RSS Logo" class="company-logo">
+                <div class="logo-text-group">
+                    <span class="logo-word">REGINALD<span class="sherq-part">SHERQ</span>SERVICES</span>
+                    <span class="logo-sub">SAFETY • HEALTH • ENVIRONMENT • RISK • QUALITY</span>
+                </div>
+            </div>
+            <div class="brand-hero">
+                <div class="brand-eyebrow">Staff Portal</div>
+                <h1>Stay Safe.<br>Stay <em>Compliant</em>.<br>Stay Competitive.</h1>
+                <p>Sign in to manage your organisation's Safety, Health, Environment, Risk and Quality performance — all in one integrated portal.</p>
+                <div class="pillars" id="pillars">
+                    <div class="pillar" data-i="0"><span class="dot"></span><span class="label">Safety</span><span class="status">Monitoring</span></div>
+                    <div class="pillar" data-i="1"><span class="dot"></span><span class="label">Health</span><span class="status">Monitoring</span></div>
+                    <div class="pillar" data-i="2"><span class="dot"></span><span class="label">Environment</span><span class="status">Monitoring</span></div>
+                    <div class="pillar" data-i="3"><span class="dot"></span><span class="label">Risk</span><span class="status">Monitoring</span></div>
+                    <div class="pillar" data-i="4"><span class="dot"></span><span class="label">Quality</span><span class="status">Monitoring</span></div>
+                </div>
+            </div>
+            <div class="brand-foot">©️ 2026 Reginald SHERQ Services</div>
+        </div>
+        <div class="formside">
+            <div class="login-container">
+                <div class="kicker">Staff Portal</div>
+                <h2><i class="fas fa-lock"></i> Sign In</h2>
+                <p class="sub">Sign in with your RSS credentials to continue.</p>
+                <div id="errorMsg" class="error"></div>
+                <div class="input-group-custom">
+                    <input type="text" id="username" placeholder="Username">
+                </div>
+                <div class="input-group-custom password-input-wrapper">
+                    <input type="password" id="password" placeholder="Password">
+                    <button type="button" class="toggle-password" onclick="togglePasswordVisibility()">
+                        <i class="fas fa-eye" id="eyeIcon"></i>
+                    </button>
+                </div>
+                <button class="submit-btn" onclick="handleLogin()">Sign In</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="dashboardScreen" style="display: none;">
+        <header class="site-header">
+            <div class="logo-mark" style="display: flex; align-items: center; gap: 14px;">
+                <img src="https://static.wixstatic.com/media/48021b_d585e66e35b84171968a4275ccf39bdc~mv2.png" alt="RSS Logo" class="company-logo">
+                <div class="logo-text-group">
+                    <span class="logo-word">REGINALD<span class="sherq-part">SHERQ</span>SERVICES</span>
+                    <span class="logo-sub">SAFETY • HEALTH • ENVIRONMENT • RISK • QUALITY</span>
+                </div>
+            </div>
+        </header>
+        <div class="dashboard">
+            <div class="sidebar">
+                <h3 id="welcomeUser" style="font-size: 15px; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 15px; margin-top: 0;"></h3>
+                <div class="nav-item" onclick="showDashboardHome()">Dashboard</div>
+
+                <div id="hrSection" class="nav-item" onclick="toggleHrMenu()" style="display: none; color: var(--sherq-green); font-weight: bold;">
+                    <i class="fas fa-users"></i> HR
+                    <i class="fas fa-chevron-down" id="hrChevron" style="float: right; font-size: 11px; margin-top: 3px;"></i>
+                </div>
+                <div id="hrSubmenu" style="display: none; padding-left: 14px;">
+                    <div class="nav-item" id="hrEmployeesItem" style="font-size: 13px;">Employees</div>
+                    <div class="nav-item" onclick="showLeaveView()" style="font-size: 13px;">Leave</div>
+                    <div class="nav-item" onclick="showHrPlaceholder('Courses')" style="font-size: 13px;">Courses</div>
+                    <div class="nav-item" onclick="showHrPlaceholder('Timesheets')" style="font-size: 13px;">Timesheets</div>
+                </div>
+
+                <div id="financeSection" class="nav-item" style="display: none; color: var(--sherq-green); font-weight: bold;">
+                    <i class="fas fa-wallet"></i> Finance 
+                </div>
+                <div class="nav-item" onclick="handleLogout()" style="margin-top: 50px; color: #94A3B8; border-bottom: none;">Logout</div>
+            </div>
+            <div class="content">
+                <div id="dashboardHomeView">
+                    <h1 id="pageTitle" style="color: var(--sherq-blue); margin-top: 0;">Dashboard Overview</h1>
+                    <p id="pageDescription" style="color: #475569;">Welcome to the portal.</p>
+                </div>
+
+                <div id="workforceView" style="display: none;">
+                    <div class="wf-header">
+                        <div>
+                            <h1>Employees</h1>
+                            <p>Manage employee records for your organisation</p>
+                        </div>
+                        <button class="wf-add-btn" onclick="openAddEmployeeModal()">
+                            <i class="fas fa-user-plus"></i> Add Employee
+                        </button>
+                    </div>
+                    <div class="wf-stats">
+                        <div class="wf-stat-card">
+                            <div class="label">Total Employees</div>
+                            <div class="value" id="wfTotalCount">0</div>
+                        </div>
+                        <div class="wf-stat-card active">
+                            <div class="label">Active</div>
+                            <div class="value" id="wfActiveCount">0</div>
+                        </div>
+                        <div class="wf-stat-card inactive">
+                            <div class="label">Inactive</div>
+                            <div class="value" id="wfInactiveCount">0</div>
+                        </div>
+                    </div>
+                    <div class="wf-toolbar">
+                        <div class="wf-search">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="wfSearchInput" placeholder="Search by name, email, or job title..." oninput="renderEmployeeTable()">
+                        </div>
+                    </div>
+                    <div class="wf-table-wrap">
+                        <table class="wf-table">
+                            <thead>
+                                <tr>
+                                    <th>Full Name</th>
+                                    <th>Email</th>
+                                    <th>Job Title</th>
+                                    <th>Department</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="wfTableBody"></tbody>
+                        </table>
+                        <div id="wfEmptyState" class="wf-empty" style="display:none;">No employees found.</div>
+                    </div>
+                </div>
+
+                <div id="hrPlaceholderView" style="display: none;">
+                    <h1 id="hrPlaceholderTitle" style="color: var(--sherq-blue); margin-top: 0;">—</h1>
+                    <p style="color: var(--ink-soft);">This section is under development.</p>
+                </div>
+
+                <!-- LEAVE VIEW -->
+                <div id="leaveView" style="display: none;">
+                    <div class="wf-header">
+                        <div>
+                            <h1>Leave Management</h1>
+                            <p>View leave balances, request leave, and track history</p>
+                        </div>
+                    </div>
+
+                    <!-- Admin-only pending approvals -->
+                    <div id="lvApprovalsSection" style="display: none;">
+                        <div class="lv-section-title"><i class="fas fa-clock"></i> Pending Approvals</div>
+                        <div class="wf-table-wrap" style="margin-bottom: 10px;">
+                            <table class="wf-table">
+                                <thead>
+                                    <tr>
+                                        <th>Employee</th>
+                                        <th>Type</th>
+                                        <th>Dates</th>
+                                        <th>Days</th>
+                                        <th>Reason</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="lvApprovalsBody"></tbody>
+                            </table>
+                            <div id="lvApprovalsEmpty" class="wf-empty" style="display:none;">No pending leave requests.</div>
+                        </div>
+                    </div>
+
+                    <!-- Personal leave section -->
+                    <div id="lvPersonalSection">
+                        <div class="lv-section-title"><i class="fas fa-umbrella-beach"></i> Your Leave Balance</div>
+                        <div class="lv-balance-grid" id="lvBalanceGrid"></div>
+
+                        <button class="lv-request-btn" onclick="openLeaveRequestModal()">
+                            <i class="fas fa-plus"></i> Request Leave
+                        </button>
+
+                        <div class="lv-section-title">Leave History</div>
+                        <div class="wf-table-wrap">
+                            <table class="wf-table">
+                                <thead>
+                                    <tr>
+                                        <th>Type</th>
+                                        <th>Dates</th>
+                                        <th>Days</th>
+                                        <th>Reason</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="lvHistoryBody"></tbody>
+                            </table>
+                            <div id="lvHistoryEmpty" class="wf-empty" style="display:none;">No leave history yet.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="profileView" style="display: none;">
+                    <button class="ep-back" onclick="backFromProfile()">
+                        <i class="fas fa-arrow-left"></i> Back
+                    </button>
+                    <div class="ep-header">
+                        <div class="ep-header-left">
+                            <div class="ep-avatar" id="epAvatar">--</div>
+                            <div>
+                                <div class="ep-name-row">
+                                    <h1 id="epName">—</h1>
+                                    <span class="wf-badge" id="epStatusBadge">—</span>
+                                </div>
+                                <p class="ep-jobtitle" id="epJobTitle">—</p>
+                                <div class="ep-meta">
+                                    <span><i class="fas fa-envelope"></i> <span id="epEmail">—</span></span>
+                                    <span><i class="fas fa-phone"></i> <span id="epMobile">—</span></span>
+                                    <span><i class="fas fa-building"></i> <span id="epDepartment">—</span></span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="ep-actions" id="epActionsBar">
+                            <button class="ep-btn ep-btn-edit" onclick="openEditFromProfile()"><i class="fas fa-edit"></i> Edit Profile</button>
+                            <button class="ep-btn ep-btn-deactivate" onclick="deactivateFromProfile()"><i class="fas fa-user-slash"></i> Deactivate</button>
+                            <button class="ep-btn ep-btn-delete" onclick="deleteFromProfile()"><i class="fas fa-trash"></i> Delete</button>
+                        </div>
+                    </div>
+                    <div class="ep-grid">
+                        <div class="ep-card">
+                            <h2>Personal Information</h2>
+                            <div class="ep-field"><div class="l">Full Name</div><div class="v" id="epFullName">—</div></div>
+                            <div class="ep-field"><div class="l">Date of Birth</div><div class="v" id="epDob">—</div></div>
+                            <div class="ep-field"><div class="l">ID Number</div><div class="v" id="epIdNumber">—</div></div>
+                            <div class="ep-field"><div class="l">Gender</div><div class="v" id="epGender">—</div></div>
+                            <div class="ep-field"><div class="l">Nationality</div><div class="v" id="epNationality">—</div></div>
+                        </div>
+                        <div class="ep-card">
+                            <h2>Contact Information</h2>
+                            <div class="ep-field"><div class="l">Email</div><div class="v" id="epEmail2">—</div></div>
+                            <div class="ep-field"><div class="l">Office Phone</div><div class="v" id="epPhone">—</div></div>
+                            <div class="ep-field"><div class="l">Mobile Phone</div><div class="v" id="epMobile2">—</div></div>
+                            <div class="ep-field"><div class="l">Address</div><div class="v" id="epAddress">—</div></div>
+                        </div>
+                        <div class="ep-card">
+                            <h2>Employment Details</h2>
+                            <div class="ep-field"><div class="l">Job Title</div><div class="v" id="epJobTitle2">—</div></div>
+                            <div class="ep-field"><div class="l">Department</div><div class="v" id="epDepartment2">—</div></div>
+                            <div class="ep-field"><div class="l">Employment Type</div><div class="v" id="epEmploymentType">—</div></div>
+                            <div class="ep-field"><div class="l">Start Date</div><div class="v" id="epStartDate">—</div></div>
+                            <div class="ep-field"><div class="l">Contract End Date</div><div class="v" id="epContractEnd">—</div></div>
+                            <div class="ep-field"><div class="l">Salary Grade</div><div class="v" id="epSalaryGrade">—</div></div>
+                            <div class="ep-field"><div class="l">Work Schedule</div><div class="v" id="epWorkSchedule">—</div></div>
+                        </div>
+                        <div class="ep-card">
+                            <h2>Emergency Contact</h2>
+                            <div class="ep-field"><div class="l">Contact Name</div><div class="v" id="epEmergencyContact">—</div></div>
+                            <div class="ep-field"><div class="l">Phone Number</div><div class="v" id="epEmergencyPhone">—</div></div>
+                        </div>
+                        <div class="ep-card credentials-card full-width" style="grid-column: 1 / -1;">
+                            <h2>
+                                <span><i class="fas fa-key"></i> Login Credentials</span>
+                                <button class="ep-small-btn" id="epCredentialsBtn" onclick="openCredentialsModal()">Create Login</button>
+                            </h2>
+                            <div id="epCredentialsEmpty" class="ep-credentials-empty">No login account has been created for this employee yet.</div>
+                            <div id="epCredentialsFilled" style="display:none;">
+                                <div class="ep-field"><div class="l">Username</div><div class="v ep-mono" id="epLoginUsername">—</div></div>
+                                <div class="ep-field"><div class="l">Password</div><div class="v ep-mono" id="epLoginPassword">—</div></div>
+                                <div class="ep-field"><div class="l">Role</div><div class="v" id="epLoginRole">—</div></div>
+                            </div>
+                        </div>
+                        <div class="ep-card full-width" style="grid-column: 1 / -1;">
+                            <h2>
+                                <span><i class="fas fa-folder-open"></i> Documents</span>
+                                <button class="ep-small-btn" id="epDocsUploadBtn" onclick="openDocumentsModal()">Upload / Replace</button>
+                            </h2>
+                            <div class="ep-doc-item">
+                                <span class="ep-doc-name"><i class="fas fa-id-card"></i> ID Document</span>
+                                <span id="epDocIdStatus"></span>
+                            </div>
+                            <div class="ep-doc-item">
+                                <span class="ep-doc-name"><i class="fas fa-file-signature"></i> Employment Contract</span>
+                                <span id="epDocEmploymentStatus"></span>
+                            </div>
+                            <div class="ep-doc-item">
+                                <span class="ep-doc-name"><i class="fas fa-file-contract"></i> RSS Contract</span>
+                                <span id="epDocRssStatus"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="wf-modal-overlay" id="wfModalOverlay">
+        <div class="wf-modal">
+            <div class="wf-modal-header">
+                <div>
+                    <h2 id="wfModalTitle">Add Employee</h2>
+                    <div class="wf-modal-step-label" id="wfModalStepLabel" style="display:none;">Step 1 of 3 — Employee Details</div>
+                </div>
+                <button class="wf-modal-close" onclick="closeAddEmployeeModal()">✕</button>
+            </div>
+            <div class="wf-modal-body" id="wfStep1Body">
+                <div class="wf-field"><label>First Name</label><input type="text" id="f_first_name"></div>
+                <div class="wf-field"><label>Last Name</label><input type="text" id="f_last_name"></div>
+                <div class="wf-field"><label>Email</label><input type="email" id="f_email"></div>
+                <div class="wf-field"><label>Job Title</label><input type="text" id="f_job_title"></div>
+                <div class="wf-field"><label>Date of Birth</label><input type="date" id="f_date_of_birth"></div>
+                <div class="wf-field"><label>ID Number</label><input type="text" id="f_id_number"></div>
+                <div class="wf-field">
+                    <label>Gender</label>
+                    <select id="f_gender"><option value="">Select</option><option>Male</option><option>Female</option></select>
+                </div>
+                <div class="wf-field"><label>Nationality</label><input type="text" id="f_nationality"></div>
+                <div class="wf-field"><label>Phone</label><input type="text" id="f_phone"></div>
+                <div class="wf-field"><label>Mobile</label><input type="text" id="f_mobile"></div>
+                <div class="wf-field full-width"><label>Address</label><input type="text" id="f_address"></div>
+                <div class="wf-field"><label>Department</label><input type="text" id="f_department"></div>
+                <div class="wf-field"><label>Employment Type</label><input type="text" id="f_employment_type" placeholder="e.g. Full-time"></div>
+                <div class="wf-field"><label>Start Date</label><input type="date" id="f_start_date"></div>
+                <div class="wf-field"><label>Contract End Date</label><input type="date" id="f_contract_end_date"></div>
+                <div class="wf-field"><label>Salary Grade</label><input type="text" id="f_salary_grade"></div>
+                <div class="wf-field">
+                    <label>Status</label>
+                    <select id="f_employement_status"><option value="Active">Active</option><option value="Inactive">Inactive</option></select>
+                </div>
+                <div class="wf-field full-width"><label>Work Schedule</label><input type="text" id="f_work_schedule"></div>
+                <div class="wf-field"><label>Emergency Contact</label><input type="text" id="f_emergency_contact"></div>
+                <div class="wf-field"><label>Emergency Phone</label><input type="text" id="f_emergency_phone"></div>
+            </div>
+            <div class="wf-modal-body" id="wfStep2Body" style="display:none;">
+                <div class="wf-account-note">Optional — create login credentials now so this employee can sign in, or skip and add them later from their profile.</div>
+                <div class="wf-field"><label>Username</label><input type="text" id="acc_username" placeholder="e.g. j.dlamini"></div>
+                <div class="wf-field">
+                    <label>Role</label>
+                    <select id="acc_role"><option value="intern">Intern</option><option value="manager">Manager</option><option value="admin">Admin</option></select>
+                </div>
+                <div class="wf-field full-width">
+                    <label>Password</label>
+                    <div class="wf-password-row">
+                        <input type="text" id="acc_password" placeholder="Click Generate or type your own">
+                        <button type="button" class="wf-gen-btn" onclick="generatePassword('acc_password')">Generate</button>
+                    </div>
+                </div>
+            </div>
+            <div class="wf-modal-body" id="wfStep3Body" style="display:none;">
+                <div class="wf-account-note">Optional — upload documents now, or add them later from the employee's profile.</div>
+                <div class="wf-doc-row">
+                    <span class="doc-label"><i class="fas fa-id-card"></i> ID Document</span>
+                    <input type="file" id="doc_id_document" accept=".pdf,.jpg,.jpeg,.png">
+                </div>
+                <div class="wf-doc-row">
+                    <span class="doc-label"><i class="fas fa-file-signature"></i> Employment Contract</span>
+                    <input type="file" id="doc_employment_contract" accept=".pdf,.jpg,.jpeg,.png">
+                </div>
+                <div class="wf-doc-row">
+                    <span class="doc-label"><i class="fas fa-file-contract"></i> RSS Contract</span>
+                    <input type="file" id="doc_rss_contract" accept=".pdf,.jpg,.jpeg,.png">
+                </div>
+            </div>
+            <div class="wf-modal-footer">
+                <button class="wf-btn-secondary" onclick="closeAddEmployeeModal()">Cancel</button>
+                <div style="display:flex; gap:10px;">
+                    <button class="wf-btn-ghost" id="wfBackBtn" style="display:none;" onclick="goToStep(currentStep - 1)">← Back</button>
+                    <button class="wf-btn-ghost" id="wfSkipBtn" style="display:none;" onclick="goToStep(currentStep + 1)">Skip →</button>
+                    <button class="wf-btn-primary" id="wfModalSaveBtn" onclick="handleModalPrimaryAction()">Next →</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="wf-modal-overlay" id="credModalOverlay">
+        <div class="wf-modal" style="max-width: 420px;">
+            <div class="wf-modal-header">
+                <h2 id="credModalTitle">Create Login</h2>
+                <button class="wf-modal-close" onclick="closeCredentialsModal()">✕</button>
+            </div>
+            <div class="wf-modal-body" style="grid-template-columns: 1fr;">
+                <div class="wf-field"><label>Username</label><input type="text" id="cr_username"></div>
+                <div class="wf-field">
+                    <label>Role</label>
+                    <select id="cr_role"><option value="intern">Intern</option><option value="manager">Manager</option><option value="admin">Admin</option></select>
+                </div>
+                <div class="wf-field">
+                    <label>Password <span id="crPasswordHint" style="font-weight:400; color:var(--ink-soft);"></span></label>
+                    <div class="wf-password-row">
+                        <input type="text" id="cr_password" placeholder="Leave blank to keep current password">
+                        <button type="button" class="wf-gen-btn" onclick="generatePassword('cr_password')">Generate</button>
+                    </div>
+                </div>
+            </div>
+            <div class="wf-modal-footer">
+                <button class="wf-btn-secondary" onclick="closeCredentialsModal()">Cancel</button>
+                <button class="wf-btn-primary" onclick="saveCredentials()">Save Login</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="wf-modal-overlay" id="docModalOverlay">
+        <div class="wf-modal" style="max-width: 480px;">
+            <div class="wf-modal-header">
+                <h2>Upload / Replace Documents</h2>
+                <button class="wf-modal-close" onclick="closeDocumentsModal()">✕</button>
+            </div>
+            <div class="wf-modal-body" style="grid-template-columns: 1fr;">
+                <div class="wf-account-note">Only choose a file for the document(s) you want to upload or replace — leave others blank to keep what's already there.</div>
+                <div class="wf-doc-row">
+                    <span class="doc-label"><i class="fas fa-id-card"></i> ID Document</span>
+                    <input type="file" id="modal_doc_id_document" accept=".pdf,.jpg,.jpeg,.png">
+                </div>
+                <div class="wf-doc-row">
+                    <span class="doc-label"><i class="fas fa-file-signature"></i> Employment Contract</span>
+                    <input type="file" id="modal_doc_employment_contract" accept=".pdf,.jpg,.jpeg,.png">
+                </div>
+                <div class="wf-doc-row">
+                    <span class="doc-label"><i class="fas fa-file-contract"></i> RSS Contract</span>
+                    <input type="file" id="modal_doc_rss_contract" accept=".pdf,.jpg,.jpeg,.png">
+                </div>
+            </div>
+            <div class="wf-modal-footer">
+                <button class="wf-btn-secondary" onclick="closeDocumentsModal()">Cancel</button>
+                <button class="wf-btn-primary" onclick="saveDocumentsFromProfile()">Upload</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- REQUEST LEAVE MODAL -->
+    <div class="wf-modal-overlay" id="leaveModalOverlay">
+        <div class="wf-modal" style="max-width: 460px;">
+            <div class="wf-modal-header">
+                <h2>Request Leave</h2>
+                <button class="wf-modal-close" onclick="closeLeaveRequestModal()">✕</button>
+            </div>
+            <div class="wf-modal-body" style="grid-template-columns: 1fr;">
+                <div class="wf-field">
+                    <label>Leave Type</label>
+                    <select id="lv_leave_type">
+                        <option value="Annual">Annual</option>
+                        <option value="Sick">Sick</option>
+                        <option value="Family Responsibility">Family Responsibility</option>
+                    </select>
+                </div>
+                <div class="wf-field"><label>Start Date</label><input type="date" id="lv_start_date" onchange="recalculateLeaveDays()"></div>
+                <div class="wf-field"><label>End Date</label><input type="date" id="lv_end_date" onchange="recalculateLeaveDays()"></div>
+                <div class="wf-field"><label>Days Requested</label><input type="number" id="lv_days_requested" min="1" readonly style="background:#F4F6F9;"></div>
+                <div class="wf-field"><label>Reason</label><textarea id="lv_reason" rows="3"></textarea></div>
+            </div>
+            <div class="wf-modal-footer">
+                <button class="wf-btn-secondary" onclick="closeLeaveRequestModal()">Cancel</button>
+                <button class="wf-btn-primary" onclick="submitLeaveRequest()">Submit Request</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'https://scheme-absurd-seduce.ngrok-free.dev';
+        const API_HEADERS = { 'ngrok-skip-browser-warning': 'true' };
+
+        function togglePasswordVisibility() {
+            const passwordInput = document.getElementById('password');
+            const eyeIcon = document.getElementById('eyeIcon');
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                eyeIcon.classList.remove('fa-eye');
+                eyeIcon.classList.add('fa-eye-slash');
+            } else {
+                passwordInput.type = 'password';
+                eyeIcon.classList.remove('fa-eye-slash');
+                eyeIcon.classList.add('fa-eye');
+            }
+        }
+
+        let currentUserRole = null;
+        let currentUserEmployeeId = null;
+
+        async function handleLogin() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const errorMsg = document.getElementById('errorMsg');
+            try {
+                const response = await fetch(`${API_BASE}/api/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', ...API_HEADERS },
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    errorMsg.innerText = data.error || 'Login failed';
+                    return;
+                }
+                document.getElementById('loginScreen').style.display = 'none';
+                document.getElementById('dashboardScreen').style.display = 'block';
+                document.getElementById('welcomeUser').innerText = `Hello, ${data.user.username} (${data.user.role})`;
+
+                const role = data.user.role;
+                currentUserRole = role;
+                currentUserEmployeeId = data.user.employee_id || null;
+                const isManagement = (role === 'admin' || role === 'manager');
+
+                document.getElementById('hrSection').style.display = 'block';
+                document.getElementById('financeSection').style.display = isManagement ? 'block' : 'none';
+
+                const hrEmployeesItem = document.getElementById('hrEmployeesItem');
+                if (isManagement) {
+                    hrEmployeesItem.innerText = 'Employees';
+                    hrEmployeesItem.onclick = showWorkforce;
+                } else {
+                    hrEmployeesItem.innerText = 'Employee';
+                    hrEmployeesItem.onclick = viewOwnEmployeeProfile;
+                }
+
+                if (role === 'admin') {
+                    document.getElementById('pageDescription').innerText = 'Admin Portal: You have full access to HR and Finance management.';
+                } else if (role === 'manager') {
+                    document.getElementById('pageDescription').innerText = 'Manager Portal: You have access to HR and Finance management.';
+                } else {
+                    document.getElementById('pageDescription').innerText = 'Intern Portal: Welcome to your dashboard.';
+                }
+            } catch (err) {
+                console.error(err);
+                errorMsg.innerText = 'Server error. Is your backend running?';
+            }
+        }
+
+        function handleLogout() { location.reload(); }
+
+        const pillars = document.querySelectorAll('.pillar');
+        let pillarIndex = 0;
+        function tickPillars() {
+            pillars.forEach(p => p.classList.remove('active'));
+            pillars[pillarIndex].classList.add('active');
+            pillarIndex = (pillarIndex + 1) % pillars.length;
+        }
+        tickPillars();
+        setInterval(tickPillars, 1400);
+
+        let employeeList = [];
+        let editingEmployeeId = null;
+        let currentProfileId = null;
+        let currentProfileHasLogin = false;
+        let isOwnProfileReadOnly = false;
+        let currentStep = 1;
+
+        function hideAllContentViews() {
+            document.getElementById('dashboardHomeView').style.display = 'none';
+            document.getElementById('workforceView').style.display = 'none';
+            document.getElementById('profileView').style.display = 'none';
+            document.getElementById('hrPlaceholderView').style.display = 'none';
+            document.getElementById('leaveView').style.display = 'none';
+        }
+
+        function showDashboardHome() {
+            hideAllContentViews();
+            document.getElementById('dashboardHomeView').style.display = 'block';
+        }
+
+        async function showWorkforce() {
+            hideAllContentViews();
+            document.getElementById('workforceView').style.display = 'block';
+            await fetchEmployees();
+        }
+
+        function toggleHrMenu() {
+            const submenu = document.getElementById('hrSubmenu');
+            const chevron = document.getElementById('hrChevron');
+            const isOpen = submenu.style.display === 'block';
+            submenu.style.display = isOpen ? 'none' : 'block';
+            chevron.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
+        }
+
+        function showHrPlaceholder(sectionName) {
+            hideAllContentViews();
+            document.getElementById('hrPlaceholderTitle').innerText = sectionName;
+            document.getElementById('hrPlaceholderView').style.display = 'block';
+        }
+
+        // ============ LEAVE VIEW ============
+        async function showLeaveView() {
+            hideAllContentViews();
+            document.getElementById('leaveView').style.display = 'block';
+
+            const isAdmin = currentUserRole === 'admin';
+            document.getElementById('lvApprovalsSection').style.display = isAdmin ? 'block' : 'none';
+            if (isAdmin) {
+                await fetchPendingApprovals();
+            }
+
+            if (currentUserEmployeeId) {
+                document.getElementById('lvPersonalSection').style.display = 'block';
+                await fetchOwnLeave();
+            } else {
+                document.getElementById('lvPersonalSection').style.display = 'none';
+            }
+        }
+
+        async function fetchOwnLeave() {
+            try {
+                const response = await fetch(`${API_BASE}/api/employees/${currentUserEmployeeId}/leave`, { headers: API_HEADERS });
+                const data = await response.json();
+                renderLeaveBalances(data.balances);
+                renderLeaveHistory(data.history);
+            } catch (err) {
+                console.error('Error fetching leave data:', err);
+            }
+        }
+
+        function renderLeaveBalances(balances) {
+            const grid = document.getElementById('lvBalanceGrid');
+            grid.innerHTML = '';
+            for (const type in balances) {
+                const b = balances[type];
+                const pct = b.entitlement > 0 ? Math.max(0, Math.min(100, (b.remaining / b.entitlement) * 100)) : 0;
+                const card = document.createElement('div');
+                card.className = 'lv-balance-card';
+                card.innerHTML = `
+                    <div class="lv-type">${type}</div>
+                    <div class="lv-remaining">${b.remaining} <span>/ ${b.entitlement} days left</span></div>
+                    <div class="lv-progress-track"><div class="lv-progress-fill" style="width:${pct}%;"></div></div>
+                `;
+                grid.appendChild(card);
+            }
+        }
+
+        function renderLeaveHistory(history) {
+            const tbody = document.getElementById('lvHistoryBody');
+            const empty = document.getElementById('lvHistoryEmpty');
+            tbody.innerHTML = '';
+            if (history.length === 0) {
+                empty.style.display = 'block';
+                return;
+            }
+            empty.style.display = 'none';
+            history.forEach(req => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${req.leave_type}</td>
+                    <td>${formatDate(req.start_date)} – ${formatDate(req.end_date)}</td>
+                    <td>${req.days_requested}</td>
+                    <td>${req.reason || '—'}</td>
+                    <td><span class="lv-status-badge status-${req.status}">${req.status}</span></td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        async function fetchPendingApprovals() {
+            try {
+                const response = await fetch(`${API_BASE}/api/leave/pending`, { headers: API_HEADERS });
+                const requests = await response.json();
+                renderPendingApprovals(requests);
+            } catch (err) {
+                console.error('Error fetching pending approvals:', err);
+            }
+        }
+
+        function renderPendingApprovals(requests) {
+            const tbody = document.getElementById('lvApprovalsBody');
+            const empty = document.getElementById('lvApprovalsEmpty');
+            tbody.innerHTML = '';
+            if (requests.length === 0) {
+                empty.style.display = 'block';
+                return;
+            }
+            empty.style.display = 'none';
+            requests.forEach(req => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${req.first_name} ${req.last_name}</td>
+                    <td>${req.leave_type}</td>
+                    <td>${formatDate(req.start_date)} – ${formatDate(req.end_date)}</td>
+                    <td>${req.days_requested}</td>
+                    <td>${req.reason || '—'}</td>
+                    <td>
+                        <button class="lv-approve-btn" onclick="approveLeaveRequest(${req.id})">Approve</button>
+                        <button class="lv-reject-btn" onclick="rejectLeaveRequest(${req.id})">Reject</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        async function approveLeaveRequest(requestId) {
+            try {
+                await fetch(`${API_BASE}/api/leave/${requestId}/approve`, { method: 'PATCH', headers: API_HEADERS });
+                await fetchPendingApprovals();
+                if (currentUserEmployeeId) await fetchOwnLeave();
+            } catch (err) {
+                console.error('Error approving leave:', err);
+            }
+        }
+
+        async function rejectLeaveRequest(requestId) {
+            try {
+                await fetch(`${API_BASE}/api/leave/${requestId}/reject`, { method: 'PATCH', headers: API_HEADERS });
+                await fetchPendingApprovals();
+            } catch (err) {
+                console.error('Error rejecting leave:', err);
+            }
+        }
+
+        function openLeaveRequestModal() {
+            document.getElementById('lv_leave_type').value = 'Annual';
+            document.getElementById('lv_start_date').value = '';
+            document.getElementById('lv_end_date').value = '';
+            document.getElementById('lv_days_requested').value = '';
+            document.getElementById('lv_reason').value = '';
+            document.getElementById('leaveModalOverlay').classList.add('open');
+        }
+
+        function closeLeaveRequestModal() {
+            document.getElementById('leaveModalOverlay').classList.remove('open');
+        }
+
+        function recalculateLeaveDays() {
+            const start = document.getElementById('lv_start_date').value;
+            const end = document.getElementById('lv_end_date').value;
+            if (!start || !end) return;
+            const startD = new Date(start);
+            const endD = new Date(end);
+            const diffMs = endD - startD;
+            const days = Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1;
+            document.getElementById('lv_days_requested').value = days > 0 ? days : '';
+        }
+
+        async function submitLeaveRequest() {
+            const leave_type = document.getElementById('lv_leave_type').value;
+            const start_date = document.getElementById('lv_start_date').value;
+            const end_date = document.getElementById('lv_end_date').value;
+            const days_requested = document.getElementById('lv_days_requested').value;
+            const reason = document.getElementById('lv_reason').value;
+
+            if (!start_date || !end_date || !days_requested) {
+                alert('Please fill in the start date, end date, and ensure days are calculated.');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/api/employees/${currentUserEmployeeId}/leave`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', ...API_HEADERS },
+                    body: JSON.stringify({ leave_type, start_date, end_date, days_requested: parseInt(days_requested, 10), reason })
+                });
+                if (!response.ok) { alert('Failed to submit leave request'); return; }
+                closeLeaveRequestModal();
+                await fetchOwnLeave();
+            } catch (err) {
+                console.error('Error submitting leave request:', err);
+                alert('Server error while submitting leave request');
+            }
+        }
+
+        async function fetchEmployees() {
+            try {
+                const response = await fetch(`${API_BASE}/api/employees`, { headers: API_HEADERS });
+                employeeList = await response.json();
+                renderEmployeeTable();
+            } catch (err) {
+                console.error('Error fetching employees:', err);
+            }
+        }
+
+        function renderEmployeeTable() {
+            const search = document.getElementById('wfSearchInput').value.toLowerCase();
+            const tbody = document.getElementById('wfTableBody');
+            const emptyState = document.getElementById('wfEmptyState');
+            const filtered = employeeList.filter(emp => {
+                const fullName = `${emp.first_name || ''} ${emp.last_name || ''}`.toLowerCase();
+                return (
+                    search === '' ||
+                    fullName.includes(search) ||
+                    (emp.email || '').toLowerCase().includes(search) ||
+                    (emp.job_title || '').toLowerCase().includes(search)
+                );
+            });
+            tbody.innerHTML = '';
+            if (filtered.length === 0) {
+                emptyState.style.display = 'block';
+            } else {
+                emptyState.style.display = 'none';
+                filtered.forEach(emp => {
+                    const isActive = (emp.employement_status || 'Active') === 'Active';
+                    const row = document.createElement('tr');
+                    row.onclick = () => viewEmployeeProfile(emp.id, false);
+                    row.innerHTML = `
+                        <td>${emp.first_name || ''} ${emp.last_name || ''}</td>
+                        <td>${emp.email || ''}</td>
+                        <td>${emp.job_title || ''}</td>
+                        <td>${emp.department || ''}</td>
+                        <td><span class="wf-badge ${isActive ? 'active-badge' : 'inactive-badge'}">${emp.employement_status || 'Active'}</span></td>
+                        <td onclick="event.stopPropagation()">
+                            <button class="wf-action-btn deactivate" onclick="deactivateEmployee(${emp.id})" title="Deactivate"><i class="fas fa-user-slash"></i></button>
+                            <button class="wf-action-btn delete" onclick="deleteEmployee(${emp.id})" title="Delete"><i class="fas fa-trash"></i></button>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            }
+            document.getElementById('wfTotalCount').innerText = employeeList.length;
+            document.getElementById('wfActiveCount').innerText = employeeList.filter(e => (e.employement_status || 'Active') === 'Active').length;
+            document.getElementById('wfInactiveCount').innerText = employeeList.filter(e => e.employement_status === 'Inactive').length;
+        }
+
+        function clearEmployeeForm() {
+            const ids = ['f_first_name','f_last_name','f_email','f_job_title','f_date_of_birth',
+                'f_id_number','f_gender','f_nationality','f_phone','f_mobile','f_address',
+                'f_department','f_employment_type','f_start_date','f_contract_end_date',
+                'f_salary_grade','f_work_schedule','f_emergency_contact','f_emergency_phone'];
+            ids.forEach(id => document.getElementById(id).value = '');
+            document.getElementById('f_employement_status').value = 'Active';
+            document.getElementById('acc_username').value = '';
+            document.getElementById('acc_password').value = '';
+            document.getElementById('acc_role').value = 'intern';
+            document.getElementById('doc_id_document').value = '';
+            document.getElementById('doc_employment_contract').value = '';
+            document.getElementById('doc_rss_contract').value = '';
+        }
+
+        function fillEmployeeForm(emp) {
+            document.getElementById('f_first_name').value = emp.first_name || '';
+            document.getElementById('f_last_name').value = emp.last_name || '';
+            document.getElementById('f_email').value = emp.email || '';
+            document.getElementById('f_job_title').value = emp.job_title || '';
+            document.getElementById('f_date_of_birth').value = emp.date_of_birth ? emp.date_of_birth.split('T')[0] : '';
+            document.getElementById('f_id_number').value = emp.id_number || '';
+            document.getElementById('f_gender').value = emp.gender || '';
+            document.getElementById('f_nationality').value = emp.nationality || '';
+            document.getElementById('f_phone').value = emp.phone || '';
+            document.getElementById('f_mobile').value = emp.mobile || '';
+            document.getElementById('f_address').value = emp.address || '';
+            document.getElementById('f_department').value = emp.department || '';
+            document.getElementById('f_employment_type').value = emp.employment_type || '';
+            document.getElementById('f_start_date').value = emp.start_date ? emp.start_date.split('T')[0] : '';
+            document.getElementById('f_contract_end_date').value = emp.contract_end_date ? emp.contract_end_date.split('T')[0] : '';
+            document.getElementById('f_salary_grade').value = emp.salary_grade || '';
+            document.getElementById('f_employement_status').value = emp.employement_status || 'Active';
+            document.getElementById('f_work_schedule').value = emp.work_schedule || '';
+            document.getElementById('f_emergency_contact').value = emp.emergency_contact || '';
+            document.getElementById('f_emergency_phone').value = emp.emergency_phone || '';
+        }
+
+        const stepLabels = {
+            1: 'Step 1 of 3 — Employee Details',
+            2: 'Step 2 of 3 — Login Account (optional)',
+            3: 'Step 3 of 3 — Documents (optional)'
+        };
+
+        function goToStep(step) {
+            currentStep = step;
+            document.getElementById('wfStep1Body').style.display = step === 1 ? 'grid' : 'none';
+            document.getElementById('wfStep2Body').style.display = step === 2 ? 'grid' : 'none';
+            document.getElementById('wfStep3Body').style.display = step === 3 ? 'grid' : 'none';
+            document.getElementById('wfBackBtn').style.display = step > 1 ? 'inline-block' : 'none';
+            document.getElementById('wfSkipBtn').style.display = step === 2 ? 'inline-block' : 'none';
+            document.getElementById('wfModalStepLabel').innerText = stepLabels[step];
+            document.getElementById('wfModalSaveBtn').innerText = step < 3 ? 'Next →' : 'Save Employee';
+        }
+
+        function openAddEmployeeModal() {
+            editingEmployeeId = null;
+            clearEmployeeForm();
+            document.getElementById('wfModalTitle').innerText = 'Add Employee';
+            document.getElementById('wfModalStepLabel').style.display = 'block';
+            goToStep(1);
+            document.getElementById('wfModalOverlay').classList.add('open');
+        }
+
+        function openEditEmployeeModal(emp) {
+            editingEmployeeId = emp.id;
+            fillEmployeeForm(emp);
+            document.getElementById('wfModalTitle').innerText = 'Edit Employee';
+            document.getElementById('wfModalStepLabel').style.display = 'none';
+            document.getElementById('wfStep1Body').style.display = 'grid';
+            document.getElementById('wfStep2Body').style.display = 'none';
+            document.getElementById('wfStep3Body').style.display = 'none';
+            document.getElementById('wfBackBtn').style.display = 'none';
+            document.getElementById('wfSkipBtn').style.display = 'none';
+            document.getElementById('wfModalSaveBtn').innerText = 'Save Changes';
+            document.getElementById('wfModalOverlay').classList.add('open');
+        }
+
+        function closeAddEmployeeModal() {
+            document.getElementById('wfModalOverlay').classList.remove('open');
+        }
+
+        function getEmployeeFormPayload() {
+            return {
+                first_name: document.getElementById('f_first_name').value,
+                last_name: document.getElementById('f_last_name').value,
+                email: document.getElementById('f_email').value,
+                job_title: document.getElementById('f_job_title').value,
+                date_of_birth: document.getElementById('f_date_of_birth').value,
+                id_number: document.getElementById('f_id_number').value,
+                gender: document.getElementById('f_gender').value,
+                nationality: document.getElementById('f_nationality').value,
+                phone: document.getElementById('f_phone').value,
+                mobile: document.getElementById('f_mobile').value,
+                address: document.getElementById('f_address').value,
+                department: document.getElementById('f_department').value,
+                employment_type: document.getElementById('f_employment_type').value,
+                start_date: document.getElementById('f_start_date').value,
+                contract_end_date: document.getElementById('f_contract_end_date').value,
+                salary_grade: document.getElementById('f_salary_grade').value,
+                employement_status: document.getElementById('f_employement_status').value,
+                work_schedule: document.getElementById('f_work_schedule').value,
+                emergency_contact: document.getElementById('f_emergency_contact').value,
+                emergency_phone: document.getElementById('f_emergency_phone').value
+            };
+        }
+
+        function handleModalPrimaryAction() {
+            if (editingEmployeeId !== null) {
+                saveEmployeeEdit();
+                return;
+            }
+            if (currentStep < 3) {
+                goToStep(currentStep + 1);
+            } else {
+                finalSaveNewEmployee();
+            }
+        }
+
+        async function saveEmployeeEdit() {
+            const payload = getEmployeeFormPayload();
+            try {
+                const response = await fetch(`${API_BASE}/api/employees/${editingEmployeeId}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json', ...API_HEADERS },
+                    body: JSON.stringify(payload)
+                });
+                if (!response.ok) { alert('Failed to save employee'); return; }
+                closeAddEmployeeModal();
+                if (currentProfileId === editingEmployeeId) {
+                    await viewEmployeeProfile(editingEmployeeId, isOwnProfileReadOnly);
+                } else {
+                    await fetchEmployees();
+                }
+            } catch (err) {
+                console.error('Error saving employee:', err);
+                alert('Server error while saving employee');
+            }
+        }
+
+        async function finalSaveNewEmployee() {
+            const payload = getEmployeeFormPayload();
+            try {
+                const response = await fetch(`${API_BASE}/api/employees`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', ...API_HEADERS },
+                    body: JSON.stringify(payload)
+                });
+                if (!response.ok) { alert('Failed to save employee'); return; }
+                const newEmployee = await response.json();
+
+                const username = document.getElementById('acc_username').value.trim();
+                const password = document.getElementById('acc_password').value.trim();
+                const role = document.getElementById('acc_role').value;
+                if (username && password) {
+                    await fetch(`${API_BASE}/api/employees/${newEmployee.id}/account`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', ...API_HEADERS },
+                        body: JSON.stringify({ username, password, role })
+                    });
+                }
+
+                const idFile = document.getElementById('doc_id_document').files[0];
+                const empFile = document.getElementById('doc_employment_contract').files[0];
+                const rssFile = document.getElementById('doc_rss_contract').files[0];
+                if (idFile || empFile || rssFile) {
+                    const formData = new FormData();
+                    if (idFile) formData.append('id_document', idFile);
+                    if (empFile) formData.append('employment_contract', empFile);
+                    if (rssFile) formData.append('rss_contract', rssFile);
+                    await fetch(`${API_BASE}/api/employees/${newEmployee.id}/documents`, {
+                        method: 'POST',
+                        headers: API_HEADERS,
+                        body: formData
+                    });
+                }
+
+                closeAddEmployeeModal();
+                await fetchEmployees();
+            } catch (err) {
+                console.error('Error saving employee:', err);
+                alert('Server error while saving employee');
+            }
+        }
+
+        async function deactivateEmployee(id) {
+            if (!confirm('Deactivate this employee?')) return;
+            try {
+                await fetch(`${API_BASE}/api/employees/${id}/deactivate`, { method: 'PATCH', headers: API_HEADERS });
+                await fetchEmployees();
+            } catch (err) {
+                console.error('Error deactivating employee:', err);
+            }
+        }
+
+        async function deleteEmployee(id) {
+            if (!confirm('Permanently delete this employee? This cannot be undone.')) return;
+            try {
+                await fetch(`${API_BASE}/api/employees/${id}`, { method: 'DELETE', headers: API_HEADERS });
+                await fetchEmployees();
+            } catch (err) {
+                console.error('Error deleting employee:', err);
+            }
+        }
+
+        function generatePassword(targetInputId) {
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%';
+            let pwd = '';
+            for (let i = 0; i < 10; i++) {
+                pwd += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            document.getElementById(targetInputId).value = pwd;
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '—';
+            const d = new Date(dateStr);
+            if (isNaN(d)) return dateStr;
+            return d.toLocaleDateString('en-ZA', { year: 'numeric', month: 'long', day: 'numeric' });
+        }
+
+        async function viewEmployeeProfile(id, readOnly) {
+            isOwnProfileReadOnly = readOnly;
+            try {
+                const response = await fetch(`${API_BASE}/api/employees/${id}`, { headers: API_HEADERS });
+                if (!response.ok) {
+                    alert('Employee not found');
+                    return;
+                }
+                const emp = await response.json();
+                currentProfileId = emp.id;
+                populateProfileView(emp);
+                hideAllContentViews();
+                document.getElementById('profileView').style.display = 'block';
+            } catch (err) {
+                console.error('Error loading employee profile:', err);
+            }
+        }
+
+        function viewOwnEmployeeProfile() {
+            if (!currentUserEmployeeId) {
+                alert('No employee record is linked to your account yet. Please contact your administrator.');
+                return;
+            }
+            viewEmployeeProfile(currentUserEmployeeId, true);
+        }
+
+        function docStatusHtml(path) {
+            if (path) {
+                return `<a href="${API_BASE}/${path}" target="_blank" class="ep-doc-status uploaded" style="text-decoration:none;">Uploaded — View</a>`;
+            }
+            return `<span class="ep-doc-status missing">Not uploaded</span>`;
+        }
+
+        function populateProfileView(emp) {
+            const fullName = `${emp.first_name || ''} ${emp.last_name || ''}`.trim() || 'Unknown';
+            const initials = fullName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+            const isActive = (emp.employement_status || 'Active') === 'Active';
+            document.getElementById('epAvatar').innerText = initials;
+            document.getElementById('epName').innerText = fullName;
+            document.getElementById('epJobTitle').innerText = emp.job_title || '—';
+            document.getElementById('epEmail').innerText = emp.email || '—';
+            document.getElementById('epMobile').innerText = emp.mobile || '—';
+            document.getElementById('epDepartment').innerText = emp.department || '—';
+            const badge = document.getElementById('epStatusBadge');
+            badge.innerText = emp.employement_status || 'Active';
+            badge.className = 'wf-badge ' + (isActive ? 'active-badge' : 'inactive-badge');
+            document.getElementById('epFullName').innerText = fullName;
+            document.getElementById('epDob').innerText = formatDate(emp.date_of_birth);
+            document.getElementById('epIdNumber').innerText = emp.id_number || '—';
+            document.getElementById('epGender').innerText = emp.gender || '—';
+            document.getElementById('epNationality').innerText = emp.nationality || '—';
+            document.getElementById('epEmail2').innerText = emp.email || '—';
+            document.getElementById('epPhone').innerText = emp.phone || '—';
+            document.getElementById('epMobile2').innerText = emp.mobile || '—';
+            document.getElementById('epAddress').innerText = emp.address || '—';
+            document.getElementById('epJobTitle2').innerText = emp.job_title || '—';
+            document.getElementById('epDepartment2').innerText = emp.department || '—';
+            document.getElementById('epEmploymentType').innerText = emp.employment_type || '—';
+            document.getElementById('epStartDate').innerText = formatDate(emp.start_date);
+            document.getElementById('epContractEnd').innerText = emp.contract_end_date ? formatDate(emp.contract_end_date) : 'N/A — Permanent';
+            document.getElementById('epSalaryGrade').innerText = emp.salary_grade || '—';
+            document.getElementById('epWorkSchedule').innerText = emp.work_schedule || '—';
+            document.getElementById('epEmergencyContact').innerText = emp.emergency_contact || '—';
+            document.getElementById('epEmergencyPhone').innerText = emp.emergency_phone || '—';
+
+            currentProfileHasLogin = !!emp.login_username;
+            const credBtn = document.getElementById('epCredentialsBtn');
+            if (currentProfileHasLogin) {
+                document.getElementById('epCredentialsEmpty').style.display = 'none';
+                document.getElementById('epCredentialsFilled').style.display = 'block';
+                document.getElementById('epLoginUsername').innerText = emp.login_username;
+                document.getElementById('epLoginPassword').innerText = emp.login_password;
+                document.getElementById('epLoginRole').innerText = emp.login_role || '—';
+                credBtn.innerText = 'Edit Login';
+            } else {
+                document.getElementById('epCredentialsEmpty').style.display = 'block';
+                document.getElementById('epCredentialsFilled').style.display = 'none';
+                credBtn.innerText = 'Create Login';
+            }
+
+            document.getElementById('epDocIdStatus').innerHTML = docStatusHtml(emp.id_document_path);
+            document.getElementById('epDocEmploymentStatus').innerHTML = docStatusHtml(emp.employment_contract_path);
+            document.getElementById('epDocRssStatus').innerHTML = docStatusHtml(emp.rss_contract_path);
+
+            document.getElementById('epActionsBar').style.display = isOwnProfileReadOnly ? 'none' : 'flex';
+            document.getElementById('epCredentialsBtn').style.display = isOwnProfileReadOnly ? 'none' : 'inline-block';
+            document.getElementById('epDocsUploadBtn').style.display = isOwnProfileReadOnly ? 'none' : 'inline-block';
+
+            document.getElementById('profileView').dataset.employee = JSON.stringify(emp);
+        }
+
+        function backFromProfile() {
+            currentProfileId = null;
+            if (isOwnProfileReadOnly) {
+                showDashboardHome();
+            } else {
+                showWorkforce();
+            }
+        }
+
+        function openEditFromProfile() {
+            const emp = JSON.parse(document.getElementById('profileView').dataset.employee);
+            openEditEmployeeModal(emp);
+        }
+
+        async function deactivateFromProfile() {
+            if (!confirm('Deactivate this employee?')) return;
+            try {
+                await fetch(`${API_BASE}/api/employees/${currentProfileId}/deactivate`, { method: 'PATCH', headers: API_HEADERS });
+                await viewEmployeeProfile(currentProfileId, false);
+            } catch (err) {
+                console.error('Error deactivating employee:', err);
+            }
+        }
+
+        async function deleteFromProfile() {
+            if (!confirm('Permanently delete this employee? This cannot be undone.')) return;
+            try {
+                await fetch(`${API_BASE}/api/employees/${currentProfileId}`, { method: 'DELETE', headers: API_HEADERS });
+                backFromProfile();
+            } catch (err) {
+                console.error('Error deleting employee:', err);
+            }
+        }
+
+        function openCredentialsModal() {
+            const emp = JSON.parse(document.getElementById('profileView').dataset.employee);
+            document.getElementById('credModalTitle').innerText = currentProfileHasLogin ? 'Edit Login' : 'Create Login';
+            document.getElementById('cr_username').value = emp.login_username || '';
+            document.getElementById('cr_role').value = emp.login_role || 'intern';
+            document.getElementById('cr_password').value = '';
+            document.getElementById('crPasswordHint').innerText = currentProfileHasLogin ? '(leave blank to keep current)' : '';
+            document.getElementById('credModalOverlay').classList.add('open');
+        }
+
+        function closeCredentialsModal() {
+            document.getElementById('credModalOverlay').classList.remove('open');
+        }
+
+        async function saveCredentials() {
+            const username = document.getElementById('cr_username').value.trim();
+            const password = document.getElementById('cr_password').value.trim();
+            const role = document.getElementById('cr_role').value;
+            if (!username) { alert('Username is required'); return; }
+            if (!currentProfileHasLogin && !password) { alert('Password is required when creating a new login'); return; }
+            try {
+                const response = await fetch(`${API_BASE}/api/employees/${currentProfileId}/account`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', ...API_HEADERS },
+                    body: JSON.stringify({ username, password, role })
+                });
+                if (!response.ok) { alert('Failed to save login credentials'); return; }
+                closeCredentialsModal();
+                await viewEmployeeProfile(currentProfileId, isOwnProfileReadOnly);
+            } catch (err) {
+                console.error('Error saving credentials:', err);
+                alert('Server error while saving login credentials');
+            }
+        }
+
+        function openDocumentsModal() {
+            document.getElementById('modal_doc_id_document').value = '';
+            document.getElementById('modal_doc_employment_contract').value = '';
+            document.getElementById('modal_doc_rss_contract').value = '';
+            document.getElementById('docModalOverlay').classList.add('open');
+        }
+
+        function closeDocumentsModal() {
+            document.getElementById('docModalOverlay').classList.remove('open');
+        }
+
+        async function saveDocumentsFromProfile() {
+            const idFile = document.getElementById('modal_doc_id_document').files[0];
+            const empFile = document.getElementById('modal_doc_employment_contract').files[0];
+            const rssFile = document.getElementById('modal_doc_rss_contract').files[0];
+            if (!idFile && !empFile && !rssFile) { alert('Choose at least one file to upload'); return; }
+            const formData = new FormData();
+            if (idFile) formData.append('id_document', idFile);
+            if (empFile) formData.append('employment_contract', empFile);
+            if (rssFile) formData.append('rss_contract', rssFile);
+            try {
+                const response = await fetch(`${API_BASE}/api/employees/${currentProfileId}/documents`, {
+                    method: 'POST',
+                    headers: API_HEADERS,
+                    body: formData
+                });
+                if (!response.ok) { alert('Failed to upload documents'); return; }
+                closeDocumentsModal();
+                await viewEmployeeProfile(currentProfileId, isOwnProfileReadOnly);
+            } catch (err) {
+                console.error('Error uploading documents:', err);
+                alert('Server error while uploading documents');
+            }
+        }
+    </script>
+</body>
+</html>
