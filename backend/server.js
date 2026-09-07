@@ -526,7 +526,6 @@ app.patch('/api/leave/:requestId/reject', async (req, res) => {
 
 // ============ TRAININGS ============
 
-// Get all trainings, filtered by owner (personal list) and with completion status for a given employee
 app.get('/api/trainings', async (req, res) => {
   const { employee_id, owner_id } = req.query;
   try {
@@ -556,7 +555,6 @@ app.get('/api/trainings', async (req, res) => {
   }
 });
 
-// Get all training categories (topics)
 app.get('/api/training-categories', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM training_categories ORDER BY id ASC');
@@ -567,7 +565,6 @@ app.get('/api/training-categories', async (req, res) => {
   }
 });
 
-// Add a new training category (topic)
 app.post('/api/training-categories', async (req, res) => {
   const { name, created_by } = req.body;
   if (!name) return res.status(400).json({ error: 'name is required' });
@@ -586,7 +583,6 @@ app.post('/api/training-categories', async (req, res) => {
   }
 });
 
-// Rename a training category (updates all trainings and columns using the old name too)
 app.patch('/api/training-categories/:id', async (req, res) => {
   const { id } = req.params;
   const { name } = req.body;
@@ -610,7 +606,6 @@ app.patch('/api/training-categories/:id', async (req, res) => {
   }
 });
 
-// Delete a training category (and everything inside it)
 app.delete('/api/training-categories/:id', async (req, res) => {
   const { id } = req.params;
   try {
@@ -631,7 +626,6 @@ app.delete('/api/training-categories/:id', async (req, res) => {
   }
 });
 
-// Add a new training
 app.post('/api/trainings', async (req, res) => {
   const { category, title, training_date, link, description, created_by } = req.body;
   if (!category || !title) {
@@ -650,7 +644,6 @@ app.post('/api/trainings', async (req, res) => {
   }
 });
 
-// Update a training's core fields (used for inline row editing)
 app.patch('/api/trainings/:id', async (req, res) => {
   const { id } = req.params;
   const { title, training_date } = req.body;
@@ -666,7 +659,6 @@ app.patch('/api/trainings/:id', async (req, res) => {
   }
 });
 
-// Delete a training row entirely
 app.delete('/api/trainings/:id', async (req, res) => {
   const { id } = req.params;
   try {
@@ -678,7 +670,6 @@ app.delete('/api/trainings/:id', async (req, res) => {
   }
 });
 
-// Mark a training complete for an employee
 app.post('/api/trainings/:id/complete', async (req, res) => {
   const { id } = req.params;
   const { employee_id } = req.body;
@@ -697,7 +688,6 @@ app.post('/api/trainings/:id/complete', async (req, res) => {
   }
 });
 
-// Unmark a training as complete
 app.delete('/api/trainings/:id/complete/:employeeId', async (req, res) => {
   const { id, employeeId } = req.params;
   try {
@@ -712,7 +702,6 @@ app.delete('/api/trainings/:id/complete/:employeeId', async (req, res) => {
   }
 });
 
-// Get custom columns declared for a category
 app.get('/api/training-columns', async (req, res) => {
   const { category } = req.query;
   try {
@@ -727,7 +716,6 @@ app.get('/api/training-columns', async (req, res) => {
   }
 });
 
-// Add a new custom column to a category
 app.post('/api/training-columns', async (req, res) => {
   const { category, column_name } = req.body;
   if (!category || !column_name) {
@@ -748,7 +736,6 @@ app.post('/api/training-columns', async (req, res) => {
   }
 });
 
-// Rename a custom column
 app.patch('/api/training-columns/:id', async (req, res) => {
   const { id } = req.params;
   const { column_name } = req.body;
@@ -765,7 +752,6 @@ app.patch('/api/training-columns/:id', async (req, res) => {
   }
 });
 
-// Remove a custom column
 app.delete('/api/training-columns/:id', async (req, res) => {
   const { id } = req.params;
   try {
@@ -777,7 +763,6 @@ app.delete('/api/training-columns/:id', async (req, res) => {
   }
 });
 
-// Save a value into a training row's custom column cell
 app.patch('/api/trainings/:id/extra', async (req, res) => {
   const { id } = req.params;
   const { column_name, value } = req.body;
@@ -796,7 +781,6 @@ app.patch('/api/trainings/:id/extra', async (req, res) => {
   }
 });
 
-// Get an employee's task checklist for a specific training (legacy — kept for compatibility)
 app.get('/api/trainings/:id/tasks', async (req, res) => {
   const { id } = req.params;
   const { employee_id } = req.query;
@@ -812,7 +796,6 @@ app.get('/api/trainings/:id/tasks', async (req, res) => {
   }
 });
 
-// Get an employee's progress on a specific training
 app.get('/api/trainings/:id/progress', async (req, res) => {
   const { id } = req.params;
   const { employee_id } = req.query;
@@ -831,8 +814,6 @@ app.get('/api/trainings/:id/progress', async (req, res) => {
   }
 });
 
-// Update an employee's progress on a specific training (auto-sets completion date at 100%,
-// but does NOT mark a Presentation Day Topic complete until the document is uploaded)
 app.put('/api/trainings/:id/progress', async (req, res) => {
   const { id } = req.params;
   const { employee_id, percentage } = req.body;
@@ -851,7 +832,6 @@ app.put('/api/trainings/:id/progress', async (req, res) => {
       [id, employee_id, pct, completedDate]
     );
 
-    // Presentations only count as complete once the document is uploaded — handled in the document upload route instead
     if (pct >= 100 && !isPresentation) {
       await pool.query(
         `INSERT INTO training_completions (training_id, employee_id, completed_at)
@@ -872,7 +852,6 @@ app.put('/api/trainings/:id/progress', async (req, res) => {
   }
 });
 
-// Upload a presentation document once marked done — this is what actually marks the presentation complete
 app.post('/api/trainings/:id/document', upload.single('document'), async (req, res) => {
   const { id } = req.params;
   const { employee_id } = req.body;
@@ -908,6 +887,374 @@ app.post('/api/trainings/:id/document', upload.single('document'), async (req, r
   } catch (err) {
     console.error("EXACT PRESENTATION DOC UPLOAD ERROR:", err);
     res.status(500).json({ error: 'Error uploading presentation document' });
+  }
+});
+
+// ============ TIMESHEETS / OVERTIME ============
+
+app.get('/api/employees/:id/overtime', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await pool.query(
+      `SELECT oe.*,
+              COALESCE(SUM(ot.minutes_taken), 0) AS minutes_taken_total,
+              COALESCE(
+                json_agg(
+                  json_build_object('id', ot.id, 'minutes_taken', ot.minutes_taken, 'date_taken', ot.date_taken, 'note', ot.note)
+                  ORDER BY ot.date_taken
+                ) FILTER (WHERE ot.id IS NOT NULL),
+                '[]'
+              ) AS takings
+       FROM overtime_entries oe
+       LEFT JOIN overtime_takings ot ON ot.overtime_entry_id = oe.id
+       WHERE oe.employee_id = $1
+       GROUP BY oe.id
+       ORDER BY oe.date_worked DESC, oe.id DESC`,
+      [id]
+    );
+    const rows = result.rows.map(r => ({
+      ...r,
+      minutes_taken_total: parseInt(r.minutes_taken_total, 10),
+      minutes_remaining: r.minutes_worked - parseInt(r.minutes_taken_total, 10)
+    }));
+    res.json(rows);
+  } catch (err) {
+    console.error("EXACT OVERTIME FETCH ERROR:", err);
+    res.status(500).json({ error: 'Error fetching overtime entries' });
+  }
+});
+
+app.post('/api/employees/:id/overtime', async (req, res) => {
+  const { id } = req.params;
+  const { minutes_worked, date_worked } = req.body;
+  if (!minutes_worked || !date_worked) {
+    return res.status(400).json({ error: 'minutes_worked and date_worked are required' });
+  }
+  try {
+    const result = await pool.query(
+      `INSERT INTO overtime_entries (employee_id, minutes_worked, date_worked)
+       VALUES ($1, $2, $3) RETURNING *`,
+      [id, minutes_worked, date_worked]
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error("EXACT OVERTIME CREATE ERROR:", err);
+    res.status(500).json({ error: 'Error adding overtime entry' });
+  }
+});
+
+app.patch('/api/overtime/:entryId', async (req, res) => {
+  const { entryId } = req.params;
+  const { minutes_worked, date_worked } = req.body;
+  try {
+    const result = await pool.query(
+      `UPDATE overtime_entries SET minutes_worked = $2, date_worked = $3 WHERE id = $1 RETURNING *`,
+      [entryId, minutes_worked, date_worked]
+    );
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error("EXACT OVERTIME UPDATE ERROR:", err);
+    res.status(500).json({ error: 'Error updating overtime entry' });
+  }
+});
+
+app.delete('/api/overtime/:entryId', async (req, res) => {
+  const { entryId } = req.params;
+  try {
+    await pool.query('DELETE FROM overtime_entries WHERE id = $1', [entryId]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error("EXACT OVERTIME DELETE ERROR:", err);
+    res.status(500).json({ error: 'Error deleting overtime entry' });
+  }
+});
+
+app.get('/api/overtime/:entryId/takings', async (req, res) => {
+  const { entryId } = req.params;
+  try {
+    const result = await pool.query(
+      'SELECT * FROM overtime_takings WHERE overtime_entry_id = $1 ORDER BY date_taken DESC, id DESC',
+      [entryId]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error("EXACT OVERTIME TAKINGS FETCH ERROR:", err);
+    res.status(500).json({ error: 'Error fetching overtime takings' });
+  }
+});
+
+app.post('/api/overtime/:entryId/takings', async (req, res) => {
+  const { entryId } = req.params;
+  const { minutes_taken, date_taken, note } = req.body;
+  if (!minutes_taken || !date_taken) {
+    return res.status(400).json({ error: 'minutes_taken and date_taken are required' });
+  }
+  try {
+    const entryResult = await pool.query('SELECT minutes_worked FROM overtime_entries WHERE id = $1', [entryId]);
+    if (entryResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Overtime entry not found' });
+    }
+    const totalWorked = entryResult.rows[0].minutes_worked;
+
+    const takenResult = await pool.query(
+      'SELECT COALESCE(SUM(minutes_taken), 0) AS total FROM overtime_takings WHERE overtime_entry_id = $1',
+      [entryId]
+    );
+    const alreadyTaken = parseInt(takenResult.rows[0].total, 10);
+    const remaining = totalWorked - alreadyTaken;
+
+    if (minutes_taken > remaining) {
+      return res.status(400).json({ error: `Only ${remaining} minutes remaining on this overtime entry` });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO overtime_takings (overtime_entry_id, minutes_taken, date_taken, note)
+       VALUES ($1, $2, $3, $4) RETURNING *`,
+      [entryId, minutes_taken, date_taken, note || null]
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error("EXACT OVERTIME TAKING CREATE ERROR:", err);
+    res.status(500).json({ error: 'Error recording overtime taking' });
+  }
+});
+
+app.delete('/api/overtime-takings/:takingId', async (req, res) => {
+  const { takingId } = req.params;
+  try {
+    await pool.query('DELETE FROM overtime_takings WHERE id = $1', [takingId]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error("EXACT OVERTIME TAKING DELETE ERROR:", err);
+    res.status(500).json({ error: 'Error removing overtime taking' });
+  }
+});
+
+// ============ RSS TRAINING REGISTER ============
+
+app.get('/api/rss-training-types', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM rss_training_types ORDER BY id ASC');
+    res.json(result.rows);
+  } catch (err) {
+    console.error("EXACT RSS TRAINING TYPES FETCH ERROR:", err);
+    res.status(500).json({ error: 'Error fetching training types' });
+  }
+});
+
+app.get('/api/rss-learners', async (req, res) => {
+  const { name, year, month, client, expired } = req.query;
+  try {
+    let query = 'SELECT * FROM rss_training_learners WHERE 1=1';
+    const params = [];
+    let idx = 1;
+
+    if (name) {
+      query += ` AND (first_name ILIKE $${idx} OR last_name ILIKE $${idx} OR id_number ILIKE $${idx})`;
+      params.push(`%${name}%`);
+      idx++;
+    }
+    if (year) {
+      query += ` AND EXTRACT(YEAR FROM date_of_training) = $${idx}`;
+      params.push(year);
+      idx++;
+    }
+    if (month) {
+      query += ` AND EXTRACT(MONTH FROM date_of_training) = $${idx}`;
+      params.push(month);
+      idx++;
+    }
+    if (client) {
+      query += ` AND client ILIKE $${idx}`;
+      params.push(`%${client}%`);
+      idx++;
+    }
+    if (expired === 'true') {
+      query += ` AND valid_until IS NOT NULL AND valid_until < CURRENT_DATE`;
+    }
+
+    query += ' ORDER BY date_of_training DESC, id DESC';
+
+    const result = await pool.query(query, params);
+    res.json(result.rows);
+  } catch (err) {
+    console.error("EXACT RSS LEARNERS FETCH ERROR:", err);
+    res.status(500).json({ error: 'Error fetching learners' });
+  }
+});
+
+app.get('/api/rss-learners/summary', async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT training_type, COUNT(*) AS total FROM rss_training_learners GROUP BY training_type'
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error("EXACT RSS LEARNERS SUMMARY ERROR:", err);
+    res.status(500).json({ error: 'Error fetching summary' });
+  }
+});
+
+app.post('/api/rss-learners', upload.fields([
+  { name: 'id_document', maxCount: 1 },
+  { name: 'marked_test', maxCount: 1 },
+  { name: 'training_register', maxCount: 1 }
+]), async (req, res) => {
+  const {
+    first_name, last_name, id_number, training_type, client,
+    date_of_training, valid_until, passed, created_by
+  } = req.body;
+
+  if (!first_name || !last_name || !training_type) {
+    return res.status(400).json({ error: 'First name, last name, and training type are required' });
+  }
+
+  try {
+    const year = date_of_training ? new Date(date_of_training).getFullYear() : new Date().getFullYear();
+
+    const counterResult = await pool.query(
+      `INSERT INTO rss_certificate_counters (training_type, year, last_number)
+       VALUES ($1, $2, 1)
+       ON CONFLICT (training_type, year) DO UPDATE SET last_number = rss_certificate_counters.last_number + 1
+       RETURNING last_number`,
+      [training_type, year]
+    );
+    const seq = counterResult.rows[0].last_number;
+
+    const prefixResult = await pool.query('SELECT prefix FROM rss_training_types WHERE name = $1', [training_type]);
+    const prefix = prefixResult.rows.length ? prefixResult.rows[0].prefix : training_type.substring(0, 2).toUpperCase();
+    const certificate_number = `${prefix}${year}/${String(seq).padStart(3, '0')}`;
+
+    const files = req.files || {};
+    const idDocPath = files.id_document ? 'uploads/' + files.id_document[0].filename : null;
+    const markedTestPath = files.marked_test ? 'uploads/' + files.marked_test[0].filename : null;
+    const registerPath = files.training_register ? 'uploads/' + files.training_register[0].filename : null;
+
+    const result = await pool.query(
+      `INSERT INTO rss_training_learners
+        (first_name, last_name, id_number, training_type, client, date_of_training, valid_until, passed, certificate_number, id_document_path, marked_test_path, training_register_path, created_by)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+       RETURNING *`,
+      [first_name, last_name, id_number || null, training_type, client || null, date_of_training || null, valid_until || null,
+       passed === 'true', certificate_number, idDocPath, markedTestPath, registerPath, created_by || null]
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error("EXACT RSS LEARNER CREATE ERROR:", err);
+    res.status(500).json({ error: 'Error registering learner' });
+  }
+});
+
+app.patch('/api/rss-learners/:id', async (req, res) => {
+  const { id } = req.params;
+  const {
+    first_name, last_name, id_number, training_type, client,
+    date_of_training, valid_until, passed
+  } = req.body;
+  try {
+    const result = await pool.query(
+      `UPDATE rss_training_learners SET
+        first_name=$2, last_name=$3, id_number=$4, training_type=$5, client=$6,
+        date_of_training=$7, valid_until=$8, passed=$9
+       WHERE id=$1 RETURNING *`,
+      [id, first_name, last_name, id_number || null, training_type, client || null,
+       date_of_training || null, valid_until || null, passed === true || passed === 'true']
+    );
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error("EXACT RSS LEARNER UPDATE ERROR:", err);
+    res.status(500).json({ error: 'Error updating learner' });
+  }
+});
+
+app.post('/api/rss-learners/:id/documents', upload.fields([
+  { name: 'id_document', maxCount: 1 },
+  { name: 'marked_test', maxCount: 1 },
+  { name: 'training_register', maxCount: 1 }
+]), async (req, res) => {
+  const { id } = req.params;
+  const files = req.files || {};
+  try {
+    const updates = [];
+    const values = [];
+    let idx = 1;
+    if (files.id_document) { updates.push(`id_document_path = $${idx++}`); values.push('uploads/' + files.id_document[0].filename); }
+    if (files.marked_test) { updates.push(`marked_test_path = $${idx++}`); values.push('uploads/' + files.marked_test[0].filename); }
+    if (files.training_register) { updates.push(`training_register_path = $${idx++}`); values.push('uploads/' + files.training_register[0].filename); }
+    if (updates.length === 0) return res.status(400).json({ error: 'No files uploaded' });
+    values.push(id);
+    const result = await pool.query(
+      `UPDATE rss_training_learners SET ${updates.join(', ')} WHERE id = $${idx} RETURNING *`,
+      values
+    );
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error("EXACT RSS LEARNER DOC UPLOAD ERROR:", err);
+    res.status(500).json({ error: 'Error uploading documents' });
+  }
+});
+
+app.delete('/api/rss-learners/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    await pool.query('DELETE FROM rss_training_learners WHERE id = $1', [id]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error("EXACT RSS LEARNER DELETE ERROR:", err);
+    res.status(500).json({ error: 'Error deleting learner' });
+  }
+});
+
+// ============ RSS TRAINING MANUALS ============
+
+// Get all manuals, optionally filtered by training type
+app.get('/api/rss-manuals', async (req, res) => {
+  const { training_type } = req.query;
+  try {
+    let query = 'SELECT * FROM rss_training_manuals';
+    let params = [];
+    if (training_type) {
+      query += ' WHERE training_type = $1';
+      params.push(training_type);
+    }
+    query += ' ORDER BY uploaded_at DESC';
+    const result = await pool.query(query, params);
+    res.json(result.rows);
+  } catch (err) {
+    console.error("EXACT RSS MANUALS FETCH ERROR:", err);
+    res.status(500).json({ error: 'Error fetching manuals' });
+  }
+});
+
+// Upload a new manual for a training type
+app.post('/api/rss-manuals', upload.single('manual'), async (req, res) => {
+  const { training_type, uploaded_by } = req.body;
+  if (!training_type || !req.file) {
+    return res.status(400).json({ error: 'training_type and a file are required' });
+  }
+  try {
+    const filePath = 'uploads/' + req.file.filename;
+    const result = await pool.query(
+      `INSERT INTO rss_training_manuals (training_type, file_name, file_path, uploaded_by)
+       VALUES ($1, $2, $3, $4) RETURNING *`,
+      [training_type, req.file.originalname, filePath, uploaded_by || null]
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error("EXACT RSS MANUAL CREATE ERROR:", err);
+    res.status(500).json({ error: 'Error uploading manual' });
+  }
+});
+
+// Delete a manual
+app.delete('/api/rss-manuals/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    await pool.query('DELETE FROM rss_training_manuals WHERE id = $1', [id]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error("EXACT RSS MANUAL DELETE ERROR:", err);
+    res.status(500).json({ error: 'Error deleting manual' });
   }
 });
 

@@ -65,6 +65,17 @@
         .nav-item { padding: 12px 0; cursor: pointer; border-bottom: 1px solid rgba(255, 255, 255, 0.1); font-size: 14px; }
         .nav-item:hover { color: var(--sherq-green); }
         @media (max-width: 880px) { #loginScreen { grid-template-columns: 1fr; } .brand { padding: 36px 28px; min-height: 260px; } .brand-hero h1 { font-size: 30px; } .pillars { display: none; } .formside { padding: 32px 24px; } }
+        .dash-hero { background: #fff; border: 1px solid var(--line); border-radius: 22px; padding: 40px 44px; position: relative; overflow: hidden; margin-bottom: 28px; }
+        .dash-hero-dots { position: absolute; inset: 0; background-image: radial-gradient(rgba(26,54,93,0.05) 1.3px, transparent 1.3px); background-size: 20px 20px; mask-image: radial-gradient(circle at 85% 20%, black 0%, transparent 60%); }
+        .dash-hero-content { position: relative; }
+        .dash-hero-eyebrow { font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 3px; color: #5C7A1D; text-transform: uppercase; font-weight: 700; margin-bottom: 14px; display: flex; align-items: center; gap: 10px; }
+        .dash-hero-eyebrow span:first-child { width: 22px; height: 1.5px; background: var(--sherq-green); display: inline-block; }
+        .dash-hero-title { font-family: 'Barlow Condensed', sans-serif; font-size: 34px; font-weight: 700; color: var(--sherq-blue); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 28px; }
+        .dash-hero-title span { color: #5C7A1D; }
+        .dash-hero-quote-row { display: flex; gap: 16px; align-items: flex-start; max-width: 520px; }
+        .dash-hero-quote-mark { font-family: Georgia, serif; font-size: 44px; color: var(--sherq-green); line-height: 0.5; opacity: 0.9; }
+        .dash-hero-quote-text { font-size: 16px; color: #1D2333; line-height: 1.6; }
+        .dash-hero-quote-label { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 1.5px; color: var(--ink-soft); text-transform: uppercase; margin-top: 10px; }
         .wf-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 24px; flex-wrap: wrap; gap: 14px; }
         .wf-header h1 { color: var(--sherq-blue); margin: 0 0 4px; font-size: 24px; }
         .wf-header p { color: var(--ink-soft); margin: 0; font-size: 13.5px; }
@@ -213,6 +224,11 @@
         .training-category-count { font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; font-weight: 700; color: #fff; background: var(--sherq-green); padding: 3px 10px; border-radius: 20px; margin-left: 10px; }
         .lv-monthly-note { font-size: 12.5px; color: var(--ink-soft); margin-bottom: 12px; }
         .lv-monthly-note b { color: var(--sherq-blue); }
+        .ot-entry { background: #FAFBFC; border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; gap: 12px; cursor: pointer; }
+        .ot-entry:hover { background: #F4F6F9; }
+        .ot-entry .ot-text { font-size: 13.5px; color: #1D2333; }
+        .ot-entry .ot-text b { color: var(--sherq-blue); }
+        .ot-entry .ot-note-icon { color: var(--ink-soft); font-size: 13px; flex-shrink: 0; }
         .th-edit-input { border: none; background: transparent; font-family: inherit; font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--ink-soft); padding: 2px 4px; border-radius: 4px; width: 100%; min-width: 60px; }
         .th-edit-input:focus { outline: none; background: #fff; color: #1D2333; }
         .lv-add-col-btn { border: 1.5px dashed var(--line); background: #FAFBFC; color: var(--sherq-blue-mid); width: 26px; height: 26px; border-radius: 6px; cursor: pointer; font-size: 11px; }
@@ -320,21 +336,26 @@
                     <div class="nav-item" id="hrEmployeesItem" style="font-size: 13px;">Employees</div>
                     <div class="nav-item" onclick="showLeaveView()" style="font-size: 13px;">Leave</div>
                     <div class="nav-item" onclick="showTrainingView()" style="font-size: 13px;">Training</div>
-                    <div class="nav-item" onclick="showHrPlaceholder('Timesheets')" style="font-size: 13px;">Timesheets</div>
+                    <div class="nav-item" onclick="toggleTimesheetsMenu()" style="font-size: 13px;">
+                        Timesheets
+                        <i class="fas fa-chevron-down" id="timesheetsChevron" style="display:none;"></i>
+                    </div>
+                    <div id="timesheetsSubmenu" style="display: none; padding-left: 14px;">
+                        <div class="nav-item" onclick="showTimesheetsView('overtime')" style="font-size: 12px;">Overtime</div>
+                        <div class="nav-item" onclick="showTimesheetsView('timesheet')" style="font-size: 12px;">Timesheet</div>
+                    </div>
                 </div>
 
                 <div id="financeSection" class="nav-item" style="display: none; color: #fff; font-weight: bold;">
                     <i class="fas fa-wallet"></i> Finance 
                 </div>
 
-                <div id="rssTrainingSection" class="nav-item" onclick="toggleTrainingMenu()" style="display: none; color: #fff; font-weight: bold;">
+                <div id="rssTrainingSection" class="nav-item" onclick="toggleRssTrainingMenu()" style="display: none; color: #fff; font-weight: bold;">
                     <i class="fas fa-hard-hat"></i> RSS Training
-                    <i class="fas fa-chevron-down" id="trainingChevron" style="display: none;"></i>
                 </div>
-                <div id="trainingSubmenu" style="display: none; padding-left: 14px;">
-                    <div class="nav-item" onclick="showHrPlaceholder('First Aid Training')" style="font-size: 13px;">First Aid Training</div>
-                    <div class="nav-item" onclick="showHrPlaceholder('Fire Fighting Training')" style="font-size: 13px;">Fire Fighting Training</div>
-                    <div class="nav-item" onclick="showHrPlaceholder('HSE Rep Training')" style="font-size: 13px;">HSE Rep Training</div>
+                <div id="rssTrainingSubmenu" style="display: none; padding-left: 14px;">
+                    <div class="nav-item" onclick="showRssTrainingRegister()" style="font-size: 13px;">Learner Register</div>
+                    <div class="nav-item" onclick="showRssManualsView()" style="font-size: 13px;">Training Manuals</div>
                 </div>
 
                 <div id="inboxNavItem" class="nav-item" onclick="showInboxView()" style="display: none; color: #fff; font-weight: bold;">
@@ -344,8 +365,22 @@
             </div>
             <div class="content">
                 <div id="dashboardHomeView">
-                    <h1 id="pageTitle" style="color: var(--sherq-blue); margin-top: 0;">Dashboard Overview</h1>
-                    <p id="pageDescription" style="color: #475569;">Welcome to the portal.</p>
+                    <div class="dash-hero">
+                        <div class="dash-hero-dots"></div>
+                        <div class="dash-hero-content">
+                            <div class="dash-hero-eyebrow"><span></span><span id="dashHeroDate">—</span></div>
+                            <div class="dash-hero-title">Welcome back, <span id="dashHeroName">—</span></div>
+                            <div class="dash-hero-quote-row">
+                                <div class="dash-hero-quote-mark">"</div>
+                                <div>
+                                    <div class="dash-hero-quote-text" id="dashHeroQuote">—</div>
+                                    <div class="dash-hero-quote-label">Quote of the day</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="wf-stats" id="dashStatsGrid" style="grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));"></div>
+                    <p id="pageDescription" style="display:none;"></p>
                 </div>
 
                 <div id="workforceView" style="display: none;">
@@ -402,6 +437,138 @@
                 </div>
 
                 <!-- TRAINING VIEW -->
+                <!-- TIMESHEETS VIEW -->
+                <!-- RSS TRAINING MANUALS VIEW -->
+                <div id="rssManualsView" style="display: none;">
+                    <div class="wf-header">
+                        <div>
+                            <h1>Training Manuals</h1>
+                            <p>Storage hub for training course manuals — upload once, download or print anytime</p>
+                        </div>
+                    </div>
+                    <div id="rssManualsCategoriesContainer"></div>
+                </div>
+
+                <!-- RSS TRAINING REGISTER VIEW -->
+                <div id="rssTrainingView" style="display: none;">
+                    <div class="wf-header">
+                        <div>
+                            <h1>RSS Training</h1>
+                            <p>External learner training register</p>
+                        </div>
+                        <button class="wf-add-btn" onclick="openRegisterLearnerModal()">
+                            <i class="fas fa-plus"></i> Register Learner
+                        </button>
+                    </div>
+
+                    <div class="wf-stats" id="rssLearnerStats" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 24px;"></div>
+
+                    <div class="wf-table-wrap" style="padding: 16px 20px; margin-bottom: 16px;">
+                        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
+                            <div class="wf-search" style="flex:1; min-width:200px; margin:0;">
+                                <i class="fas fa-search"></i>
+                                <input type="text" id="rssFilterName" placeholder="Search by name or ID number..." oninput="applyRssLearnerFilters()">
+                            </div>
+                            <div>
+                                <label style="font-size:11px; color:var(--ink-soft); display:block; margin-bottom:4px;">Year</label>
+                                <select id="rssFilterYear" onchange="applyRssLearnerFilters()" style="padding:9px 11px; border:1.5px solid var(--line); border-radius:8px; font-family:'Archivo', sans-serif; font-size:13.5px; color:#1D2333;"><option value="">All Years</option></select>
+                            </div>
+                            <div>
+                                <label style="font-size:11px; color:var(--ink-soft); display:block; margin-bottom:4px;">Month</label>
+                                <select id="rssFilterMonth" onchange="applyRssLearnerFilters()" style="padding:9px 11px; border:1.5px solid var(--line); border-radius:8px; font-family:'Archivo', sans-serif; font-size:13.5px; color:#1D2333;">
+                                    <option value="">All Months</option>
+                                    <option value="1">January</option><option value="2">February</option><option value="3">March</option>
+                                    <option value="4">April</option><option value="5">May</option><option value="6">June</option>
+                                    <option value="7">July</option><option value="8">August</option><option value="9">September</option>
+                                    <option value="10">October</option><option value="11">November</option><option value="12">December</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style="font-size:11px; color:var(--ink-soft); display:block; margin-bottom:4px;">Client</label>
+                                <input type="text" id="rssFilterClient" placeholder="Client name..." oninput="applyRssLearnerFilters()" style="padding:9px 12px; border:1px solid var(--line); border-radius:8px; font-size:13px;">
+                            </div>
+                            <button class="wf-btn-secondary" id="rssFilterExpiredBtn" onclick="toggleRssExpiredFilter()">Show Expired Only</button>
+                            <button class="wf-btn-secondary" onclick="clearRssLearnerFilters()">Clear Filters</button>
+                        </div>
+                        <div style="font-size:13px; color:var(--ink-soft); margin-top:12px;">Showing <b id="rssResultCount" style="color:var(--sherq-blue);">0</b> result(s)</div>
+                    </div>
+                    <div class="wf-table-wrap">
+                        <table class="wf-table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>ID Number</th>
+                                    <th>Client</th>
+                                    <th>Training Type</th>
+                                    <th>Date</th>
+                                    <th>Valid Until</th>
+                                    <th>Result</th>
+                                    <th>Certificate #</th>
+                                </tr>
+                            </thead>
+                            <tbody id="rssLearnersBody"></tbody>
+                        </table>
+                        <div id="rssLearnersEmpty" class="wf-empty" style="display:none;">No learners registered yet.</div>
+                    </div>
+                </div>
+
+                <div id="timesheetsView" style="display: none;">
+                    <div class="wf-header">
+                        <div>
+                            <h1>Timesheets</h1>
+                            <p id="timesheetsViewSubtitle">Overtime</p>
+                        </div>
+                    </div>
+
+                    <!-- Admin/Manager: pick an employee to view -->
+                    <div id="timesheetsEmployeeListView" style="display:none;">
+                        <div class="wf-toolbar">
+                            <div class="wf-search">
+                                <i class="fas fa-search"></i>
+                                <input type="text" id="timesheetsEmployeeSearchInput" placeholder="Search employees by name, job title, or department..." oninput="renderTimesheetsEmployeeList()">
+                            </div>
+                        </div>
+                        <div class="wf-table-wrap">
+                            <table class="wf-table">
+                                <thead>
+                                    <tr>
+                                        <th>Full Name</th>
+                                        <th>Job Title</th>
+                                        <th>Department</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="timesheetsEmployeeListBody"></tbody>
+                            </table>
+                            <div id="timesheetsEmployeeListEmpty" class="wf-empty" style="display:none;">No employees found.</div>
+                        </div>
+                    </div>
+
+                    <div id="timesheetsPersonalSection">
+                        <button class="ep-back" id="timesheetsBackToListBtn" onclick="backToTimesheetsEmployeeList()" style="display:none;">
+                            <i class="fas fa-arrow-left"></i> Back to Employees
+                        </button>
+                        <h2 id="timesheetsViewingWhoLabel" style="display:none; color: var(--sherq-blue); font-size: 18px; margin: 0 0 20px;"></h2>
+
+                        <div class="lv-section-title clickable" id="overtimeSectionToggle" onclick="toggleOvertimeSection()">
+                            <i class="fas fa-chevron-down"></i> Overtime
+                        </div>
+                        <div id="overtimeSectionBody">
+                            <div class="wf-stats" id="overtimeRegister" style="grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); margin-bottom: 20px;"></div>
+                            <div id="overtimeEntriesList" style="margin-bottom: 14px;"></div>
+                            <button class="wf-add-btn" onclick="openAddOvertimeModal()">
+                                <i class="fas fa-plus"></i> Add Overtime
+                            </button>
+                        </div>
+
+                        <div class="lv-section-title clickable" id="timesheetSectionToggle" onclick="toggleTimesheetSection()" style="margin-top: 28px;">
+                            <i class="fas fa-chevron-down"></i> Timesheet
+                        </div>
+                        <div id="timesheetSectionBody" style="display:none;">
+                            <div class="wf-empty">This section is under development.</div>
+                        </div>
+                    </div>
+                </div>
+
                 <div id="trainingView" style="display: none;">
                     <div class="wf-header">
                         <div>
@@ -980,6 +1147,127 @@
         </div>
     </div>
 
+    <!-- ADD/EDIT OVERTIME MODAL -->
+    <div class="wf-modal-overlay" id="overtimeModalOverlay">
+        <div class="wf-modal" style="max-width: 480px;">
+            <div class="wf-modal-header">
+                <h2 id="overtimeModalTitle">Add Overtime</h2>
+                <button class="wf-modal-close" onclick="closeOvertimeModal()">✕</button>
+            </div>
+            <div class="wf-modal-body" style="grid-template-columns: 1fr 1fr;">
+                <div class="wf-field"><label>Hours</label><input type="number" id="ot_hours" min="0" value="0"></div>
+                <div class="wf-field"><label>Minutes</label><input type="number" id="ot_minutes" min="0" max="59" value="0"></div>
+                <div class="wf-field full-width"><label>Date Overtime Worked</label><input type="date" id="ot_date_worked"></div>
+                <div id="ot_takings_section" class="wf-field full-width" style="display:none;">
+                    <label>Taking this overtime</label>
+                    <div id="ot_remaining_summary" style="font-size:12.5px; color:var(--ink-soft); margin-bottom:10px;"></div>
+                    <div id="ot_takings_list" style="margin-bottom: 10px;"></div>
+                    <div id="ot_add_form_wrap">
+                        <div style="display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap; background:#FAFBFC; border:1px solid var(--line); border-radius:8px; padding:10px;">
+                            <div style="width:70px;"><label style="font-size:11px;">Hours</label><input type="number" id="ot_take_hours" min="0" value="0"></div>
+                            <div style="width:70px;"><label style="font-size:11px;">Minutes</label><input type="number" id="ot_take_minutes" min="0" max="59" value="0"></div>
+                            <div style="flex:1; min-width:130px;"><label style="font-size:11px;">Date Taken</label><input type="date" id="ot_take_date"></div>
+                            <button class="wf-btn-secondary" style="padding:8px 14px; font-size:12.5px;" onclick="addOvertimeTaking()">+ Add</button>
+                        </div>
+                        <div class="wf-field full-width" style="margin-top:10px;"><label>Note (optional)</label><input type="text" id="ot_take_note"></div>
+                    </div>
+                    <div id="ot_fully_taken_note" style="display:none; background:#F0F9E8; border:1px solid #C8E6A0; border-radius:8px; padding:10px 14px; font-size:12.5px; color:#5C7A1D; font-weight:700;">
+                        <i class="fas fa-check-circle"></i> All hours from this overtime have been taken.
+                    </div>
+                </div>
+            </div>
+            <div class="wf-modal-footer">
+                <button class="lv-reject-btn" id="ot_delete_btn" style="padding:10px 18px; font-size:13.5px; display:none;" onclick="deleteOvertimeEntry()">Delete</button>
+                <div style="display:flex; gap:10px;">
+                    <button class="wf-btn-secondary" onclick="closeOvertimeModal()">Cancel</button>
+                    <button class="wf-btn-primary" onclick="saveOvertimeEntry()">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- UPLOAD MANUAL MODAL -->
+    <div class="wf-modal-overlay" id="rssManualModalOverlay">
+        <div class="wf-modal" style="max-width: 420px;">
+            <div class="wf-modal-header">
+                <h2 id="rssManualModalTitle">Upload Manual</h2>
+                <button class="wf-modal-close" onclick="closeRssManualModal()">✕</button>
+            </div>
+            <div class="wf-modal-body" style="grid-template-columns: 1fr;">
+                <div class="wf-field"><label>Manual File</label><input type="file" id="rssManualFile"></div>
+            </div>
+            <div class="wf-modal-footer">
+                <button class="wf-btn-secondary" onclick="closeRssManualModal()">Cancel</button>
+                <button class="wf-btn-primary" onclick="saveRssManual()">Upload</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- REGISTER/EDIT LEARNER MODAL -->
+    <div class="wf-modal-overlay" id="rssLearnerModalOverlay">
+        <div class="wf-modal" style="max-width: 580px;">
+            <div class="wf-modal-header">
+                <h2 id="rssLearnerModalTitle">Register Learner</h2>
+                <button class="wf-modal-close" onclick="closeRssLearnerModal()">✕</button>
+            </div>
+            <div class="wf-modal-body" style="grid-template-columns: 1fr 1fr;">
+                <div class="wf-field"><label>First Name</label><input type="text" id="rl_first_name"></div>
+                <div class="wf-field"><label>Last Name</label><input type="text" id="rl_last_name"></div>
+                <div class="wf-field full-width"><label>ID Number</label><input type="text" id="rl_id_number"></div>
+                <div class="wf-field full-width"><label>Client (company they work for)</label><input type="text" id="rl_client" placeholder="e.g. Acme Construction"></div>
+                <div class="wf-field full-width">
+                    <label>Type of Training</label>
+                    <select id="rl_training_type"></select>
+                </div>
+                <div class="wf-field"><label>Date of Training</label><input type="date" id="rl_date_of_training"></div>
+                <div class="wf-field"><label>Valid Until</label><input type="date" id="rl_valid_until"></div>
+                <div class="wf-field">
+                    <label>Result</label>
+                    <select id="rl_passed">
+                        <option value="true">Passed</option>
+                        <option value="false">Failed</option>
+                    </select>
+                </div>
+                <div class="wf-field">
+                    <label>Certificate Number</label>
+                    <input type="text" id="rl_certificate_number" disabled style="background:#F4F6F9; color:var(--ink-soft);">
+                </div>
+
+                <div class="wf-field full-width">
+                    <label>Upload ID Document</label>
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <input type="file" id="rl_id_document" style="flex:1;">
+                        <button class="wf-btn-primary" id="rl_id_document_replace_btn" style="display:none; padding:7px 12px; font-size:12px;" onclick="replaceRssLearnerDocument('id_document')">Replace</button>
+                    </div>
+                    <div id="rl_id_document_current" style="font-size:11.5px; margin-top:4px;"></div>
+                </div>
+                <div class="wf-field full-width">
+                    <label>Upload Marked Test</label>
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <input type="file" id="rl_marked_test" style="flex:1;">
+                        <button class="wf-btn-primary" id="rl_marked_test_replace_btn" style="display:none; padding:7px 12px; font-size:12px;" onclick="replaceRssLearnerDocument('marked_test')">Replace</button>
+                    </div>
+                    <div id="rl_marked_test_current" style="font-size:11.5px; margin-top:4px;"></div>
+                </div>
+                <div class="wf-field full-width">
+                    <label>Upload Training Register</label>
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <input type="file" id="rl_training_register" style="flex:1;">
+                        <button class="wf-btn-primary" id="rl_training_register_replace_btn" style="display:none; padding:7px 12px; font-size:12px;" onclick="replaceRssLearnerDocument('training_register')">Replace</button>
+                    </div>
+                    <div id="rl_training_register_current" style="font-size:11.5px; margin-top:4px;"></div>
+                </div>
+            </div>
+            <div class="wf-modal-footer">
+                <button class="lv-reject-btn" id="rl_delete_btn" style="padding:10px 18px; font-size:13.5px; display:none;" onclick="deleteRssLearner()">Delete</button>
+                <div style="display:flex; gap:10px;">
+                    <button class="wf-btn-secondary" onclick="closeRssLearnerModal()">Cancel</button>
+                    <button class="wf-btn-primary" onclick="saveRssLearner()">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- SWITCH BACK TO ADMIN MODAL -->
     <div class="wf-modal-overlay" id="switchBackModalOverlay">
         <div class="wf-modal" style="max-width: 400px;">
@@ -1130,6 +1418,7 @@
                         }
                     } catch (e) { /* non-fatal */ }
                 }
+                populateDashboardHero();
             } catch (err) {
                 console.error(err);
                 errorMsg.innerText = 'Server error. Is your backend running?';
@@ -1163,13 +1452,150 @@
             document.getElementById('leaveView').style.display = 'none';
             document.getElementById('inboxView').style.display = 'none';
             document.getElementById('trainingView').style.display = 'none';
+            document.getElementById('timesheetsView').style.display = 'none';
+            document.getElementById('rssTrainingView').style.display = 'none';
+            document.getElementById('rssManualsView').style.display = 'none';
             document.getElementById('inboxListView').style.display = 'block';
             document.getElementById('inboxDetailView').style.display = 'none';
+        }
+
+        const DAILY_QUOTES = [
+            "Small steps every day lead to big changes.",
+            "Discipline is choosing between what you want now and what you want most.",
+            "Progress, not perfection.",
+            "Safety isn't expensive, it's priceless.",
+            "The best way to predict the future is to create it.",
+            "Consistency beats intensity.",
+            "Every expert was once a beginner.",
+            "Do the work and the confidence will follow.",
+            "A goal without a plan is just a wish.",
+            "Great things are built one careful step at a time.",
+            "Quality is never an accident, it's the result of intention.",
+            "Take care of the details and the big picture takes care of itself.",
+            "You don't have to be great to start, but you have to start to be great.",
+            "Focus on being productive instead of busy."
+        ];
+
+        function populateDashboardHero() {
+            const now = new Date();
+            document.getElementById('dashHeroDate').innerText = now.toLocaleDateString('en-ZA', { weekday: 'long', day: 'numeric', month: 'long' });
+            document.getElementById('dashHeroName').innerText = currentUserFullName || currentUserRole || 'there';
+            const dayOfYear = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 86400000);
+            document.getElementById('dashHeroQuote').innerText = DAILY_QUOTES[dayOfYear % DAILY_QUOTES.length];
+            loadDashboardStats();
+        }
+
+        function renderDashStatCard(label, value, extraClass) {
+            return `
+                <div class="wf-stat-card ${extraClass || ''}">
+                    <div class="label">${label}</div>
+                    <div class="value">${value}</div>
+                </div>
+            `;
+        }
+
+        async function loadDashboardStats() {
+            const grid = document.getElementById('dashStatsGrid');
+            grid.innerHTML = '';
+            const isManagement = (currentUserRole === 'admin' || currentUserRole === 'manager');
+
+            try {
+                if (isManagement) {
+                    const [employeesResp, pendingResp] = await Promise.all([
+                        fetch(`${API_BASE}/api/employees`, { headers: API_HEADERS }),
+                        fetch(`${API_BASE}/api/leave/pending`, { headers: API_HEADERS })
+                    ]);
+                    const employees = await employeesResp.json();
+                    const pending = await pendingResp.json();
+
+                    let cardsHtml = '';
+                    cardsHtml += renderDashStatCard('Employees', employees.length, 'active');
+                    cardsHtml += renderDashStatCard('Pending Leave Requests', pending.length, pending.length > 0 ? 'inactive' : '');
+
+                    let allLeave = [];
+                    if (currentUserRole === 'admin') {
+                        const allResp = await fetch(`${API_BASE}/api/leave/all`, { headers: API_HEADERS });
+                        allLeave = await allResp.json();
+                        const unread = allLeave.filter(r => !r.is_read).length;
+                        cardsHtml += renderDashStatCard('Unread in Inbox', unread, unread > 0 ? 'inactive' : '');
+                    }
+
+                    grid.innerHTML = cardsHtml;
+                    renderDashRecentActivity(allLeave.slice(0, 5), true);
+                } else {
+                    let cardsHtml = '';
+                    let ownLeaveHistory = [];
+
+                    if (currentUserEmployeeId) {
+                        const [leaveResp, trainingsResp, overtimeResp] = await Promise.all([
+                            fetch(`${API_BASE}/api/employees/${currentUserEmployeeId}/leave`, { headers: API_HEADERS }),
+                            fetch(`${API_BASE}/api/trainings?employee_id=${currentUserEmployeeId}&owner_id=${currentUserEmployeeId}`, { headers: API_HEADERS }),
+                            fetch(`${API_BASE}/api/employees/${currentUserEmployeeId}/overtime`, { headers: API_HEADERS })
+                        ]);
+                        const leave = await leaveResp.json();
+                        const trainings = await trainingsResp.json();
+                        const overtime = await overtimeResp.json();
+                        ownLeaveHistory = leave.history || [];
+
+                        const leaveRemaining = leave.balances && leave.balances['Paid Leave'] ? (leave.balances['Paid Leave'].entitlement - leave.balances['Paid Leave'].used) : '—';
+                        const completedTrainings = trainings.filter(t => t.completed).length;
+                        const overtimeMinutes = overtime.reduce((sum, e) => sum + (e.minutes_worked || 0), 0);
+                        const overtimeStr = formatDurationFromMinutes(overtimeMinutes);
+
+                        cardsHtml += renderDashStatCard('Leave Days Left', leaveRemaining, 'active');
+                        cardsHtml += renderDashStatCard('Trainings Completed', completedTrainings, 'active');
+                        cardsHtml += renderDashStatCard('Overtime Logged', overtimeStr);
+                    }
+
+                    grid.innerHTML = cardsHtml;
+                    renderDashRecentActivity(ownLeaveHistory.slice(0, 5), false);
+                }
+            } catch (err) {
+                console.error('Error loading dashboard stats:', err);
+            }
+        }
+
+        function renderDashRecentActivity(items, isAdminView) {
+            let panel = document.getElementById('dashRecentActivityPanel');
+            if (!panel) {
+                panel = document.createElement('div');
+                panel.id = 'dashRecentActivityPanel';
+                panel.className = 'wf-table-wrap';
+                panel.style.padding = '20px 24px';
+                panel.style.marginTop = '20px';
+                document.getElementById('dashStatsGrid').insertAdjacentElement('afterend', panel);
+            }
+
+            const title = isAdminView ? 'Recent leave requests' : 'Your recent leave history';
+
+            if (!items || items.length === 0) {
+                panel.innerHTML = `
+                    <div style="font-size:13px; font-weight:700; color:var(--sherq-blue); margin-bottom:10px;">${title}</div>
+                    <div class="wf-empty" style="padding:20px 0;">Nothing here yet.</div>
+                `;
+                return;
+            }
+
+            panel.innerHTML = `
+                <div style="font-size:13px; font-weight:700; color:var(--sherq-blue); margin-bottom:10px;">${title}</div>
+                ${items.map((item, i) => `
+                    <div class="dash-activity-row" data-index="${i}" style="display:flex; justify-content:space-between; align-items:center; padding:9px 0; border-bottom:1px solid var(--line); font-size:13px; cursor:pointer;">
+                        <span style="color:#1D2333;">
+                            ${isAdminView ? `<b>${item.first_name} ${item.last_name}</b> &middot; ` : ''}${item.leave_type} &middot; ${item.days_requested} day${item.days_requested === 1 ? '' : 's'}
+                        </span>
+                        <span class="lv-status-badge status-${item.status}">${item.status}</span>
+                    </div>
+                `).join('')}
+            `;
+            panel.querySelectorAll('.dash-activity-row').forEach(row => {
+                row.onclick = () => openHistoryRequestDetail(items[parseInt(row.dataset.index, 10)]);
+            });
         }
 
         function showDashboardHome() {
             hideAllContentViews();
             document.getElementById('dashboardHomeView').style.display = 'block';
+            populateDashboardHero();
         }
 
         async function showWorkforce() {
@@ -1192,6 +1618,450 @@
             const isOpen = submenu.style.display === 'block';
             submenu.style.display = isOpen ? 'none' : 'block';
             chevron.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
+        }
+
+        function toggleRssTrainingMenu() {
+            const submenu = document.getElementById('rssTrainingSubmenu');
+            const isOpen = submenu.style.display === 'block';
+            submenu.style.display = isOpen ? 'none' : 'block';
+        }
+
+        function toggleTimesheetsMenu() {
+            const submenu = document.getElementById('timesheetsSubmenu');
+            const isOpen = submenu.style.display === 'block';
+            submenu.style.display = isOpen ? 'none' : 'block';
+        }
+
+        // ============ RSS TRAINING REGISTER ============
+        let rssLearners = [];
+        let rssTrainingTypes = [];
+        let editingRssLearnerId = null;
+        let rssExpiredFilterOn = false;
+        const RSS_LEARNER_TYPE_LABELS = {
+            'First Aid Training': 'First Aid Training',
+            'Fire Fighting Training': 'Fire Fighting Training',
+            'HSE Rep Training': 'SHE Rep Training'
+        };
+
+        // ============ RSS TRAINING MANUALS ============
+        let rssManuals = [];
+        let pendingManualUploadType = null;
+
+        async function showRssManualsView() {
+            hideAllContentViews();
+            document.getElementById('rssManualsView').style.display = 'block';
+            await fetchRssTrainingTypes();
+            await fetchRssManuals();
+            renderRssManualsCategories();
+        }
+
+        async function fetchRssManuals() {
+            try {
+                const response = await fetch(`${API_BASE}/api/rss-manuals`, { headers: API_HEADERS });
+                rssManuals = await response.json();
+            } catch (err) {
+                console.error('Error fetching manuals:', err);
+            }
+        }
+
+        function renderRssManualsCategories() {
+            const container = document.getElementById('rssManualsCategoriesContainer');
+            container.innerHTML = '';
+            rssTrainingTypes.forEach(type => {
+                const safeId = 'manuals-' + type.id;
+                const items = rssManuals.filter(m => m.training_type === type.name);
+                const section = document.createElement('div');
+                section.style.marginBottom = '24px';
+                section.innerHTML = `
+                    <div class="lv-section-title clickable collapsed" id="${safeId}-toggle" onclick="toggleRssManualCategory('${safeId}')">
+                        <i class="fas fa-chevron-down"></i> ${type.name}
+                        <span class="training-category-count">${items.length} manual${items.length === 1 ? '' : 's'}</span>
+                    </div>
+                    <div id="${safeId}-body" style="display:none;">
+                        <div id="${safeId}-list" style="margin-bottom: 12px;"></div>
+                        <button class="wf-btn-secondary" onclick="openUploadManualModal('${type.name.replace(/'/g, "\\'")}')">
+                            <i class="fas fa-upload"></i> Upload Manual
+                        </button>
+                    </div>
+                `;
+                container.appendChild(section);
+
+                const list = section.querySelector(`#${safeId}-list`);
+                if (items.length === 0) {
+                    list.innerHTML = `<div class="wf-empty">No manuals uploaded yet for this course.</div>`;
+                } else {
+                    list.innerHTML = items.map(m => `
+                        <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 14px; border:1px solid var(--line); border-radius:8px; margin-bottom:8px;">
+                            <a href="${API_BASE}/${m.file_path}" target="_blank" style="font-size:13px; color:var(--sherq-blue-mid); font-weight:600;">
+                                <i class="fas fa-file-pdf"></i> ${m.file_name || 'Manual'}
+                            </a>
+                            <div style="display:flex; align-items:center; gap:10px;">
+                                <span style="font-size:11.5px; color:var(--ink-soft);">${formatDate(m.uploaded_at)}</span>
+                                <button class="lv-col-remove" onclick="deleteRssManual(${m.id})" title="Remove">&times;</button>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            });
+        }
+
+        function toggleRssManualCategory(safeId) {
+            const body = document.getElementById(`${safeId}-body`);
+            const toggle = document.getElementById(`${safeId}-toggle`);
+            const isHidden = body.style.display === 'none';
+            body.style.display = isHidden ? 'block' : 'none';
+            toggle.classList.toggle('collapsed', !isHidden);
+        }
+
+        function openUploadManualModal(typeName) {
+            pendingManualUploadType = typeName;
+            document.getElementById('rssManualModalTitle').innerText = `Upload Manual — ${typeName}`;
+            document.getElementById('rssManualFile').value = '';
+            document.getElementById('rssManualModalOverlay').classList.add('open');
+        }
+
+        function closeRssManualModal() {
+            document.getElementById('rssManualModalOverlay').classList.remove('open');
+            pendingManualUploadType = null;
+        }
+
+        async function saveRssManual() {
+            const file = document.getElementById('rssManualFile').files[0];
+            if (!file) { alert('Please choose a file first.'); return; }
+            if (!pendingManualUploadType) return;
+
+            const formData = new FormData();
+            formData.append('manual', file);
+            formData.append('training_type', pendingManualUploadType);
+            formData.append('uploaded_by', currentUserEmployeeId || '');
+
+            try {
+                const response = await fetch(`${API_BASE}/api/rss-manuals`, {
+                    method: 'POST', headers: API_HEADERS, body: formData
+                });
+                if (!response.ok) { alert('Failed to upload manual'); return; }
+                closeRssManualModal();
+                await fetchRssManuals();
+                renderRssManualsCategories();
+            } catch (err) {
+                console.error('Error uploading manual:', err);
+                alert('Server error while uploading manual');
+            }
+        }
+
+        function deleteRssManual(id) {
+            showAppConfirm('Remove this manual?', async () => {
+                try {
+                    await fetch(`${API_BASE}/api/rss-manuals/${id}`, { method: 'DELETE', headers: API_HEADERS });
+                    await fetchRssManuals();
+                    renderRssManualsCategories();
+                } catch (err) {
+                    console.error('Error deleting manual:', err);
+                }
+            });
+        }
+
+        async function showRssTrainingRegister() {
+            hideAllContentViews();
+            document.getElementById('rssTrainingView').style.display = 'block';
+            await fetchRssTrainingTypes();
+            populateRssYearFilter();
+            await fetchRssLearners();
+            await fetchRssLearnerSummary();
+        }
+
+        async function fetchRssTrainingTypes() {
+            try {
+                const response = await fetch(`${API_BASE}/api/rss-training-types`, { headers: API_HEADERS });
+                rssTrainingTypes = await response.json();
+                const select = document.getElementById('rl_training_type');
+                select.innerHTML = rssTrainingTypes.map(t => `<option value="${t.name}">${t.name}</option>`).join('');
+            } catch (err) {
+                console.error('Error fetching training types:', err);
+            }
+        }
+
+        function populateRssYearFilter() {
+            const select = document.getElementById('rssFilterYear');
+            const currentYear = new Date().getFullYear();
+            const startYear = currentYear - 5;
+            const endYear = 2030;
+            let optionsHtml = '<option value="">All Years</option>';
+            for (let y = endYear; y >= startYear; y--) {
+                optionsHtml += `<option value="${y}">${y}</option>`;
+            }
+            select.innerHTML = optionsHtml;
+        }
+
+        function toggleRssExpiredFilter() {
+            rssExpiredFilterOn = !rssExpiredFilterOn;
+            const btn = document.getElementById('rssFilterExpiredBtn');
+            btn.style.background = rssExpiredFilterOn ? '#FEF2F2' : '';
+            btn.style.color = rssExpiredFilterOn ? '#DC2626' : '';
+            btn.style.borderColor = rssExpiredFilterOn ? '#FCA5A5' : '';
+            applyRssLearnerFilters();
+        }
+
+        function clearRssLearnerFilters() {
+            document.getElementById('rssFilterName').value = '';
+            document.getElementById('rssFilterYear').value = '';
+            document.getElementById('rssFilterMonth').value = '';
+            document.getElementById('rssFilterClient').value = '';
+            rssExpiredFilterOn = false;
+            const btn = document.getElementById('rssFilterExpiredBtn');
+            btn.style.background = '';
+            btn.style.color = '';
+            btn.style.borderColor = '';
+            applyRssLearnerFilters();
+        }
+
+        async function applyRssLearnerFilters() {
+            await fetchRssLearners();
+        }
+
+        async function fetchRssLearners() {
+            const name = document.getElementById('rssFilterName').value.trim();
+            const year = document.getElementById('rssFilterYear').value;
+            const month = document.getElementById('rssFilterMonth').value;
+            const client = document.getElementById('rssFilterClient').value.trim();
+
+            const params = new URLSearchParams();
+            if (name) params.append('name', name);
+            if (year) params.append('year', year);
+            if (month) params.append('month', month);
+            if (client) params.append('client', client);
+            if (rssExpiredFilterOn) params.append('expired', 'true');
+
+            try {
+                const response = await fetch(`${API_BASE}/api/rss-learners?${params.toString()}`, { headers: API_HEADERS });
+                rssLearners = await response.json();
+                renderRssLearnersTable();
+            } catch (err) {
+                console.error('Error fetching learners:', err);
+            }
+        }
+
+        function renderRssLearnersTable() {
+            const tbody = document.getElementById('rssLearnersBody');
+            const empty = document.getElementById('rssLearnersEmpty');
+            document.getElementById('rssResultCount').innerText = rssLearners.length;
+
+            tbody.innerHTML = '';
+            if (rssLearners.length === 0) {
+                empty.style.display = 'block';
+            } else {
+                empty.style.display = 'none';
+                rssLearners.forEach(l => {
+                    const row = document.createElement('tr');
+                    row.style.cursor = 'pointer';
+                    row.onclick = () => openEditRssLearnerModal(l.id);
+                    const isExpired = l.valid_until && new Date(l.valid_until) < new Date();
+                    row.innerHTML = `
+                        <td>${l.first_name} ${l.last_name}</td>
+                        <td>${l.id_number || '—'}</td>
+                        <td>${l.client || '—'}</td>
+                        <td>${l.training_type}</td>
+                        <td>${l.date_of_training ? formatDate(l.date_of_training) : '—'}</td>
+                        <td>${l.valid_until ? formatDate(l.valid_until) : '—'} ${isExpired ? '<span style="color:#DC2626; font-weight:700; font-size:11px;">EXPIRED</span>' : ''}</td>
+                        <td><span class="lv-status-badge status-${l.passed ? 'Approved' : 'Rejected'}">${l.passed ? 'Passed' : 'Failed'}</span></td>
+                        <td>${l.certificate_number || '—'}</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            }
+        }
+
+        async function fetchRssLearnerSummary() {
+            try {
+                const response = await fetch(`${API_BASE}/api/rss-learners/summary`, { headers: API_HEADERS });
+                const summary = await response.json();
+                renderRssLearnerSummary(summary);
+            } catch (err) {
+                console.error('Error fetching learner summary:', err);
+            }
+        }
+
+        function renderRssLearnerSummary(summary) {
+            const grid = document.getElementById('rssLearnerStats');
+            grid.innerHTML = Object.keys(RSS_LEARNER_TYPE_LABELS).map(type => {
+                const row = summary.find(s => s.training_type === type);
+                const count = row ? row.total : 0;
+                return `
+                    <div class="wf-stat-card active">
+                        <div class="label">${RSS_LEARNER_TYPE_LABELS[type]}</div>
+                        <div class="value">${count}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function openRegisterLearnerModal() {
+            editingRssLearnerId = null;
+            document.getElementById('rssLearnerModalTitle').innerText = 'Register Learner';
+            document.getElementById('rl_first_name').value = '';
+            document.getElementById('rl_last_name').value = '';
+            document.getElementById('rl_id_number').value = '';
+            document.getElementById('rl_client').value = '';
+            if (rssTrainingTypes.length) document.getElementById('rl_training_type').value = rssTrainingTypes[0].name;
+            document.getElementById('rl_date_of_training').value = '';
+            document.getElementById('rl_valid_until').value = '';
+            document.getElementById('rl_passed').value = 'true';
+            document.getElementById('rl_certificate_number').value = '';
+            document.getElementById('rl_certificate_number').placeholder = 'Generated automatically when saved';
+            document.getElementById('rl_id_document').value = '';
+            document.getElementById('rl_marked_test').value = '';
+            document.getElementById('rl_training_register').value = '';
+            document.getElementById('rl_id_document_current').innerHTML = '';
+            document.getElementById('rl_marked_test_current').innerHTML = '';
+            document.getElementById('rl_training_register_current').innerHTML = '';
+            document.getElementById('rl_id_document_replace_btn').style.display = 'none';
+            document.getElementById('rl_marked_test_replace_btn').style.display = 'none';
+            document.getElementById('rl_training_register_replace_btn').style.display = 'none';
+            document.getElementById('rl_delete_btn').style.display = 'none';
+            document.getElementById('rssLearnerModalOverlay').classList.add('open');
+        }
+
+        function rssDocLinkHtml(path, label) {
+            if (!path) return `<span style="color:var(--ink-soft);">No ${label} uploaded yet.</span>`;
+            return `<a href="${API_BASE}/${path}" target="_blank" style="color:var(--sherq-blue-mid);"><i class="fas fa-file"></i> View current ${label}</a>`;
+        }
+
+        function openEditRssLearnerModal(id) {
+            const l = rssLearners.find(x => x.id === id);
+            if (!l) return;
+            editingRssLearnerId = id;
+            document.getElementById('rssLearnerModalTitle').innerText = 'Edit Learner';
+            document.getElementById('rl_first_name').value = l.first_name || '';
+            document.getElementById('rl_last_name').value = l.last_name || '';
+            document.getElementById('rl_id_number').value = l.id_number || '';
+            document.getElementById('rl_client').value = l.client || '';
+            document.getElementById('rl_training_type').value = l.training_type;
+            document.getElementById('rl_date_of_training').value = l.date_of_training ? l.date_of_training.split('T')[0] : '';
+            document.getElementById('rl_valid_until').value = l.valid_until ? l.valid_until.split('T')[0] : '';
+            document.getElementById('rl_passed').value = l.passed ? 'true' : 'false';
+            document.getElementById('rl_certificate_number').value = l.certificate_number || '';
+            document.getElementById('rl_id_document').value = '';
+            document.getElementById('rl_marked_test').value = '';
+            document.getElementById('rl_training_register').value = '';
+            document.getElementById('rl_id_document_current').innerHTML = rssDocLinkHtml(l.id_document_path, 'ID document');
+            document.getElementById('rl_marked_test_current').innerHTML = rssDocLinkHtml(l.marked_test_path, 'marked test');
+            document.getElementById('rl_training_register_current').innerHTML = rssDocLinkHtml(l.training_register_path, 'training register');
+            document.getElementById('rl_id_document_replace_btn').style.display = 'inline-block';
+            document.getElementById('rl_marked_test_replace_btn').style.display = 'inline-block';
+            document.getElementById('rl_training_register_replace_btn').style.display = 'inline-block';
+            document.getElementById('rl_delete_btn').style.display = 'inline-block';
+            document.getElementById('rssLearnerModalOverlay').classList.add('open');
+        }
+
+        async function replaceRssLearnerDocument(fieldName) {
+            if (!editingRssLearnerId) return;
+            const fileInput = document.getElementById(`rl_${fieldName}`);
+            const file = fileInput.files[0];
+            if (!file) { alert('Please choose a file first.'); return; }
+
+            const formData = new FormData();
+            formData.append(fieldName, file);
+
+            try {
+                const response = await fetch(`${API_BASE}/api/rss-learners/${editingRssLearnerId}/documents`, {
+                    method: 'POST', headers: API_HEADERS, body: formData
+                });
+                if (!response.ok) { alert('Failed to replace document'); return; }
+                const updated = await response.json();
+
+                const idx = rssLearners.findIndex(l => l.id === editingRssLearnerId);
+                if (idx !== -1) rssLearners[idx] = updated;
+
+                const labelMap = { id_document: 'ID document', marked_test: 'marked test', training_register: 'training register' };
+                document.getElementById(`rl_${fieldName}_current`).innerHTML = rssDocLinkHtml(updated[`${fieldName}_path`], labelMap[fieldName]);
+                fileInput.value = '';
+            } catch (err) {
+                console.error('Error replacing document:', err);
+                alert('Server error while replacing document');
+            }
+        }
+
+        function closeRssLearnerModal() {
+            document.getElementById('rssLearnerModalOverlay').classList.remove('open');
+            editingRssLearnerId = null;
+        }
+
+        async function saveRssLearner() {
+            const first_name = document.getElementById('rl_first_name').value.trim();
+            const last_name = document.getElementById('rl_last_name').value.trim();
+            if (!first_name || !last_name) { alert('Please enter first and last name.'); return; }
+
+            const id_number = document.getElementById('rl_id_number').value.trim();
+            const client = document.getElementById('rl_client').value.trim();
+            const training_type = document.getElementById('rl_training_type').value;
+            const date_of_training = document.getElementById('rl_date_of_training').value;
+            const valid_until = document.getElementById('rl_valid_until').value;
+            const passed = document.getElementById('rl_passed').value;
+
+            const idFile = document.getElementById('rl_id_document').files[0];
+            const testFile = document.getElementById('rl_marked_test').files[0];
+            const regFile = document.getElementById('rl_training_register').files[0];
+
+            try {
+                if (editingRssLearnerId) {
+                    await fetch(`${API_BASE}/api/rss-learners/${editingRssLearnerId}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json', ...API_HEADERS },
+                        body: JSON.stringify({ first_name, last_name, id_number, client, training_type, date_of_training, valid_until, passed })
+                    });
+
+                    if (idFile || testFile || regFile) {
+                        const docForm = new FormData();
+                        if (idFile) docForm.append('id_document', idFile);
+                        if (testFile) docForm.append('marked_test', testFile);
+                        if (regFile) docForm.append('training_register', regFile);
+                        await fetch(`${API_BASE}/api/rss-learners/${editingRssLearnerId}/documents`, {
+                            method: 'POST', headers: API_HEADERS, body: docForm
+                        });
+                    }
+                } else {
+                    const formData = new FormData();
+                    formData.append('first_name', first_name);
+                    formData.append('last_name', last_name);
+                    formData.append('id_number', id_number);
+                    formData.append('client', client);
+                    formData.append('training_type', training_type);
+                    formData.append('date_of_training', date_of_training);
+                    formData.append('valid_until', valid_until);
+                    formData.append('passed', passed);
+                    formData.append('created_by', currentUserEmployeeId || '');
+                    if (idFile) formData.append('id_document', idFile);
+                    if (testFile) formData.append('marked_test', testFile);
+                    if (regFile) formData.append('training_register', regFile);
+
+                    const response = await fetch(`${API_BASE}/api/rss-learners`, {
+                        method: 'POST', headers: API_HEADERS, body: formData
+                    });
+                    if (!response.ok) { alert('Failed to register learner'); return; }
+                }
+
+                closeRssLearnerModal();
+                await fetchRssLearners();
+                await fetchRssLearnerSummary();
+            } catch (err) {
+                console.error('Error saving learner:', err);
+                alert('Server error while saving learner');
+            }
+        }
+
+        function deleteRssLearner() {
+            if (!editingRssLearnerId) return;
+            const id = editingRssLearnerId;
+            showAppConfirm('Remove this learner record? This cannot be undone.', async () => {
+                try {
+                    await fetch(`${API_BASE}/api/rss-learners/${id}`, { method: 'DELETE', headers: API_HEADERS });
+                    closeRssLearnerModal();
+                    await fetchRssLearners();
+                    await fetchRssLearnerSummary();
+                } catch (err) {
+                    console.error('Error deleting learner:', err);
+                }
+            });
         }
 
         function showHrPlaceholder(sectionName) {
@@ -2527,6 +3397,373 @@
                     await fetchTrainings();
                 } catch (err) {
                     console.error('Error removing training topic:', err);
+                }
+            });
+        }
+
+        // ============ TIMESHEETS / OVERTIME ============
+        let viewingTimesheetsEmployeeId = null;
+        let isTimesheetsReadOnly = false;
+        let timesheetsEmployeeList = [];
+        let overtimeEntries = [];
+        let editingOvertimeId = null;
+
+        let currentTimesheetsTab = 'overtime';
+
+        function applyTimesheetsTabVisibility() {
+            const showOvertime = currentTimesheetsTab === 'overtime';
+            document.getElementById('overtimeSectionToggle').style.display = showOvertime ? 'flex' : 'none';
+            document.getElementById('overtimeSectionBody').style.display = showOvertime ? 'block' : 'none';
+            document.getElementById('timesheetSectionToggle').style.display = showOvertime ? 'none' : 'flex';
+            document.getElementById('timesheetSectionBody').style.display = showOvertime ? 'none' : 'block';
+        }
+
+        async function showTimesheetsView(tab) {
+            if (tab) currentTimesheetsTab = tab;
+            hideAllContentViews();
+            document.getElementById('timesheetsView').style.display = 'block';
+            applyTimesheetsTabVisibility();
+
+            const pageLabel = currentTimesheetsTab === 'overtime' ? 'Overtime' : 'Timesheet';
+            const isManagement = (currentUserRole === 'admin' || currentUserRole === 'manager');
+
+            if (isManagement) {
+                document.getElementById('timesheetsViewSubtitle').innerText = `Select an employee to view their ${pageLabel.toLowerCase()}`;
+                document.getElementById('timesheetsEmployeeListView').style.display = 'block';
+                document.getElementById('timesheetsPersonalSection').style.display = 'none';
+                await fetchTimesheetsEmployeeList();
+            } else {
+                document.getElementById('timesheetsViewSubtitle').innerText = pageLabel;
+                document.getElementById('timesheetsEmployeeListView').style.display = 'none';
+                document.getElementById('timesheetsPersonalSection').style.display = 'block';
+                document.getElementById('timesheetsBackToListBtn').style.display = 'none';
+                document.getElementById('timesheetsViewingWhoLabel').style.display = 'none';
+                viewingTimesheetsEmployeeId = currentUserEmployeeId;
+                isTimesheetsReadOnly = false;
+                if (currentTimesheetsTab === 'overtime') await fetchOvertimeEntries();
+            }
+        }
+
+        async function fetchTimesheetsEmployeeList() {
+            try {
+                const response = await fetch(`${API_BASE}/api/employees`, { headers: API_HEADERS });
+                timesheetsEmployeeList = await response.json();
+                renderTimesheetsEmployeeList();
+            } catch (err) {
+                console.error('Error fetching employees for timesheets list:', err);
+            }
+        }
+
+        function renderTimesheetsEmployeeList() {
+            const search = (document.getElementById('timesheetsEmployeeSearchInput').value || '').toLowerCase();
+            const tbody = document.getElementById('timesheetsEmployeeListBody');
+            const empty = document.getElementById('timesheetsEmployeeListEmpty');
+
+            const filtered = timesheetsEmployeeList.filter(emp => {
+                const fullName = `${emp.first_name || ''} ${emp.last_name || ''}`.toLowerCase();
+                return (
+                    search === '' ||
+                    fullName.includes(search) ||
+                    (emp.job_title || '').toLowerCase().includes(search) ||
+                    (emp.department || '').toLowerCase().includes(search)
+                );
+            });
+
+            tbody.innerHTML = '';
+            if (filtered.length === 0) {
+                empty.style.display = 'block';
+            } else {
+                empty.style.display = 'none';
+                filtered.forEach(emp => {
+                    const row = document.createElement('tr');
+                    row.onclick = () => selectEmployeeForTimesheets(emp.id, `${emp.first_name || ''} ${emp.last_name || ''}`.trim());
+                    row.innerHTML = `
+                        <td>${emp.first_name || ''} ${emp.last_name || ''}</td>
+                        <td>${emp.job_title || '—'}</td>
+                        <td>${emp.department || '—'}</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            }
+        }
+
+        async function selectEmployeeForTimesheets(employeeId, employeeName) {
+            viewingTimesheetsEmployeeId = employeeId;
+            isTimesheetsReadOnly = true;
+            document.getElementById('timesheetsEmployeeListView').style.display = 'none';
+            document.getElementById('timesheetsPersonalSection').style.display = 'block';
+            document.getElementById('timesheetsBackToListBtn').style.display = 'flex';
+            document.getElementById('timesheetsViewingWhoLabel').style.display = 'block';
+            const pageLabel = currentTimesheetsTab === 'overtime' ? 'Overtime' : 'Timesheet';
+            document.getElementById('timesheetsViewingWhoLabel').innerText = `Viewing ${pageLabel.toLowerCase()} for: ${employeeName}`;
+            applyTimesheetsTabVisibility();
+            if (currentTimesheetsTab === 'overtime') await fetchOvertimeEntries();
+        }
+
+        function backToTimesheetsEmployeeList() {
+            viewingTimesheetsEmployeeId = null;
+            isTimesheetsReadOnly = false;
+            document.getElementById('timesheetsPersonalSection').style.display = 'none';
+            document.getElementById('timesheetsEmployeeListView').style.display = 'block';
+        }
+
+        function toggleOvertimeSection() {
+            const body = document.getElementById('overtimeSectionBody');
+            const toggle = document.getElementById('overtimeSectionToggle');
+            const isHidden = body.style.display === 'none';
+            body.style.display = isHidden ? 'block' : 'none';
+            toggle.classList.toggle('collapsed', !isHidden);
+        }
+
+        function toggleTimesheetSection() {
+            const body = document.getElementById('timesheetSectionBody');
+            const toggle = document.getElementById('timesheetSectionToggle');
+            const isHidden = body.style.display === 'none';
+            body.style.display = isHidden ? 'block' : 'none';
+            toggle.classList.toggle('collapsed', !isHidden);
+        }
+
+        function formatDurationFromMinutes(totalMinutes) {
+            const h = Math.floor(totalMinutes / 60);
+            const m = totalMinutes % 60;
+            if (h > 0 && m > 0) return `${h}hr${h > 1 ? 's' : ''}${m}min`;
+            if (h > 0) return `${h} Hour${h > 1 ? 's' : ''}`;
+            return `${m}min`;
+        }
+
+        async function fetchOvertimeEntries() {
+            if (!viewingTimesheetsEmployeeId) return;
+            try {
+                const response = await fetch(`${API_BASE}/api/employees/${viewingTimesheetsEmployeeId}/overtime`, { headers: API_HEADERS });
+                overtimeEntries = await response.json();
+                renderOvertimeEntries();
+            } catch (err) {
+                console.error('Error fetching overtime entries:', err);
+            }
+        }
+
+        function ordinalDate(dateStr) {
+            const d = new Date(dateStr);
+            const day = d.getDate();
+            const suffix = (day % 10 === 1 && day !== 11) ? 'st' : (day % 10 === 2 && day !== 12) ? 'nd' : (day % 10 === 3 && day !== 13) ? 'rd' : 'th';
+            const month = d.toLocaleDateString('en-ZA', { month: 'long' });
+            return `${day}${suffix} of ${month} ${d.getFullYear()}`;
+        }
+
+        function renderOvertimeEntries() {
+            renderOvertimeRegister();
+            const list = document.getElementById('overtimeEntriesList');
+            if (overtimeEntries.length === 0) {
+                list.innerHTML = `<div class="wf-empty">No overtime logged yet.</div>`;
+                return;
+            }
+            list.innerHTML = overtimeEntries.map(entry => {
+                const duration = formatDurationFromMinutes(entry.minutes_worked);
+                const workedStr = formatDate(entry.date_worked);
+                const takings = entry.takings || [];
+                const remaining = entry.minutes_remaining;
+
+                let takenStr;
+                if (takings.length === 0) {
+                    takenStr = `not yet taken`;
+                } else if (takings.length === 1 && remaining <= 0) {
+                    takenStr = `<span style="color:#5C7A1D; font-weight:700;">taken on the ${ordinalDate(takings[0].date_taken)}</span>`;
+                } else {
+                    const parts = takings.map(t => `${formatDurationFromMinutes(t.minutes_taken)} taken on the ${ordinalDate(t.date_taken)}`);
+                    let str = parts.join(', ');
+                    if (remaining > 0) str += `, ${formatDurationFromMinutes(remaining)} remaining`;
+                    takenStr = `<span style="color:#B45309; font-weight:700;">${str}</span>`;
+                }
+
+                return `
+                    <div class="ot-entry" onclick="openEditOvertimeModal(${entry.id})">
+                        <div class="ot-text"><b>${duration}</b> overtime worked on ${workedStr} <span style="color:var(--ink-soft);">(${takenStr})</span></div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderOvertimeRegister() {
+            const register = document.getElementById('overtimeRegister');
+            const totalWorked = overtimeEntries.reduce((sum, e) => sum + (e.minutes_worked || 0), 0);
+            const totalTaken = overtimeEntries.reduce((sum, e) => sum + (e.minutes_taken_total || 0), 0);
+            const totalRemaining = totalWorked - totalTaken;
+
+            register.innerHTML = `
+                <div class="wf-stat-card">
+                    <div class="label">Total Hours Banked</div>
+                    <div class="value">${formatDurationFromMinutes(totalWorked)}</div>
+                </div>
+                <div class="wf-stat-card">
+                    <div class="label">Total Hours Used</div>
+                    <div class="value">${formatDurationFromMinutes(totalTaken)}</div>
+                </div>
+                <div class="wf-stat-card active">
+                    <div class="label">Hours Remaining</div>
+                    <div class="value">${formatDurationFromMinutes(totalRemaining)}</div>
+                </div>
+            `;
+        }
+
+        function openAddOvertimeModal() {
+            editingOvertimeId = null;
+            document.getElementById('overtimeModalTitle').innerText = 'Add Overtime';
+            document.getElementById('ot_hours').value = 0;
+            document.getElementById('ot_minutes').value = 0;
+            document.getElementById('ot_date_worked').value = '';
+            document.getElementById('ot_takings_section').style.display = 'none';
+            document.getElementById('ot_delete_btn').style.display = 'none';
+            document.getElementById('overtimeModalOverlay').classList.add('open');
+        }
+
+        async function openEditOvertimeModal(entryId) {
+            const entry = overtimeEntries.find(e => e.id === entryId);
+            if (!entry) return;
+            editingOvertimeId = entryId;
+            document.getElementById('overtimeModalTitle').innerText = 'Edit Overtime';
+            document.getElementById('ot_hours').value = Math.floor(entry.minutes_worked / 60);
+            document.getElementById('ot_minutes').value = entry.minutes_worked % 60;
+            document.getElementById('ot_date_worked').value = entry.date_worked ? entry.date_worked.split('T')[0] : '';
+            document.getElementById('ot_takings_section').style.display = 'block';
+            document.getElementById('ot_take_hours').value = 0;
+            document.getElementById('ot_take_minutes').value = 0;
+            document.getElementById('ot_take_date').value = '';
+            document.getElementById('ot_take_note').value = '';
+            document.getElementById('ot_delete_btn').style.display = isTimesheetsReadOnly ? 'none' : 'inline-block';
+            document.getElementById('overtimeModalOverlay').classList.add('open');
+            await loadOvertimeTakings(entryId);
+        }
+
+        async function loadOvertimeTakings(entryId) {
+            try {
+                const response = await fetch(`${API_BASE}/api/overtime/${entryId}/takings`, { headers: API_HEADERS });
+                const takings = await response.json();
+                renderOvertimeTakings(entryId, takings);
+            } catch (err) {
+                console.error('Error loading overtime takings:', err);
+            }
+        }
+
+        function renderOvertimeTakings(entryId, takings) {
+            const entry = overtimeEntries.find(e => e.id === entryId);
+            const totalTaken = takings.reduce((sum, t) => sum + t.minutes_taken, 0);
+            const remaining = (entry ? entry.minutes_worked : 0) - totalTaken;
+
+            document.getElementById('ot_remaining_summary').innerHTML = `
+                Total worked: <b>${formatDurationFromMinutes(entry ? entry.minutes_worked : 0)}</b> &middot;
+                Taken so far: <b>${formatDurationFromMinutes(totalTaken)}</b> &middot;
+                Remaining: <b style="color:${remaining > 0 ? '#B45309' : '#5C7A1D'};">${formatDurationFromMinutes(remaining)}</b>
+            `;
+
+            const canTakeMore = remaining > 0 && !isTimesheetsReadOnly;
+            document.getElementById('ot_add_form_wrap').style.display = canTakeMore ? 'block' : 'none';
+            document.getElementById('ot_fully_taken_note').style.display = (remaining <= 0) ? 'block' : 'none';
+
+            const list = document.getElementById('ot_takings_list');
+            if (takings.length === 0) {
+                list.innerHTML = `<div style="font-size:12.5px; color:var(--ink-soft);">No time taken yet from this overtime.</div>`;
+            } else {
+                list.innerHTML = takings.map(t => `
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid var(--line); font-size:12.5px;">
+                        <span>${formatDurationFromMinutes(t.minutes_taken)} taken on ${formatDate(t.date_taken)}${t.note ? ` &mdash; ${t.note}` : ''}</span>
+                        <button class="lv-col-remove" onclick="deleteOvertimeTaking(${t.id}, ${entryId})" title="Remove">&times;</button>
+                    </div>
+                `).join('');
+            }
+        }
+
+        async function addOvertimeTaking() {
+            const hours = parseInt(document.getElementById('ot_take_hours').value, 10) || 0;
+            const minutes = parseInt(document.getElementById('ot_take_minutes').value, 10) || 0;
+            const totalMinutes = (hours * 60) + minutes;
+            const date_taken = document.getElementById('ot_take_date').value;
+            const note = document.getElementById('ot_take_note').value.trim();
+
+            if (totalMinutes <= 0) { alert('Please enter how much time is being taken.'); return; }
+            if (!date_taken) { alert('Please enter the date it was taken.'); return; }
+            if (!editingOvertimeId) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/api/overtime/${editingOvertimeId}/takings`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', ...API_HEADERS },
+                    body: JSON.stringify({ minutes_taken: totalMinutes, date_taken, note })
+                });
+                if (!response.ok) {
+                    const data = await response.json();
+                    alert(data.error || 'Failed to add taking');
+                    return;
+                }
+                document.getElementById('ot_take_hours').value = 0;
+                document.getElementById('ot_take_minutes').value = 0;
+                document.getElementById('ot_take_date').value = '';
+                document.getElementById('ot_take_note').value = '';
+                await loadOvertimeTakings(editingOvertimeId);
+                await fetchOvertimeEntries();
+            } catch (err) {
+                console.error('Error adding overtime taking:', err);
+                alert('Server error while adding taking');
+            }
+        }
+
+        async function deleteOvertimeTaking(takingId, entryId) {
+            try {
+                await fetch(`${API_BASE}/api/overtime-takings/${takingId}`, { method: 'DELETE', headers: API_HEADERS });
+                await loadOvertimeTakings(entryId);
+                await fetchOvertimeEntries();
+            } catch (err) {
+                console.error('Error deleting overtime taking:', err);
+            }
+        }
+
+        function closeOvertimeModal() {
+            document.getElementById('overtimeModalOverlay').classList.remove('open');
+            editingOvertimeId = null;
+        }
+
+        async function saveOvertimeEntry() {
+            const hours = parseInt(document.getElementById('ot_hours').value, 10) || 0;
+            const minutes = parseInt(document.getElementById('ot_minutes').value, 10) || 0;
+            const totalMinutes = (hours * 60) + minutes;
+            const date_worked = document.getElementById('ot_date_worked').value;
+
+            if (totalMinutes <= 0) { alert('Please enter an amount of overtime worked.'); return; }
+            if (!date_worked) { alert('Please enter the date the overtime was worked.'); return; }
+
+            try {
+                if (editingOvertimeId) {
+                    await fetch(`${API_BASE}/api/overtime/${editingOvertimeId}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json', ...API_HEADERS },
+                        body: JSON.stringify({ minutes_worked: totalMinutes, date_worked })
+                    });
+                    closeOvertimeModal();
+                    await fetchOvertimeEntries();
+                } else {
+                    await fetch(`${API_BASE}/api/employees/${viewingTimesheetsEmployeeId}/overtime`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', ...API_HEADERS },
+                        body: JSON.stringify({ minutes_worked: totalMinutes, date_worked })
+                    });
+                    closeOvertimeModal();
+                    await fetchOvertimeEntries();
+                }
+            } catch (err) {
+                console.error('Error saving overtime entry:', err);
+                alert('Server error while saving overtime entry');
+            }
+        }
+
+        function deleteOvertimeEntry() {
+            if (!editingOvertimeId) return;
+            const id = editingOvertimeId;
+            showAppConfirm('Remove this overtime entry?', async () => {
+                try {
+                    await fetch(`${API_BASE}/api/overtime/${id}`, { method: 'DELETE', headers: API_HEADERS });
+                    closeOvertimeModal();
+                    await fetchOvertimeEntries();
+                } catch (err) {
+                    console.error('Error deleting overtime entry:', err);
                 }
             });
         }
