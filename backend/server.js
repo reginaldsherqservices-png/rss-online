@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const multer = require('multer');
+const XLSX = require('xlsx');
 require('dotenv').config();
 const pool = require('./db');
 
@@ -25,6 +26,10 @@ const storage = multer.diskStorage({
   }
 });
 const upload = multer({ storage });
+
+// Timesheet spreadsheet uploads are parsed in memory — we never need to keep
+// the raw clock-machine file itself, just the rows extracted from it.
+const memUpload = multer({ storage: multer.memoryStorage() });
 
 app.use(cors());
 app.use(express.json());
@@ -1042,6 +1047,50 @@ app.get('/api/rss-training-types', async (req, res) => {
   }
 });
 
+app.post('/api/rss-training-types', async (req, res) => {
+  const { name, prefix, unit_standard, nqf_level, credits } = req.body;
+  if (!name || !prefix) return res.status(400).json({ error: 'Name and prefix are required' });
+  try {
+    const result = await pool.query(
+      `INSERT INTO rss_training_types (name, prefix, unit_standard, nqf_level, credits)
+       VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT (name) DO NOTHING
+       RETURNING *`,
+      [name.trim(), prefix.trim().toUpperCase(), unit_standard || null, nqf_level || null, credits || null]
+    );
+    res.status(201).json(result.rows[0] || { name });
+  } catch (err) {
+    console.error("EXACT RSS TRAINING TYPE CREATE ERROR:", err);
+    res.status(500).json({ error: 'Error creating training type' });
+  }
+});
+
+app.patch('/api/rss-training-types/:id', async (req, res) => {
+  const { id } = req.params;
+  const { name, prefix, unit_standard, nqf_level, credits } = req.body;
+  try {
+    const result = await pool.query(
+      `UPDATE rss_training_types SET name=$2, prefix=$3, unit_standard=$4, nqf_level=$5, credits=$6 WHERE id=$1 RETURNING *`,
+      [id, name, prefix, unit_standard || null, nqf_level || null, credits || null]
+    );
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error("EXACT RSS TRAINING TYPE UPDATE ERROR:", err);
+    res.status(500).json({ error: 'Error updating training type' });
+  }
+});
+
+app.delete('/api/rss-training-types/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    await pool.query('DELETE FROM rss_training_types WHERE id = $1', [id]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error("EXACT RSS TRAINING TYPE DELETE ERROR:", err);
+    res.status(500).json({ error: 'Error deleting training type' });
+  }
+});
+
 app.get('/api/rss-learners', async (req, res) => {
   const { name, year, month, client, expired } = req.query;
   try {
@@ -1095,6 +1144,7 @@ app.get('/api/rss-learners/summary', async (req, res) => {
   }
 });
 
+// Register a new learner — certificate number only generated when Result is Passed
 app.post('/api/rss-learners', upload.fields([
   { name: 'id_document', maxCount: 1 },
   { name: 'marked_test', maxCount: 1 },
@@ -1102,28 +1152,37 @@ app.post('/api/rss-learners', upload.fields([
 ]), async (req, res) => {
   const {
     first_name, last_name, id_number, training_type, client,
-    date_of_training, valid_until, passed, created_by
+    date_of_training, valid_until, passed, assessor_name, created_by
   } = req.body;
 
   if (!first_name || !last_name || !training_type) {
     return res.status(400).json({ error: 'First name, last name, and training type are required' });
   }
 
+  const hasPassed = passed === 'true';
+
   try {
-    const year = date_of_training ? new Date(date_of_training).getFullYear() : new Date().getFullYear();
+    let certificate_number = null;
+    let typeRow = {};
 
-    const counterResult = await pool.query(
-      `INSERT INTO rss_certificate_counters (training_type, year, last_number)
-       VALUES ($1, $2, 1)
-       ON CONFLICT (training_type, year) DO UPDATE SET last_number = rss_certificate_counters.last_number + 1
-       RETURNING last_number`,
-      [training_type, year]
-    );
-    const seq = counterResult.rows[0].last_number;
+    const typeResult = await pool.query('SELECT prefix, unit_standard, nqf_level, credits FROM rss_training_types WHERE name = $1', [training_type]);
+    typeRow = typeResult.rows[0] || {};
 
-    const prefixResult = await pool.query('SELECT prefix FROM rss_training_types WHERE name = $1', [training_type]);
-    const prefix = prefixResult.rows.length ? prefixResult.rows[0].prefix : training_type.substring(0, 2).toUpperCase();
-    const certificate_number = `${prefix}${year}/${String(seq).padStart(3, '0')}`;
+    // Only a passed result generates a certificate number
+    if (hasPassed) {
+      const year = date_of_training ? new Date(date_of_training).getFullYear() : new Date().getFullYear();
+
+      const counterResult = await pool.query(
+        `INSERT INTO rss_certificate_counters (training_type, year, last_number)
+         VALUES ($1, $2, 1)
+         ON CONFLICT (training_type, year) DO UPDATE SET last_number = rss_certificate_counters.last_number + 1
+         RETURNING last_number`,
+        [training_type, year]
+      );
+      const seq = counterResult.rows[0].last_number;
+      const prefix = typeRow.prefix || training_type.substring(0, 2).toUpperCase();
+      certificate_number = `${prefix}${year}/${String(seq).padStart(3, '0')}`;
+    }
 
     const files = req.files || {};
     const idDocPath = files.id_document ? 'uploads/' + files.id_document[0].filename : null;
@@ -1132,11 +1191,12 @@ app.post('/api/rss-learners', upload.fields([
 
     const result = await pool.query(
       `INSERT INTO rss_training_learners
-        (first_name, last_name, id_number, training_type, client, date_of_training, valid_until, passed, certificate_number, id_document_path, marked_test_path, training_register_path, created_by)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+        (first_name, last_name, id_number, training_type, client, date_of_training, valid_until, passed, certificate_number, id_document_path, marked_test_path, training_register_path, created_by, unit_standard, nqf_level, credits, assessor_name)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
        RETURNING *`,
       [first_name, last_name, id_number || null, training_type, client || null, date_of_training || null, valid_until || null,
-       passed === 'true', certificate_number, idDocPath, markedTestPath, registerPath, created_by || null]
+       hasPassed, certificate_number, idDocPath, markedTestPath, registerPath, created_by || null,
+       typeRow.unit_standard || null, typeRow.nqf_level || null, typeRow.credits || null, assessor_name || 'M. Reginald']
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
@@ -1145,20 +1205,26 @@ app.post('/api/rss-learners', upload.fields([
   }
 });
 
+// Update a learner's core details — clears certificate number if changed to Failed
 app.patch('/api/rss-learners/:id', async (req, res) => {
   const { id } = req.params;
   const {
     first_name, last_name, id_number, training_type, client,
-    date_of_training, valid_until, passed
+    date_of_training, valid_until, passed, assessor_name
   } = req.body;
+  const hasPassed = passed === true || passed === 'true';
   try {
+    if (!hasPassed) {
+      await pool.query('UPDATE rss_training_learners SET certificate_number = NULL WHERE id = $1', [id]);
+    }
+
     const result = await pool.query(
       `UPDATE rss_training_learners SET
         first_name=$2, last_name=$3, id_number=$4, training_type=$5, client=$6,
-        date_of_training=$7, valid_until=$8, passed=$9
+        date_of_training=$7, valid_until=$8, passed=$9, assessor_name=$10
        WHERE id=$1 RETURNING *`,
       [id, first_name, last_name, id_number || null, training_type, client || null,
-       date_of_training || null, valid_until || null, passed === true || passed === 'true']
+       date_of_training || null, valid_until || null, hasPassed, assessor_name || 'M. Reginald']
     );
     res.json(result.rows[0]);
   } catch (err) {
@@ -1205,9 +1271,23 @@ app.delete('/api/rss-learners/:id', async (req, res) => {
   }
 });
 
+app.patch('/api/rss-learners/:id/signature', async (req, res) => {
+  const { id } = req.params;
+  const { signature_data } = req.body;
+  try {
+    const result = await pool.query(
+      'UPDATE rss_training_learners SET signature_data = $2 WHERE id = $1 RETURNING *',
+      [id, signature_data]
+    );
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error("EXACT SIGNATURE SAVE ERROR:", err);
+    res.status(500).json({ error: 'Error saving signature' });
+  }
+});
+
 // ============ RSS TRAINING MANUALS ============
 
-// Get all manuals, optionally filtered by training type
 app.get('/api/rss-manuals', async (req, res) => {
   const { training_type } = req.query;
   try {
@@ -1226,7 +1306,6 @@ app.get('/api/rss-manuals', async (req, res) => {
   }
 });
 
-// Upload a new manual for a training type
 app.post('/api/rss-manuals', upload.single('manual'), async (req, res) => {
   const { training_type, uploaded_by } = req.body;
   if (!training_type || !req.file) {
@@ -1246,7 +1325,6 @@ app.post('/api/rss-manuals', upload.single('manual'), async (req, res) => {
   }
 });
 
-// Delete a manual
 app.delete('/api/rss-manuals/:id', async (req, res) => {
   const { id } = req.params;
   try {
@@ -1255,6 +1333,133 @@ app.delete('/api/rss-manuals/:id', async (req, res) => {
   } catch (err) {
     console.error("EXACT RSS MANUAL DELETE ERROR:", err);
     res.status(500).json({ error: 'Error deleting manual' });
+  }
+});
+
+// ============ TIMESHEET SPREADSHEET UPLOAD ============
+// Expects a spreadsheet with columns: date, name, Surname, Time in, Time out
+// (matching the export format from the clock machine). Column matching is
+// case-insensitive, so header capitalization differences don't matter.
+
+function parseSheetDate(raw) {
+  if (!raw) return null;
+  const s = String(raw).trim();
+  // Clock machine format: DD.MM.YYYY
+  const m = s.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+  if (m) {
+    const [, d, mo, y] = m;
+    return `${y}-${mo.padStart(2, '0')}-${d.padStart(2, '0')}`;
+  }
+  // Fallback for other common formats (e.g. already ISO, or mm/dd/yyyy)
+  const parsed = new Date(s);
+  if (!isNaN(parsed)) return parsed.toISOString().split('T')[0];
+  return null;
+}
+
+function parseSheetTime(raw) {
+  if (!raw) return null;
+  const s = String(raw).trim();
+  const m = s.match(/^(\d{1,2}):(\d{2})/);
+  if (m) return `${m[1].padStart(2, '0')}:${m[2]}`;
+  return null;
+}
+
+function minutesBetween(timeIn, timeOut) {
+  if (!timeIn || !timeOut) return null;
+  const [h1, m1] = timeIn.split(':').map(Number);
+  const [h2, m2] = timeOut.split(':').map(Number);
+  let diff = (h2 * 60 + m2) - (h1 * 60 + m1);
+  if (diff < 0) diff += 24 * 60; // handles a shift that crosses midnight
+  return diff;
+}
+
+app.post('/api/timesheets/upload', memUpload.single('file'), async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+
+  try {
+    const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    // raw:false returns cells as their displayed text (e.g. "15.09.2026", "08:00")
+    // rather than raw Excel serial numbers, which matches what's visible in the file.
+    const rows = XLSX.utils.sheet_to_json(sheet, { defval: '', raw: false });
+
+    const empResult = await pool.query('SELECT id, first_name, last_name FROM employees');
+    const empMap = new Map();
+    empResult.rows.forEach(e => {
+      const key = `${(e.first_name || '').trim().toLowerCase()}|${(e.last_name || '').trim().toLowerCase()}`;
+      empMap.set(key, e.id);
+    });
+
+    let inserted = 0;
+    const skippedNames = [];
+
+    for (const row of rows) {
+      const norm = {};
+      Object.keys(row).forEach(k => { norm[k.trim().toLowerCase()] = row[k]; });
+
+      const name = (norm['name'] || '').toString().trim();
+      const surname = (norm['surname'] || '').toString().trim();
+      if (!name && !surname) continue; // blank row
+
+      const entry_date = parseSheetDate(norm['date']);
+      const time_in = parseSheetTime(norm['time in']);
+      const time_out = parseSheetTime(norm['time out']);
+
+      const key = `${name.toLowerCase()}|${surname.toLowerCase()}`;
+      const employee_id = empMap.get(key);
+
+      if (!employee_id || !entry_date) {
+        skippedNames.push(`${name} ${surname}`.trim() || '(unnamed row)');
+        continue;
+      }
+
+      const minutes_worked = minutesBetween(time_in, time_out);
+
+      await pool.query(
+        `INSERT INTO timesheet_entries (employee_id, entry_date, time_in, time_out, minutes_worked)
+         VALUES ($1,$2,$3,$4,$5)
+         ON CONFLICT (employee_id, entry_date)
+         DO UPDATE SET time_in = EXCLUDED.time_in, time_out = EXCLUDED.time_out, minutes_worked = EXCLUDED.minutes_worked`,
+        [employee_id, entry_date, time_in, time_out, minutes_worked]
+      );
+      inserted++;
+    }
+
+    res.json({ inserted, skipped: skippedNames.length, skipped_names: skippedNames });
+  } catch (err) {
+    console.error('EXACT TIMESHEET UPLOAD ERROR:', err);
+    res.status(500).json({ error: 'Failed to process timesheet file. Is it a valid spreadsheet with date/name/Surname/Time in/Time out columns?' });
+  }
+});
+
+app.get('/api/employees/:id/timesheet', async (req, res) => {
+  const { id } = req.params;
+  const { start, end } = req.query; // optional date range filter, e.g. ?start=2026-09-01&end=2026-09-30
+  try {
+    let query = 'SELECT * FROM timesheet_entries WHERE employee_id = $1';
+    const params = [id];
+    if (start) {
+      params.push(start);
+      query += ` AND entry_date >= $${params.length}`;
+    }
+    if (end) {
+      params.push(end);
+      query += ` AND entry_date <= $${params.length}`;
+    }
+    query += ' ORDER BY entry_date DESC';
+
+    const result = await pool.query(query, params);
+    const entries = result.rows;
+    const totalDays = entries.length;
+    const totalMinutes = entries.reduce((sum, e) => sum + (e.minutes_worked || 0), 0);
+    const avgMinutes = totalDays > 0 ? Math.round(totalMinutes / totalDays) : 0;
+    res.json({
+      entries,
+      stats: { total_days: totalDays, total_minutes: totalMinutes, average_minutes_per_day: avgMinutes }
+    });
+  } catch (err) {
+    console.error('EXACT TIMESHEET FETCH ERROR:', err);
+    res.status(500).json({ error: 'Error fetching timesheet' });
   }
 });
 

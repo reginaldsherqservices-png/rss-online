@@ -262,6 +262,8 @@
         .lf-field .v { font-size: 13.5px; color: #1D2333; font-weight: 600; }
         .lf-field.full { grid-column: 1 / -1; }
     </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
 
@@ -355,6 +357,7 @@
                 </div>
                 <div id="rssTrainingSubmenu" style="display: none; padding-left: 14px;">
                     <div class="nav-item" onclick="showRssTrainingRegister()" style="font-size: 13px;">Learner Register</div>
+                    <div class="nav-item" onclick="showRssTrainingTypesView()" style="font-size: 13px;">Training Types</div>
                     <div class="nav-item" onclick="showRssManualsView()" style="font-size: 13px;">Training Manuals</div>
                 </div>
 
@@ -438,6 +441,33 @@
 
                 <!-- TRAINING VIEW -->
                 <!-- TIMESHEETS VIEW -->
+                <!-- RSS TRAINING TYPES VIEW -->
+                <div id="rssTrainingTypesView" style="display: none;">
+                    <div class="wf-header">
+                        <div>
+                            <h1>Training Types</h1>
+                            <p>Manage your training courses, their Unit Standard, NQF Level, Credits, and certificate prefix</p>
+                        </div>
+                        <button class="wf-add-btn" onclick="openAddTrainingTypeModal()">
+                            <i class="fas fa-plus"></i> Add Training Type
+                        </button>
+                    </div>
+                    <div class="wf-table-wrap">
+                        <table class="wf-table">
+                            <thead>
+                                <tr>
+                                    <th>Training Name</th>
+                                    <th>Unit Standard</th>
+                                    <th>NQF Level</th>
+                                    <th>Credits</th>
+                                    <th>Certificate Prefix</th>
+                                </tr>
+                            </thead>
+                            <tbody id="rssTrainingTypesBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
                 <!-- RSS TRAINING MANUALS VIEW -->
                 <div id="rssManualsView" style="display: none;">
                     <div class="wf-header">
@@ -518,6 +548,9 @@
                             <h1>Timesheets</h1>
                             <p id="timesheetsViewSubtitle">Overtime</p>
                         </div>
+                        <button class="wf-add-btn" id="timesheetUploadBtn" style="display:none;" onclick="openTimesheetUploadModal()">
+                            <i class="fas fa-upload"></i> Upload Timesheet
+                        </button>
                     </div>
 
                     <!-- Admin/Manager: pick an employee to view -->
@@ -564,7 +597,26 @@
                             <i class="fas fa-chevron-down"></i> Timesheet
                         </div>
                         <div id="timesheetSectionBody" style="display:none;">
-                            <div class="wf-empty">This section is under development.</div>
+                            <div style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; margin-bottom: 16px;">
+                                <div><label style="font-size:11px; color:var(--ink-soft); display:block; margin-bottom:4px;">From</label><input type="date" id="timesheetFilterStart" onchange="applyTimesheetDateFilter()"></div>
+                                <div><label style="font-size:11px; color:var(--ink-soft); display:block; margin-bottom:4px;">To</label><input type="date" id="timesheetFilterEnd" onchange="applyTimesheetDateFilter()"></div>
+                                <button class="wf-btn-secondary" onclick="clearTimesheetDateFilter()">Clear Dates</button>
+                            </div>
+                            <div class="wf-stats" id="timesheetStatsGrid" style="grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); margin-bottom: 20px;"></div>
+                            <div class="wf-table-wrap">
+                                <table class="wf-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Time In</th>
+                                            <th>Time Out</th>
+                                            <th>Hours Worked</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="timesheetEntriesBody"></tbody>
+                                </table>
+                                <div id="timesheetEntriesEmpty" class="wf-empty" style="display:none;">No timesheet data uploaded for this employee yet.</div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1186,6 +1238,115 @@
         </div>
     </div>
 
+    <!-- CERTIFICATE VIEW MODAL -->
+    <div class="wf-modal-overlay" id="certificateModalOverlay" style="z-index: 200;">
+        <div class="wf-modal" style="max-width: 720px;">
+            <div class="wf-modal-header">
+                <h2>Certificate of Competence</h2>
+                <button class="wf-modal-close" onclick="closeCertificateView()">✕</button>
+            </div>
+            <div class="wf-modal-body" style="grid-template-columns: 1fr; max-height: 70vh; overflow-y: auto;">
+                <div id="certificatePrintArea" style="background:#fff; position:relative; border:1px solid var(--line); padding: 40px 44px 170px; overflow:hidden;">
+                    <svg style="position:absolute; top:0; left:0; width:420px; height:130px;" viewBox="0 0 420 130" preserveAspectRatio="none">
+                        <polygon points="0,0 420,0 0,130" fill="#15619A"/>
+                        <polygon points="0,0 300,0 0,95" fill="#7AC143"/>
+                    </svg>
+                    <svg style="position:absolute; bottom:0; right:0; width:130px; height:90px;" viewBox="0 0 120 85" preserveAspectRatio="none">
+                        <polygon points="120,85 0,85 120,0" fill="#15619A"/>
+                        <polygon points="120,85 30,85 120,15" fill="#7AC143"/>
+                    </svg>
+
+                    <div style="text-align:center; margin-bottom: 4px; position:relative;">
+                        <img src="https://static.wixstatic.com/media/48021b_d585e66e35b84171968a4275ccf39bdc~mv2.png" style="height:50px; margin-bottom:6px;">
+                        <div style="font-family:'Archivo', sans-serif; font-weight:500; font-size:15px; letter-spacing:0.3px; color:#15619A; margin-bottom:4px;">REGINALD<span style="color:#7AC143;">SHERQ</span>SERVICES</div>
+                        <div style="font-family:'Barlow Condensed', sans-serif; font-size:8px; letter-spacing:1.2px; color:#1D2333; font-weight:400;">HEALTH &middot; SAFETY &middot; ENVIRONMENT &middot; RISK &middot; QUALITY</div>
+                    </div>
+
+                    <div style="text-align:center; font-family:'Barlow Condensed', sans-serif; font-size:27px; font-weight:800; color:#15619A; letter-spacing:0.5px; margin: 22px 0 22px; position:relative;">CERTIFICATE OF COMPETENCE</div>
+
+                    <div style="text-align:center; font-size:13.5px; color:#1D2333; position:relative;">This is to certify that</div>
+                    <div id="cert_learner_name" style="text-align:center; font-size:20px; font-weight:800; color:#15619A; margin: 8px 0 6px; position:relative;">—</div>
+                    <div id="cert_id_number" style="text-align:center; font-size:12.5px; color:#1D2333; margin-bottom: 16px; position:relative;">ID No: —</div>
+                    <div style="text-align:center; font-size:13.5px; color:#1D2333; margin-bottom: 6px; position:relative;">has been declared competent in</div>
+                    <div id="cert_training_name" style="text-align:center; font-size:17px; font-weight:700; color:#15619A; margin-bottom: 20px; position:relative;">—</div>
+
+                    <div style="display:flex; justify-content:center; gap:70px; margin-bottom: 20px; position:relative;">
+                        <div style="text-align:center;"><div style="font-size:12px; color:#1D2333;">Unit Standard:</div><div id="cert_unit_standard" style="font-size:13.5px; font-weight:700; color:#15619A;">—</div></div>
+                        <div style="text-align:center;"><div style="font-size:12px; color:#1D2333;">NQF Level:</div><div id="cert_nqf_level" style="font-size:13.5px; font-weight:700; color:#15619A;">—</div></div>
+                        <div style="text-align:center;"><div style="font-size:12px; color:#1D2333;">Credits:</div><div id="cert_credits" style="font-size:13.5px; font-weight:700; color:#15619A;">—</div></div>
+                    </div>
+
+                    <div style="text-align:center; font-size:11.5px; color:#1D2333; line-height:1.7; margin-bottom: 20px; position:relative;">
+                        The training has been concluded in Accordance with the<br>
+                        <b>Occupational Health Safety Act 85 of 1993</b> and <b>Regulations</b>,<br>
+                        and The South African Qualifications Authority Act <b>(SAQA)</b><br>
+                        DOL No: CI 856/3/12/1
+                    </div>
+
+                    <div style="text-align:center; font-size:12.5px; color:#1D2333; margin-bottom: 22px; position:relative;">Assessor: <b id="cert_assessor">—</b></div>
+                    <div style="text-align:center; font-size:11px; color:#1D2333; margin-bottom: 34px; line-height:1.6; position:relative;">This certificate is issued to the above mentioned candidate for<br>being declared competent by a registered assessor.</div>
+
+                    <div style="display:flex; justify-content:space-between; margin-bottom: 42px; padding: 0 6px; position:relative;">
+                        <div style="text-align:center;"><div style="font-size:11.5px; color:#1D2333;">Date of Training</div><div id="cert_date_of_training" style="font-size:12.5px; font-weight:700; color:#15619A;">—</div></div>
+                        <div style="text-align:center;"><div style="font-size:11.5px; color:#1D2333;">Certificate Number</div><div id="cert_certificate_number" style="font-size:12.5px; font-weight:700; color:#15619A;">—</div></div>
+                        <div style="text-align:center;"><div style="font-size:11.5px; color:#1D2333;">Expiry Date</div><div id="cert_expiry_date" style="font-size:12.5px; font-weight:700; color:#15619A;">—</div></div>
+                    </div>
+
+                    <div style="text-align:center; padding-top: 30px; margin-bottom: 24px; min-height: 56px; position:relative;">
+                        <img id="cert_signature_img" style="height:40px; display:none; margin-bottom:2px;">
+                        <div style="border-top:1px solid #1D2333; width:230px; margin:0 auto; padding-top:5px; font-size:11px; color:#1D2333;">Training Manager</div>
+                    </div>
+
+                    <div style="display:flex; justify-content:space-between; align-items:center; gap: 20px; padding-top: 16px; margin-bottom: 20px; position:relative; z-index:2;">
+                        <div style="height:165px; width:270px; display:flex; align-items:center; justify-content:center;"><img src="https://cdn.ymaws.com/www.saiosh.co.za/resource/resmgr/images/Saiosh_Corporate_Member_Logo.jpg" style="width:100%; height:100%; object-fit:contain;"></div>
+                        <div style="height:165px; width:270px; display:flex; align-items:center; justify-content:center;"><img src="https://upload.wikimedia.org/wikipedia/en/thumb/c/cb/Department_of_Employment_and_Labour_Logo.svg/1280px-Department_of_Employment_and_Labour_Logo.svg.png" style="width:100%; height:100%; object-fit:contain;"></div>
+                        <div style="height:80px; width:135px; display:flex; align-items:center; justify-content:center;"><img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQth1-D5GbihlbQQSlmR8sZL4DusB2_9qj69jC1Cy3Zbyzps1gjhGQZhtN8&s=10" style="width:100%; height:100%; object-fit:contain;"></div>
+                    </div>
+                </div>
+
+                <div id="certSignatureSection" style="margin-top: 20px; border-top: 1px solid var(--line); padding-top: 16px;">
+                    <div class="lv-section-title" style="margin-bottom: 8px;">Electronic Signature</div>
+                    <canvas id="signatureCanvas" width="600" height="150" style="border:1.5px dashed var(--line); border-radius: 8px; width:100%; touch-action:none; background:#FAFBFC;"></canvas>
+                    <div style="display:flex; gap:10px; margin-top: 10px; align-items:center;">
+                        <button class="wf-btn-secondary" onclick="clearSignaturePad()">Clear</button>
+                        <button class="wf-btn-primary" onclick="saveCertificateSignature()">Save Signature</button>
+                        <span id="cert_signature_status" style="font-size:12.5px; color:#5C7A1D; font-weight:700; display:none;"><i class="fas fa-check-circle"></i> Signature saved</span>
+                    </div>
+                </div>
+            </div>
+            <div class="wf-modal-footer">
+                <button class="wf-btn-secondary" onclick="closeCertificateView()">Close</button>
+                <div style="display:flex; gap:10px;">
+                    <button class="wf-btn-primary" onclick="printCertificate()"><i class="fas fa-file-pdf"></i> Save as PDF</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ADD/EDIT TRAINING TYPE MODAL -->
+    <div class="wf-modal-overlay" id="rssTypeModalOverlay">
+        <div class="wf-modal" style="max-width: 460px;">
+            <div class="wf-modal-header">
+                <h2 id="rssTypeModalTitle">Add Training Type</h2>
+                <button class="wf-modal-close" onclick="closeRssTypeModal()">✕</button>
+            </div>
+            <div class="wf-modal-body" style="grid-template-columns: 1fr 1fr;">
+                <div class="wf-field full-width"><label>Training Name</label><input type="text" id="rt_name" placeholder="e.g. Perform Basic Life Support and First Aid"></div>
+                <div class="wf-field full-width"><label>Certificate Prefix</label><input type="text" id="rt_prefix" placeholder="e.g. FA" maxlength="10"></div>
+                <div class="wf-field"><label>Unit Standard</label><input type="text" id="rt_unit_standard" placeholder="e.g. 119567"></div>
+                <div class="wf-field"><label>NQF Level</label><input type="text" id="rt_nqf_level" placeholder="e.g. 2"></div>
+                <div class="wf-field full-width"><label>Credits</label><input type="text" id="rt_credits" placeholder="e.g. 3"></div>
+            </div>
+            <div class="wf-modal-footer">
+                <button class="lv-reject-btn" id="rt_delete_btn" style="padding:10px 18px; font-size:13.5px; display:none;" onclick="deleteRssTrainingType()">Delete</button>
+                <div style="display:flex; gap:10px;">
+                    <button class="wf-btn-secondary" onclick="closeRssTypeModal()">Cancel</button>
+                    <button class="wf-btn-primary" onclick="saveRssTrainingType()">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- UPLOAD MANUAL MODAL -->
     <div class="wf-modal-overlay" id="rssManualModalOverlay">
         <div class="wf-modal" style="max-width: 420px;">
@@ -1223,7 +1384,7 @@
                 <div class="wf-field"><label>Valid Until</label><input type="date" id="rl_valid_until"></div>
                 <div class="wf-field">
                     <label>Result</label>
-                    <select id="rl_passed">
+                    <select id="rl_passed" onchange="document.getElementById('rl_view_cert_btn').style.display = (this.value === 'true' && editingRssLearnerId) ? 'inline-block' : 'none';">
                         <option value="true">Passed</option>
                         <option value="false">Failed</option>
                     </select>
@@ -1232,6 +1393,7 @@
                     <label>Certificate Number</label>
                     <input type="text" id="rl_certificate_number" disabled style="background:#F4F6F9; color:var(--ink-soft);">
                 </div>
+                <div class="wf-field full-width"><label>Assessor Name</label><input type="text" id="rl_assessor_name" value="M. Reginald"></div>
 
                 <div class="wf-field full-width">
                     <label>Upload ID Document</label>
@@ -1259,11 +1421,33 @@
                 </div>
             </div>
             <div class="wf-modal-footer">
-                <button class="lv-reject-btn" id="rl_delete_btn" style="padding:10px 18px; font-size:13.5px; display:none;" onclick="deleteRssLearner()">Delete</button>
+                <div style="display:flex; gap:10px;">
+                    <button class="lv-reject-btn" id="rl_delete_btn" style="padding:10px 18px; font-size:13.5px; display:none;" onclick="deleteRssLearner()">Delete</button>
+                    <button class="wf-btn-primary" id="rl_view_cert_btn" style="display:none;" onclick="openCertificateView()"><i class="fas fa-certificate"></i> View Certificate</button>
+                </div>
                 <div style="display:flex; gap:10px;">
                     <button class="wf-btn-secondary" onclick="closeRssLearnerModal()">Cancel</button>
                     <button class="wf-btn-primary" onclick="saveRssLearner()">Save</button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- UPLOAD TIMESHEET SPREADSHEET MODAL -->
+    <div class="wf-modal-overlay" id="timesheetUploadModalOverlay">
+        <div class="wf-modal" style="max-width: 460px;">
+            <div class="wf-modal-header">
+                <h2>Upload Timesheet Spreadsheet</h2>
+                <button class="wf-modal-close" onclick="closeTimesheetUploadModal()">✕</button>
+            </div>
+            <div class="wf-modal-body" style="grid-template-columns: 1fr;">
+                <div class="wf-account-note">Expects columns: date, name, Surname, Time in, Time out — matching the export from the clock machine. Employees are matched by first name and surname, so make sure spelling matches what's on their employee record.</div>
+                <div class="wf-field"><label>Spreadsheet File (.xlsx or .csv)</label><input type="file" id="timesheetUploadFile" accept=".xlsx,.xls,.csv"></div>
+                <div id="timesheetUploadResult" style="display:none; font-size:12.5px; padding:10px 12px; border-radius:8px; margin-top:4px;"></div>
+            </div>
+            <div class="wf-modal-footer">
+                <button class="wf-btn-secondary" onclick="closeTimesheetUploadModal()">Cancel</button>
+                <button class="wf-btn-primary" onclick="submitTimesheetUpload()">Upload</button>
             </div>
         </div>
     </div>
@@ -1361,8 +1545,6 @@
             // Reset submenus so leftover open/closed state from a previous role doesn't leak through
             document.getElementById('hrSubmenu').style.display = 'none';
             document.getElementById('hrChevron').style.transform = 'rotate(0deg)';
-            document.getElementById('trainingSubmenu').style.display = 'none';
-            document.getElementById('trainingChevron').style.transform = 'rotate(0deg)';
 
             const hrEmployeesItem = document.getElementById('hrEmployeesItem');
             if (isManagement) {
@@ -1419,6 +1601,7 @@
                     } catch (e) { /* non-fatal */ }
                 }
                 populateDashboardHero();
+                showDashboardHome();
             } catch (err) {
                 console.error(err);
                 errorMsg.innerText = 'Server error. Is your backend running?';
@@ -1455,6 +1638,7 @@
             document.getElementById('timesheetsView').style.display = 'none';
             document.getElementById('rssTrainingView').style.display = 'none';
             document.getElementById('rssManualsView').style.display = 'none';
+            document.getElementById('rssTrainingTypesView').style.display = 'none';
             document.getElementById('inboxListView').style.display = 'block';
             document.getElementById('inboxDetailView').style.display = 'none';
         }
@@ -1646,6 +1830,121 @@
         // ============ RSS TRAINING MANUALS ============
         let rssManuals = [];
         let pendingManualUploadType = null;
+
+        // ============ RSS TRAINING TYPES ============
+        let editingRssTypeId = null;
+
+        async function showRssTrainingTypesView() {
+            hideAllContentViews();
+            document.getElementById('rssTrainingTypesView').style.display = 'block';
+            await fetchRssTrainingTypes();
+            renderRssTrainingTypesTable();
+        }
+
+        function renderRssTrainingTypesTable() {
+            const tbody = document.getElementById('rssTrainingTypesBody');
+            tbody.innerHTML = rssTrainingTypes.map(t => `
+                <tr style="cursor:pointer;" onclick="openEditTrainingTypeModal(${t.id})">
+                    <td>${t.name}</td>
+                    <td>${t.unit_standard || '—'}</td>
+                    <td>${t.nqf_level || '—'}</td>
+                    <td>${t.credits || '—'}</td>
+                    <td>${t.prefix}</td>
+                </tr>
+            `).join('');
+        }
+
+        function openAddTrainingTypeModal() {
+            editingRssTypeId = null;
+            document.getElementById('rssTypeModalTitle').innerText = 'Add Training Type';
+            document.getElementById('rt_name').value = '';
+            document.getElementById('rt_prefix').value = '';
+            document.getElementById('rt_unit_standard').value = '';
+            document.getElementById('rt_nqf_level').value = '';
+            document.getElementById('rt_credits').value = '';
+            document.getElementById('rt_delete_btn').style.display = 'none';
+            document.getElementById('rssTypeModalOverlay').classList.add('open');
+        }
+
+        function openEditTrainingTypeModal(id) {
+            const t = rssTrainingTypes.find(x => x.id === id);
+            if (!t) return;
+            editingRssTypeId = id;
+            document.getElementById('rssTypeModalTitle').innerText = 'Edit Training Type';
+            document.getElementById('rt_name').value = t.name || '';
+            document.getElementById('rt_prefix').value = t.prefix || '';
+            document.getElementById('rt_unit_standard').value = t.unit_standard || '';
+            document.getElementById('rt_nqf_level').value = t.nqf_level || '';
+            document.getElementById('rt_credits').value = t.credits || '';
+            document.getElementById('rt_delete_btn').style.display = 'inline-block';
+            document.getElementById('rssTypeModalOverlay').classList.add('open');
+        }
+
+        function closeRssTypeModal() {
+            document.getElementById('rssTypeModalOverlay').classList.remove('open');
+            editingRssTypeId = null;
+        }
+
+        async function saveRssTrainingType() {
+            const name = document.getElementById('rt_name').value.trim();
+            const prefix = document.getElementById('rt_prefix').value.trim();
+            const unit_standard = document.getElementById('rt_unit_standard').value.trim();
+            const nqf_level = document.getElementById('rt_nqf_level').value.trim();
+            const credits = document.getElementById('rt_credits').value.trim();
+
+            if (!name || !prefix) { alert('Please enter a training name and a certificate prefix.'); return; }
+
+            try {
+                if (editingRssTypeId) {
+                    const response = await fetch(`${API_BASE}/api/rss-training-types/${editingRssTypeId}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json', ...API_HEADERS },
+                        body: JSON.stringify({ name, prefix, unit_standard, nqf_level, credits })
+                    });
+                    if (!response.ok) {
+                        const text = await response.text();
+                        let msg;
+                        try { msg = JSON.parse(text).error; } catch (e) { msg = null; }
+                        alert(`Failed to save changes (status ${response.status}): ` + (msg || text.slice(0, 300) || 'No response body.'));
+                        return;
+                    }
+                } else {
+                    const response = await fetch(`${API_BASE}/api/rss-training-types`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', ...API_HEADERS },
+                        body: JSON.stringify({ name, prefix, unit_standard, nqf_level, credits })
+                    });
+                    if (!response.ok) {
+                        const text = await response.text();
+                        let msg;
+                        try { msg = JSON.parse(text).error; } catch (e) { msg = null; }
+                        alert(`Failed to add training type (status ${response.status}): ` + (msg || text.slice(0, 300) || 'No response body.'));
+                        return;
+                    }
+                }
+                closeRssTypeModal();
+                await fetchRssTrainingTypes();
+                renderRssTrainingTypesTable();
+            } catch (err) {
+                console.error('Error saving training type:', err);
+                alert('Server error while saving training type');
+            }
+        }
+
+        function deleteRssTrainingType() {
+            if (!editingRssTypeId) return;
+            const id = editingRssTypeId;
+            showAppConfirm('Remove this training type? Existing learner records will keep their data, but this type will no longer be selectable.', async () => {
+                try {
+                    await fetch(`${API_BASE}/api/rss-training-types/${id}`, { method: 'DELETE', headers: API_HEADERS });
+                    closeRssTypeModal();
+                    await fetchRssTrainingTypes();
+                    renderRssTrainingTypesTable();
+                } catch (err) {
+                    console.error('Error deleting training type:', err);
+                }
+            });
+        }
 
         async function showRssManualsView() {
             hideAllContentViews();
@@ -1841,6 +2140,15 @@
             }
         }
 
+        function isRssDateExpired(dateStr) {
+            if (!dateStr) return false;
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const d = new Date(dateStr);
+            d.setHours(0, 0, 0, 0);
+            return d < today;
+        }
+
         function renderRssLearnersTable() {
             const tbody = document.getElementById('rssLearnersBody');
             const empty = document.getElementById('rssLearnersEmpty');
@@ -1855,7 +2163,7 @@
                     const row = document.createElement('tr');
                     row.style.cursor = 'pointer';
                     row.onclick = () => openEditRssLearnerModal(l.id);
-                    const isExpired = l.valid_until && new Date(l.valid_until) < new Date();
+                    const isExpired = isRssDateExpired(l.valid_until);
                     row.innerHTML = `
                         <td>${l.first_name} ${l.last_name}</td>
                         <td>${l.id_number || '—'}</td>
@@ -1908,6 +2216,7 @@
             document.getElementById('rl_passed').value = 'true';
             document.getElementById('rl_certificate_number').value = '';
             document.getElementById('rl_certificate_number').placeholder = 'Generated automatically when saved';
+            document.getElementById('rl_assessor_name').value = 'M. Reginald';
             document.getElementById('rl_id_document').value = '';
             document.getElementById('rl_marked_test').value = '';
             document.getElementById('rl_training_register').value = '';
@@ -1918,6 +2227,7 @@
             document.getElementById('rl_marked_test_replace_btn').style.display = 'none';
             document.getElementById('rl_training_register_replace_btn').style.display = 'none';
             document.getElementById('rl_delete_btn').style.display = 'none';
+            document.getElementById('rl_view_cert_btn').style.display = 'none';
             document.getElementById('rssLearnerModalOverlay').classList.add('open');
         }
 
@@ -1940,6 +2250,7 @@
             document.getElementById('rl_valid_until').value = l.valid_until ? l.valid_until.split('T')[0] : '';
             document.getElementById('rl_passed').value = l.passed ? 'true' : 'false';
             document.getElementById('rl_certificate_number').value = l.certificate_number || '';
+            document.getElementById('rl_assessor_name').value = l.assessor_name || 'M. Reginald';
             document.getElementById('rl_id_document').value = '';
             document.getElementById('rl_marked_test').value = '';
             document.getElementById('rl_training_register').value = '';
@@ -1950,6 +2261,7 @@
             document.getElementById('rl_marked_test_replace_btn').style.display = 'inline-block';
             document.getElementById('rl_training_register_replace_btn').style.display = 'inline-block';
             document.getElementById('rl_delete_btn').style.display = 'inline-block';
+            document.getElementById('rl_view_cert_btn').style.display = l.passed ? 'inline-block' : 'none';
             document.getElementById('rssLearnerModalOverlay').classList.add('open');
         }
 
@@ -1997,6 +2309,7 @@
             const date_of_training = document.getElementById('rl_date_of_training').value;
             const valid_until = document.getElementById('rl_valid_until').value;
             const passed = document.getElementById('rl_passed').value;
+            const assessor_name = document.getElementById('rl_assessor_name').value.trim();
 
             const idFile = document.getElementById('rl_id_document').files[0];
             const testFile = document.getElementById('rl_marked_test').files[0];
@@ -2007,7 +2320,7 @@
                     await fetch(`${API_BASE}/api/rss-learners/${editingRssLearnerId}`, {
                         method: 'PATCH',
                         headers: { 'Content-Type': 'application/json', ...API_HEADERS },
-                        body: JSON.stringify({ first_name, last_name, id_number, client, training_type, date_of_training, valid_until, passed })
+                        body: JSON.stringify({ first_name, last_name, id_number, client, training_type, date_of_training, valid_until, passed, assessor_name })
                     });
 
                     if (idFile || testFile || regFile) {
@@ -2029,6 +2342,7 @@
                     formData.append('date_of_training', date_of_training);
                     formData.append('valid_until', valid_until);
                     formData.append('passed', passed);
+                    formData.append('assessor_name', assessor_name);
                     formData.append('created_by', currentUserEmployeeId || '');
                     if (idFile) formData.append('id_document', idFile);
                     if (testFile) formData.append('marked_test', testFile);
@@ -2062,6 +2376,189 @@
                     console.error('Error deleting learner:', err);
                 }
             });
+        }
+
+        // ============ CERTIFICATE VIEW + SIGNATURE ============
+        let signaturePadCtx = null;
+        let signatureDrawing = false;
+        let currentCertificateLearnerId = null;
+
+        function openCertificateView() {
+            if (!editingRssLearnerId) return;
+            const l = rssLearners.find(x => x.id === editingRssLearnerId);
+            if (!l) return;
+            currentCertificateLearnerId = l.id;
+
+            document.getElementById('cert_learner_name').innerText = `${l.first_name} ${l.last_name}`;
+            document.getElementById('cert_id_number').innerText = `ID No: ${l.id_number || '—'}`;
+            document.getElementById('cert_training_name').innerText = l.training_type;
+
+            const matchingType = rssTrainingTypes.find(t => t.name === l.training_type) || {};
+            document.getElementById('cert_unit_standard').innerText = l.unit_standard || matchingType.unit_standard || '—';
+            document.getElementById('cert_nqf_level').innerText = l.nqf_level || matchingType.nqf_level || '—';
+            document.getElementById('cert_credits').innerText = l.credits || matchingType.credits || '—';
+
+            document.getElementById('cert_assessor').innerText = l.assessor_name || 'M. Reginald';
+            document.getElementById('cert_date_of_training').innerText = l.date_of_training ? formatDate(l.date_of_training) : '—';
+            document.getElementById('cert_certificate_number').innerText = l.certificate_number || '—';
+            document.getElementById('cert_expiry_date').innerText = l.valid_until ? formatDate(l.valid_until) : '—';
+
+            const sigImg = document.getElementById('cert_signature_img');
+            if (l.signature_data) {
+                sigImg.src = l.signature_data;
+                sigImg.style.display = 'inline-block';
+            } else {
+                sigImg.style.display = 'none';
+            }
+
+            document.getElementById('certificateModalOverlay').classList.add('open');
+            setTimeout(initSignaturePad, 50);
+        }
+
+        function closeCertificateView() {
+            document.getElementById('certificateModalOverlay').classList.remove('open');
+            currentCertificateLearnerId = null;
+        }
+
+        function initSignaturePad() {
+            const canvas = document.getElementById('signatureCanvas');
+            canvas.width = canvas.offsetWidth;
+            canvas.height = 150;
+            signaturePadCtx = canvas.getContext('2d');
+            signaturePadCtx.strokeStyle = '#1a365d';
+            signaturePadCtx.lineWidth = 2;
+            signaturePadCtx.lineCap = 'round';
+
+            const getPos = (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const point = e.touches ? e.touches[0] : e;
+                return { x: point.clientX - rect.left, y: point.clientY - rect.top };
+            };
+
+            const start = (e) => { signatureDrawing = true; const p = getPos(e); signaturePadCtx.beginPath(); signaturePadCtx.moveTo(p.x, p.y); e.preventDefault(); };
+            const move = (e) => { if (!signatureDrawing) return; const p = getPos(e); signaturePadCtx.lineTo(p.x, p.y); signaturePadCtx.stroke(); e.preventDefault(); };
+            const end = () => { signatureDrawing = false; };
+
+            canvas.onmousedown = start;
+            canvas.onmousemove = move;
+            canvas.onmouseup = end;
+            canvas.onmouseleave = end;
+            canvas.ontouchstart = start;
+            canvas.ontouchmove = move;
+            canvas.ontouchend = end;
+        }
+
+        function clearSignaturePad() {
+            const canvas = document.getElementById('signatureCanvas');
+            signaturePadCtx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+
+        async function saveCertificateSignature() {
+            if (!currentCertificateLearnerId) return;
+            const canvas = document.getElementById('signatureCanvas');
+            const signature_data = canvas.toDataURL('image/png');
+
+            try {
+                await fetch(`${API_BASE}/api/rss-learners/${currentCertificateLearnerId}/signature`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json', ...API_HEADERS },
+                    body: JSON.stringify({ signature_data })
+                });
+                const l = rssLearners.find(x => x.id === currentCertificateLearnerId);
+                if (l) l.signature_data = signature_data;
+
+                const sigImg = document.getElementById('cert_signature_img');
+                sigImg.src = signature_data;
+                sigImg.style.display = 'inline-block';
+
+                const statusEl = document.getElementById('cert_signature_status');
+                statusEl.style.display = 'inline';
+                setTimeout(() => { statusEl.style.display = 'none'; }, 3000);
+            } catch (err) {
+                console.error('Error saving signature:', err);
+                document.getElementById('cert_signature_status').innerHTML = '<i class="fas fa-exclamation-circle" style="color:#DC2626;"></i> <span style="color:#DC2626;">Failed to save signature</span>';
+                document.getElementById('cert_signature_status').style.display = 'inline';
+            }
+        }
+
+        function printCertificate() {
+            const printContents = document.getElementById('certificatePrintArea').outerHTML;
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(`
+                <html><head><title>Certificate</title>
+                <style>
+                    @page { size: A4; margin: 0; }
+                    html, body { margin:0; padding:0; height:297mm; overflow:hidden; }
+                    body { font-family:Archivo,sans-serif; }
+                    #pageBox {
+                        width: 210mm;
+                        height: 297mm;
+                        box-sizing: border-box;
+                        padding: 0;
+                        overflow: hidden;
+                        display: flex;
+                        justify-content: center;
+                    }
+                    #pageBox > #certificatePrintArea { transform-origin: top center; border: none !important; width: 210mm !important; }
+                </style>
+                </head><body><div id="pageBox">${printContents}</div></body></html>
+            `);
+            printWindow.document.close();
+
+            // A fixed-size, overflow:hidden page box guarantees a single printed page no matter
+            // what — we just need to scale the certificate down to fit inside it, measured live
+            // (in this document's own layout, so there's no DPI/mm-to-px guesswork involved).
+            const fitAndPrint = () => {
+                const win = printWindow;
+                const pageBox = win.document.getElementById('pageBox');
+                const area = win.document.getElementById('certificatePrintArea');
+
+                const cs = win.getComputedStyle(pageBox);
+                const usableHeight = pageBox.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+                const contentHeight = area.getBoundingClientRect().height;
+
+                if (contentHeight > usableHeight) {
+                    const scale = usableHeight / contentHeight;
+                    area.style.transform = `scale(${scale})`;
+                }
+
+                win.focus();
+                setTimeout(() => { win.print(); }, 200);
+            };
+
+            const imgs = Array.from(printWindow.document.images);
+            Promise.all(imgs.map(img => img.complete ? Promise.resolve() : new Promise(resolve => {
+                img.addEventListener('load', resolve, { once: true });
+                img.addEventListener('error', resolve, { once: true });
+            }))).then(fitAndPrint);
+        }
+
+        async function downloadCertificatePdf() {
+            const el = document.getElementById('certificatePrintArea');
+            try {
+                const imgs = Array.from(el.querySelectorAll('img'));
+                await Promise.all(imgs.map(img => {
+                    if (img.complete) return Promise.resolve();
+                    return new Promise(resolve => {
+                        img.addEventListener('load', resolve, { once: true });
+                        img.addEventListener('error', resolve, { once: true });
+                    });
+                }));
+
+                const canvas = await html2canvas(el, { scale: 2, backgroundColor: '#ffffff' });
+                const imgData = canvas.toDataURL('image/png');
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF('p', 'mm', 'a4');
+                const pageWidth = pdf.internal.pageSize.getWidth();
+                const imgHeight = (canvas.height * pageWidth) / canvas.width;
+                pdf.addImage(imgData, 'PNG', 0, 10, pageWidth, imgHeight);
+                const l = rssLearners.find(x => x.id === currentCertificateLearnerId);
+                const fileName = l ? `Certificate_${l.first_name}_${l.last_name}_${l.certificate_number}.pdf`.replace(/\s+/g, '_') : 'Certificate.pdf';
+                pdf.save(fileName);
+            } catch (err) {
+                console.error('Error generating PDF:', err);
+                alert('Error generating PDF. Please try again.');
+            }
         }
 
         function showHrPlaceholder(sectionName) {
@@ -3426,6 +3923,7 @@
 
             const pageLabel = currentTimesheetsTab === 'overtime' ? 'Overtime' : 'Timesheet';
             const isManagement = (currentUserRole === 'admin' || currentUserRole === 'manager');
+            document.getElementById('timesheetUploadBtn').style.display = isManagement ? 'flex' : 'none';
 
             if (isManagement) {
                 document.getElementById('timesheetsViewSubtitle').innerText = `Select an employee to view their ${pageLabel.toLowerCase()}`;
@@ -3441,6 +3939,7 @@
                 viewingTimesheetsEmployeeId = currentUserEmployeeId;
                 isTimesheetsReadOnly = false;
                 if (currentTimesheetsTab === 'overtime') await fetchOvertimeEntries();
+                else await fetchTimesheetForEmployee(viewingTimesheetsEmployeeId);
             }
         }
 
@@ -3497,7 +3996,10 @@
             const pageLabel = currentTimesheetsTab === 'overtime' ? 'Overtime' : 'Timesheet';
             document.getElementById('timesheetsViewingWhoLabel').innerText = `Viewing ${pageLabel.toLowerCase()} for: ${employeeName}`;
             applyTimesheetsTabVisibility();
+            document.getElementById('timesheetFilterStart').value = '';
+            document.getElementById('timesheetFilterEnd').value = '';
             if (currentTimesheetsTab === 'overtime') await fetchOvertimeEntries();
+            else await fetchTimesheetForEmployee(viewingTimesheetsEmployeeId);
         }
 
         function backToTimesheetsEmployeeList() {
@@ -3521,6 +4023,129 @@
             const isHidden = body.style.display === 'none';
             body.style.display = isHidden ? 'block' : 'none';
             toggle.classList.toggle('collapsed', !isHidden);
+        }
+
+        // ============ TIMESHEET SPREADSHEET UPLOAD ============
+        function openTimesheetUploadModal() {
+            document.getElementById('timesheetUploadFile').value = '';
+            document.getElementById('timesheetUploadResult').style.display = 'none';
+            document.getElementById('timesheetUploadModalOverlay').classList.add('open');
+        }
+
+        function closeTimesheetUploadModal() {
+            document.getElementById('timesheetUploadModalOverlay').classList.remove('open');
+        }
+
+        async function submitTimesheetUpload() {
+            const file = document.getElementById('timesheetUploadFile').files[0];
+            if (!file) { alert('Please choose a spreadsheet file first.'); return; }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const resultEl = document.getElementById('timesheetUploadResult');
+            resultEl.style.display = 'block';
+            resultEl.style.background = '#F4F6F9';
+            resultEl.style.color = 'var(--ink-soft)';
+            resultEl.innerText = 'Uploading and processing...';
+
+            try {
+                const response = await fetch(`${API_BASE}/api/timesheets/upload`, {
+                    method: 'POST', headers: API_HEADERS, body: formData
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    resultEl.style.background = '#FEE2E2';
+                    resultEl.style.color = '#DC2626';
+                    resultEl.innerText = data.error || 'Failed to process the file.';
+                    return;
+                }
+
+                resultEl.style.background = 'rgba(153,204,51,0.15)';
+                resultEl.style.color = '#5C7A1D';
+                let msg = `Imported ${data.inserted} row(s) successfully.`;
+                if (data.skipped > 0) {
+                    msg += ` ${data.skipped} row(s) could not be matched to an employee: ${data.skipped_names.join(', ')}. Check that the name/surname spelling matches their employee record.`;
+                }
+                resultEl.innerText = msg;
+
+                // Refresh the currently viewed employee's timesheet, if one is open
+                if (viewingTimesheetsEmployeeId && currentTimesheetsTab === 'timesheet') {
+                    await fetchTimesheetForEmployee(viewingTimesheetsEmployeeId);
+                }
+            } catch (err) {
+                console.error('Error uploading timesheet:', err);
+                resultEl.style.background = '#FEE2E2';
+                resultEl.style.color = '#DC2626';
+                resultEl.innerText = 'Server error while uploading the file.';
+            }
+        }
+
+        async function fetchTimesheetForEmployee(employeeId) {
+            if (!employeeId) return;
+            try {
+                const start = document.getElementById('timesheetFilterStart').value;
+                const end = document.getElementById('timesheetFilterEnd').value;
+                const params = new URLSearchParams();
+                if (start) params.append('start', start);
+                if (end) params.append('end', end);
+                const qs = params.toString() ? `?${params.toString()}` : '';
+
+                const response = await fetch(`${API_BASE}/api/employees/${employeeId}/timesheet${qs}`, { headers: API_HEADERS });
+                const data = await response.json();
+                renderTimesheetSection(data);
+            } catch (err) {
+                console.error('Error fetching timesheet data:', err);
+            }
+        }
+
+        function applyTimesheetDateFilter() {
+            if (viewingTimesheetsEmployeeId) fetchTimesheetForEmployee(viewingTimesheetsEmployeeId);
+        }
+
+        function clearTimesheetDateFilter() {
+            document.getElementById('timesheetFilterStart').value = '';
+            document.getElementById('timesheetFilterEnd').value = '';
+            applyTimesheetDateFilter();
+        }
+
+        function renderTimesheetSection(data) {
+            const grid = document.getElementById('timesheetStatsGrid');
+            const stats = data.stats || { total_days: 0, total_minutes: 0, average_minutes_per_day: 0 };
+            grid.innerHTML = `
+                <div class="wf-stat-card active">
+                    <div class="label">Total Days Recorded</div>
+                    <div class="value">${stats.total_days}</div>
+                </div>
+                <div class="wf-stat-card active">
+                    <div class="label">Total Hours Worked</div>
+                    <div class="value">${formatDurationFromMinutes(stats.total_minutes)}</div>
+                </div>
+                <div class="wf-stat-card">
+                    <div class="label">Average Per Day</div>
+                    <div class="value">${formatDurationFromMinutes(stats.average_minutes_per_day)}</div>
+                </div>
+            `;
+
+            const tbody = document.getElementById('timesheetEntriesBody');
+            const empty = document.getElementById('timesheetEntriesEmpty');
+            const entries = data.entries || [];
+            tbody.innerHTML = '';
+            if (entries.length === 0) {
+                empty.style.display = 'block';
+            } else {
+                empty.style.display = 'none';
+                entries.forEach(e => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${formatDate(e.entry_date)}</td>
+                        <td>${e.time_in || '—'}</td>
+                        <td>${e.time_out || '—'}</td>
+                        <td>${e.minutes_worked != null ? formatDurationFromMinutes(e.minutes_worked) : '—'}</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            }
         }
 
         function formatDurationFromMinutes(totalMinutes) {
