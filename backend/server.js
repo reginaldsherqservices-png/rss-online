@@ -1432,6 +1432,37 @@ app.post('/api/timesheets/upload', memUpload.single('file'), async (req, res) =>
   }
 });
 
+app.patch('/api/timesheets/:id', async (req, res) => {
+  const { id } = req.params;
+  const { entry_date, time_in, time_out } = req.body;
+  try {
+    const minutes_worked = minutesBetween(time_in || null, time_out || null);
+    const result = await pool.query(
+      `UPDATE timesheet_entries SET entry_date = $2, time_in = $3, time_out = $4, minutes_worked = $5
+       WHERE id = $1 RETURNING *`,
+      [id, entry_date, time_in || null, time_out || null, minutes_worked]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Timesheet entry not found' });
+    }
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('EXACT TIMESHEET ENTRY UPDATE ERROR:', err);
+    res.status(500).json({ error: 'Error updating timesheet entry' });
+  }
+});
+
+app.delete('/api/timesheets/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    await pool.query('DELETE FROM timesheet_entries WHERE id = $1', [id]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('EXACT TIMESHEET ENTRY DELETE ERROR:', err);
+    res.status(500).json({ error: 'Error deleting timesheet entry' });
+  }
+});
+
 app.get('/api/employees/:id/timesheet', async (req, res) => {
   const { id } = req.params;
   const { start, end } = req.query; // optional date range filter, e.g. ?start=2026-09-01&end=2026-09-30

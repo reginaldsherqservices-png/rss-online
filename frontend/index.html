@@ -1452,6 +1452,28 @@
         </div>
     </div>
 
+    <!-- EDIT TIMESHEET ENTRY MODAL -->
+    <div class="wf-modal-overlay" id="timesheetEntryModalOverlay">
+        <div class="wf-modal" style="max-width: 420px;">
+            <div class="wf-modal-header">
+                <h2>Edit Timesheet Entry</h2>
+                <button class="wf-modal-close" onclick="closeTimesheetEntryModal()">✕</button>
+            </div>
+            <div class="wf-modal-body" style="grid-template-columns: 1fr;">
+                <div class="wf-field"><label>Date</label><input type="date" id="te_date"></div>
+                <div class="wf-field"><label>Time In</label><input type="time" id="te_time_in"></div>
+                <div class="wf-field"><label>Time Out</label><input type="time" id="te_time_out"></div>
+            </div>
+            <div class="wf-modal-footer">
+                <button class="lv-reject-btn" style="padding:10px 18px; font-size:13.5px;" onclick="deleteTimesheetEntry()">Delete</button>
+                <div style="display:flex; gap:10px;">
+                    <button class="wf-btn-secondary" onclick="closeTimesheetEntryModal()">Cancel</button>
+                    <button class="wf-btn-primary" onclick="saveTimesheetEntry()">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- SWITCH BACK TO ADMIN MODAL -->
     <div class="wf-modal-overlay" id="switchBackModalOverlay">
         <div class="wf-modal" style="max-width: 400px;">
@@ -4137,6 +4159,8 @@
                 empty.style.display = 'none';
                 entries.forEach(e => {
                     const row = document.createElement('tr');
+                    row.style.cursor = 'pointer';
+                    row.onclick = () => openTimesheetEntryModal(e);
                     row.innerHTML = `
                         <td>${formatDate(e.entry_date)}</td>
                         <td>${e.time_in || '—'}</td>
@@ -4146,6 +4170,55 @@
                     tbody.appendChild(row);
                 });
             }
+        }
+
+        let editingTimesheetEntryId = null;
+
+        function openTimesheetEntryModal(entry) {
+            editingTimesheetEntryId = entry.id;
+            document.getElementById('te_date').value = entry.entry_date ? entry.entry_date.split('T')[0] : '';
+            document.getElementById('te_time_in').value = entry.time_in || '';
+            document.getElementById('te_time_out').value = entry.time_out || '';
+            document.getElementById('timesheetEntryModalOverlay').classList.add('open');
+        }
+
+        function closeTimesheetEntryModal() {
+            document.getElementById('timesheetEntryModalOverlay').classList.remove('open');
+            editingTimesheetEntryId = null;
+        }
+
+        async function saveTimesheetEntry() {
+            if (!editingTimesheetEntryId) return;
+            const entry_date = document.getElementById('te_date').value;
+            const time_in = document.getElementById('te_time_in').value;
+            const time_out = document.getElementById('te_time_out').value;
+            if (!entry_date) { alert('Please choose a date.'); return; }
+            try {
+                await fetch(`${API_BASE}/api/timesheets/${editingTimesheetEntryId}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json', ...API_HEADERS },
+                    body: JSON.stringify({ entry_date, time_in, time_out })
+                });
+                closeTimesheetEntryModal();
+                if (viewingTimesheetsEmployeeId) await fetchTimesheetForEmployee(viewingTimesheetsEmployeeId);
+            } catch (err) {
+                console.error('Error saving timesheet entry:', err);
+                alert('Server error while saving the entry');
+            }
+        }
+
+        function deleteTimesheetEntry() {
+            if (!editingTimesheetEntryId) return;
+            const id = editingTimesheetEntryId;
+            showAppConfirm('Remove this timesheet entry?', async () => {
+                try {
+                    await fetch(`${API_BASE}/api/timesheets/${id}`, { method: 'DELETE', headers: API_HEADERS });
+                    closeTimesheetEntryModal();
+                    if (viewingTimesheetsEmployeeId) await fetchTimesheetForEmployee(viewingTimesheetsEmployeeId);
+                } catch (err) {
+                    console.error('Error deleting timesheet entry:', err);
+                }
+            });
         }
 
         function formatDurationFromMinutes(totalMinutes) {
