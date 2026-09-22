@@ -201,6 +201,72 @@ app.patch('/api/employees/:id/deactivate', async (req, res) => {
 // 8. Delete an Employee Permanently
 app.delete('/api/employees/:id', async (req, res) => {
   const { id } = req.params;
+  const force = req.query.force === 'true';
+
+  if (force) {
+    // Deliberately wipe every record tied to this employee, then the employee itself.
+    // Only reached when the frontend has already shown a strong, explicit warning.
+    // We check which tables/columns actually exist first, since the deployed schema
+    // can differ slightly between environments — this keeps it safe either way.
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      const colCheck = await client.query(
+        `SELECT table_name, column_name FROM information_schema.columns
+         WHERE table_schema = 'public' AND column_name = ANY($1)`,
+        [['employee_id', 'created_by', 'uploaded_by']]
+      );
+      const hasColumn = (table, column) => colCheck.rows.some(r => r.table_name === table && r.column_name === column);
+
+      if (hasColumn('overtime_entries', 'employee_id')) {
+        await client.query('DELETE FROM overtime_takings WHERE overtime_entry_id IN (SELECT id FROM overtime_entries WHERE employee_id = $1)', [id]);
+        await client.query('DELETE FROM overtime_entries WHERE employee_id = $1', [id]);
+      }
+      if (hasColumn('leave_requests', 'employee_id')) {
+        await client.query('DELETE FROM leave_requests WHERE employee_id = $1', [id]);
+      }
+      if (hasColumn('leave_table_customizations', 'employee_id')) {
+        await client.query('DELETE FROM leave_table_customizations WHERE employee_id = $1', [id]);
+      }
+      if (hasColumn('training_completions', 'employee_id')) {
+        await client.query('DELETE FROM training_completions WHERE employee_id = $1', [id]);
+      }
+      if (hasColumn('training_progress', 'employee_id')) {
+        await client.query('DELETE FROM training_progress WHERE employee_id = $1', [id]);
+      }
+      if (hasColumn('timesheet_entries', 'employee_id')) {
+        await client.query('DELETE FROM timesheet_entries WHERE employee_id = $1', [id]);
+      }
+      if (hasColumn('trainings', 'created_by')) {
+        await client.query('UPDATE trainings SET created_by = NULL WHERE created_by = $1', [id]);
+      }
+      if (hasColumn('rss_training_learners', 'created_by')) {
+        await client.query('UPDATE rss_training_learners SET created_by = NULL WHERE created_by = $1', [id]);
+      }
+      if (hasColumn('rss_training_manuals', 'uploaded_by')) {
+        await client.query('UPDATE rss_training_manuals SET uploaded_by = NULL WHERE uploaded_by = $1', [id]);
+      }
+      if (hasColumn('users', 'employee_id')) {
+        await client.query('DELETE FROM users WHERE employee_id = $1', [id]);
+      }
+
+      const result = await client.query('DELETE FROM employees WHERE id = $1 RETURNING *', [id]);
+      if (result.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return res.status(404).json({ error: 'Employee not found' });
+      }
+      await client.query('COMMIT');
+      return res.json({ message: 'Employee and all related records deleted', employee: result.rows[0] });
+    } catch (err) {
+      await client.query('ROLLBACK');
+      console.error("EXACT EMPLOYEE FORCE DELETE ERROR:", err);
+      return res.status(500).json({ error: 'Error force-deleting employee and related records' });
+    } finally {
+      client.release();
+    }
+  }
+
   try {
     const result = await pool.query(
       'DELETE FROM employees WHERE id = $1 RETURNING *',
@@ -212,6 +278,13 @@ app.delete('/api/employees/:id', async (req, res) => {
     res.json({ message: 'Employee deleted', employee: result.rows[0] });
   } catch (err) {
     console.error("EXACT EMPLOYEE DELETE ERROR:", err);
+    if (err.code === '23503') {
+      // Foreign key violation — this employee still has related records
+      // (leave requests, trainings, overtime, login account, etc.)
+      return res.status(409).json({
+        error: 'This employee has related records (leave requests, trainings, overtime, login account, or similar) and cannot be permanently deleted while those exist. Deactivate them instead, or remove their related records first.'
+      });
+    }
     res.status(500).json({ error: 'Error deleting employee' });
   }
 });

@@ -1511,7 +1511,12 @@
     </div>
 
     <script>
-        const API_BASE = 'https://rss-online-backend-c0hzaseze2gad6aa.southafricanorth-01.azurewebsites.net';
+        // Automatically use the local backend when running from a local file or localhost,
+        // and the Azure backend everywhere else — so this never needs manual swapping again.
+        const IS_LOCAL = (location.protocol === 'file:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1');
+        const API_BASE = IS_LOCAL
+            ? 'http://localhost:5000'
+            : 'https://rss-online-backend-c0hzaseze2gad6aa.southafricanorth-01.azurewebsites.net';
         const API_HEADERS = { 'ngrok-skip-browser-warning': 'true' };
 
         let pendingConfirmCallback = null;
@@ -4813,24 +4818,50 @@
             }
         }
 
-        async function deactivateEmployee(id) {
-            if (!confirm('Deactivate this employee?')) return;
-            try {
-                await fetch(`${API_BASE}/api/employees/${id}/deactivate`, { method: 'PATCH', headers: API_HEADERS });
-                await fetchEmployees();
-            } catch (err) {
-                console.error('Error deactivating employee:', err);
-            }
+        function deactivateEmployee(id) {
+            showAppConfirm('Deactivate this employee?', async () => {
+                try {
+                    await fetch(`${API_BASE}/api/employees/${id}/deactivate`, { method: 'PATCH', headers: API_HEADERS });
+                    await fetchEmployees();
+                } catch (err) {
+                    console.error('Error deactivating employee:', err);
+                    alert('Server error while deactivating employee');
+                }
+            });
         }
 
-        async function deleteEmployee(id) {
-            if (!confirm('Permanently delete this employee? This cannot be undone.')) return;
-            try {
-                await fetch(`${API_BASE}/api/employees/${id}`, { method: 'DELETE', headers: API_HEADERS });
-                await fetchEmployees();
-            } catch (err) {
-                console.error('Error deleting employee:', err);
-            }
+        function deleteEmployee(id) {
+            showAppConfirm('Permanently delete this employee? This cannot be undone.', async () => {
+                try {
+                    const response = await fetch(`${API_BASE}/api/employees/${id}`, { method: 'DELETE', headers: API_HEADERS });
+                    const data = await response.json().catch(() => ({}));
+                    if (response.status === 409) {
+                        showAppConfirm('This employee has related records (leave requests, trainings, overtime, login account, etc). Deleting them will PERMANENTLY WIPE all of that history too, with no way to recover it. Are you absolutely sure you want to force-delete everything?', async () => {
+                            try {
+                                const forceResp = await fetch(`${API_BASE}/api/employees/${id}?force=true`, { method: 'DELETE', headers: API_HEADERS });
+                                const forceData = await forceResp.json().catch(() => ({}));
+                                if (!forceResp.ok) {
+                                    alert(forceData.error || 'Failed to force-delete employee');
+                                    return;
+                                }
+                                await fetchEmployees();
+                            } catch (err) {
+                                console.error('Error force-deleting employee:', err);
+                                alert('Server error while force-deleting employee');
+                            }
+                        });
+                        return;
+                    }
+                    if (!response.ok) {
+                        alert(data.error || 'Failed to delete employee');
+                        return;
+                    }
+                    await fetchEmployees();
+                } catch (err) {
+                    console.error('Error deleting employee:', err);
+                    alert('Server error while deleting employee');
+                }
+            });
         }
 
         function generatePassword(targetInputId) {
@@ -5029,24 +5060,50 @@
             openEditEmployeeModal(emp);
         }
 
-        async function deactivateFromProfile() {
-            if (!confirm('Deactivate this employee?')) return;
-            try {
-                await fetch(`${API_BASE}/api/employees/${currentProfileId}/deactivate`, { method: 'PATCH', headers: API_HEADERS });
-                await viewEmployeeProfile(currentProfileId, false);
-            } catch (err) {
-                console.error('Error deactivating employee:', err);
-            }
+        function deactivateFromProfile() {
+            showAppConfirm('Deactivate this employee?', async () => {
+                try {
+                    await fetch(`${API_BASE}/api/employees/${currentProfileId}/deactivate`, { method: 'PATCH', headers: API_HEADERS });
+                    await viewEmployeeProfile(currentProfileId, false);
+                } catch (err) {
+                    console.error('Error deactivating employee:', err);
+                    alert('Server error while deactivating employee');
+                }
+            });
         }
 
-        async function deleteFromProfile() {
-            if (!confirm('Permanently delete this employee? This cannot be undone.')) return;
-            try {
-                await fetch(`${API_BASE}/api/employees/${currentProfileId}`, { method: 'DELETE', headers: API_HEADERS });
-                backFromProfile();
-            } catch (err) {
-                console.error('Error deleting employee:', err);
-            }
+        function deleteFromProfile() {
+            showAppConfirm('Permanently delete this employee? This cannot be undone.', async () => {
+                try {
+                    const response = await fetch(`${API_BASE}/api/employees/${currentProfileId}`, { method: 'DELETE', headers: API_HEADERS });
+                    const data = await response.json().catch(() => ({}));
+                    if (response.status === 409) {
+                        showAppConfirm('This employee has related records (leave requests, trainings, overtime, login account, etc). Deleting them will PERMANENTLY WIPE all of that history too, with no way to recover it. Are you absolutely sure you want to force-delete everything?', async () => {
+                            try {
+                                const forceResp = await fetch(`${API_BASE}/api/employees/${currentProfileId}?force=true`, { method: 'DELETE', headers: API_HEADERS });
+                                const forceData = await forceResp.json().catch(() => ({}));
+                                if (!forceResp.ok) {
+                                    alert(forceData.error || 'Failed to force-delete employee');
+                                    return;
+                                }
+                                backFromProfile();
+                            } catch (err) {
+                                console.error('Error force-deleting employee:', err);
+                                alert('Server error while force-deleting employee');
+                            }
+                        });
+                        return;
+                    }
+                    if (!response.ok) {
+                        alert(data.error || 'Failed to delete employee');
+                        return;
+                    }
+                    backFromProfile();
+                } catch (err) {
+                    console.error('Error deleting employee:', err);
+                    alert('Server error while deleting employee');
+                }
+            });
         }
 
         function openCredentialsModal() {
