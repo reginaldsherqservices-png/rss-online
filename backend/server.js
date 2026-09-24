@@ -1410,9 +1410,247 @@ app.delete('/api/rss-manuals/:id', async (req, res) => {
 });
 
 // ============ TIMESHEET SPREADSHEET UPLOAD ============
-// Expects a spreadsheet with columns: date, name, Surname, Time in, Time out
-// (matching the export format from the clock machine). Column matching is
-// case-insensitive, so header capitalization differences don't matter.
+//
+// This clock machine (the one that produces files like "07Summary.xls") exports
+// a multi-sheet workbook. The sheet we actually want is called "Logs" and looks
+// like this once you dump it as a grid:
+//
+//   Row 0: "List of Logs"
+//   Row 1: (blank)
+//   Row 2: "Duration:", "", "2026/07/01 ~ 07/31\t( rss )"   <- gives us year+month
+//   Row 3: 1, 2, 3, 4, ... 31                                <- day-of-month headers, one per column
+//   Row 4: "No:", "", "1", ..., "Name:", "", "milly", ..., "Dept:", "", ""
+//   Row 5: "07:14\n", "", "", ...                            <- that employee's punches for the month
+//   Row 6: "No:", "", "2", ..., "Name:", "", "bokamoso", ...
+//   Row 7: punches for employee 2
+//   ... repeats to the end of the sheet
+//
+// Each day's cell can hold more than one punch, newline-separated (e.g. "08:01\n15:07\n").
+// The FIRST punch in a cell is treated as time in, the LAST as time out (if there's
+// more than one) — any punches in between are ignored, since this machine doesn't
+// distinguish break-out/break-in punches from a plain clock-in/clock-out pair.
+//
+// The sheet only gives a first name per block (lowercase, sometimes misspelled, and
+// sometimes it's actually someone's middle or last name instead of their first name).
+// There's no reliable ID to join on, so we fuzzy-match each block's name against every
+// employee's first_name AND last_name and take the closest match, using a normalized
+// edit-distance so short and long names are judged fairly. Matches that aren't close
+// enough are skipped and reported back to the user instead of being guessed at.
+//
+// If a workbook doesn't have a "Logs" sheet at all (e.g. someone uploads the older,
+// simple date/name/Surname/Time in/Time out spreadsheet format this endpoint used to
+// support), we fall back to that simpler parser so nothing that worked before breaks.
+
+// ---- Levenshtein edit distance, used for fuzzy name matching ----
+function levenshteinDistance(a, b) {
+  if (a === b) return 0;
+  if (a.length === 0) return b.length;
+  if (b.length === 0) return a.length;
+
+  let prevRow = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    const currRow = [i];
+    for (let j = 1; j <= b.length; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      currRow[j] = Math.min(
+        prevRow[j] + 1,      // deletion
+        currRow[j - 1] + 1,  // insertion
+        prevRow[j - 1] + cost // substitution
+      );
+    }
+    prevRow = currRow;
+  }
+  return prevRow[b.length];
+}
+
+// Finds the employee whose first_name or last_name is the closest fuzzy match to
+// `rawName` (a single lowercase name off the timesheet, e.g. "olwetu" or "makie").
+// Returns { employee, matchedOn, score } or null if nothing is close enough.
+function findClosestEmployee(rawName, employees) {
+  const target = String(rawName || '').trim().toLowerCase();
+  if (!target) return null;
+
+  let best = null;
+
+  for (const emp of employees) {
+    const candidates = [
+      { field: 'first_name', value: (emp.first_name || '').trim().toLowerCase() },
+      { field: 'last_name', value: (emp.last_name || '').trim().toLowerCase() }
+    ];
+
+    for (const { field, value } of candidates) {
+      if (!value) continue;
+
+      let rawDistance;
+      if (value === target) {
+        rawDistance = 0;
+      } else if (value.startsWith(target) || target.startsWith(value)) {
+        // Handles short/truncated forms, e.g. "resego" vs "resego mokoena" would
+        // only apply if last_name matching used full names — for first-name-only
+        // truncations like "success" vs "succes" this still falls through to
+        // Levenshtein below, but exact-prefix cases (nicknames) get rewarded here.
+        rawDistance = 0.5;
+      } else {
+        rawDistance = levenshteinDistance(value, target);
+      }
+
+      // Normalize by the longer of the two strings so a 1-letter typo on a short
+      // name ("makie" vs "maki") isn't scored the same as a 1-letter typo on a
+      // long one — both should count as "close", but on raw distance alone a
+      // long name gets an unfair advantage.
+      const score = rawDistance / Math.max(value.length, target.length, 1);
+
+      if (!best || score < best.score) {
+        best = { employee: emp, matchedOn: field, score };
+      }
+    }
+  }
+
+  // Accept only reasonably close matches. 0.34 allows roughly one typo'd
+  // character per three letters (covers real-world misspellings like
+  // "olwetu" -> "olwethu" or "succes" -> "success") without matching two
+  // genuinely different names to each other.
+  if (best && best.score <= 0.34) return best;
+  return null;
+}
+
+// Reads every cell in a sheet as a plain grid (array of arrays of strings),
+// which is much easier to reason about than SheetJS's default row-object mode
+// for a sheet whose layout isn't a simple one-header-row table.
+function sheetToGrid(sheet) {
+  return XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '', raw: false, blankrows: true });
+}
+
+// Finds the "Logs" sheet (case-insensitive by name; falls back to scanning every
+// sheet for the "No:" / "Name:" block pattern in case the machine names it
+// differently on a different export).
+function findLogsSheetName(workbook) {
+  const exact = workbook.SheetNames.find(n => n.trim().toLowerCase() === 'logs');
+  if (exact) return exact;
+
+  return workbook.SheetNames.find(n => {
+    const grid = sheetToGrid(workbook.Sheets[n]);
+    return grid.some(row => row.some(cell => String(cell).trim() === 'No:'));
+  }) || null;
+}
+
+// Pulls a labelled value out of a header row, e.g. given a row containing
+// ["No:", "", "1", ..., "Name:", "", "milly", ...] and label "Name:", returns "milly".
+// Scans forward from the label for the first non-blank cell rather than assuming
+// a fixed offset, since blank spacer columns can vary.
+function extractLabelledValue(row, label) {
+  for (let i = 0; i < row.length; i++) {
+    if (String(row[i]).trim() === label) {
+      for (let j = i + 1; j < row.length; j++) {
+        const v = String(row[j]).trim();
+        if (v !== '') return v;
+      }
+      return '';
+    }
+  }
+  return '';
+}
+
+// Pulls the year and month out of the "Duration:" row, e.g.
+// "2026/07/01 ~ 07/31\t( rss )" -> { year: 2026, month: 7 }
+function extractYearMonth(grid) {
+  for (const row of grid) {
+    for (const cell of row) {
+      const m = String(cell).match(/(\d{4})\/(\d{2})\/\d{2}\s*~\s*\d{2}\/\d{2}/);
+      if (m) return { year: parseInt(m[1], 10), month: parseInt(m[2], 10) };
+    }
+  }
+  return null;
+}
+
+// Finds the row that maps each column to a day-of-month number (1, 2, 3, ... up
+// to 31), and returns { rowIndex, colToDay } where colToDay maps column index -> day.
+function findDayHeaderRow(grid) {
+  for (let i = 0; i < grid.length; i++) {
+    const row = grid[i];
+    const firstThree = [row[0], row[1], row[2]].map(c => String(c).trim());
+    if (firstThree[0] === '1' && firstThree[1] === '2' && firstThree[2] === '3') {
+      const colToDay = {};
+      row.forEach((cell, colIdx) => {
+        const n = parseInt(String(cell).trim(), 10);
+        if (n >= 1 && n <= 31) colToDay[colIdx] = n;
+      });
+      return { rowIndex: i, colToDay };
+    }
+  }
+  return null;
+}
+
+// Splits a punch cell like "08:01\n15:07\n" into { time_in, time_out }.
+// First punch = time in. Last punch (if there's more than one) = time out.
+// Anything in between is ignored — this clock export doesn't distinguish
+// break punches from clock-in/clock-out punches.
+function splitPunches(cellValue) {
+  const punches = String(cellValue)
+    .split('\n')
+    .map(p => p.trim())
+    .filter(p => /^\d{1,2}:\d{2}/.test(p));
+  if (punches.length === 0) return null;
+  return {
+    time_in: punches[0].slice(0, 5),
+    time_out: punches.length > 1 ? punches[punches.length - 1].slice(0, 5) : null
+  };
+}
+
+// Parses the "Logs" sheet into a flat list of
+// { raw_name, employee_id, entry_date, time_in, time_out } rows, plus a
+// per-block match summary so the caller can report exactly who matched to whom.
+function parseClockMachineLogs(sheet, employees) {
+  const grid = sheetToGrid(sheet);
+  const yearMonth = extractYearMonth(grid);
+  const dayHeader = findDayHeaderRow(grid);
+
+  if (!yearMonth || !dayHeader) {
+    throw new Error('Could not find the "Duration" date range or the day-of-month header row in the Logs sheet.');
+  }
+
+  const entries = [];
+  const matchSummary = [];
+
+  for (let i = dayHeader.rowIndex + 1; i < grid.length; i++) {
+    const row = grid[i];
+    const hasNoLabel = row.some(cell => String(cell).trim() === 'No:');
+    if (!hasNoLabel) continue; // not a header row for a new employee block
+
+    const rawName = extractLabelledValue(row, 'Name:');
+    const dataRow = grid[i + 1] || [];
+    const match = rawName ? findClosestEmployee(rawName, employees) : null;
+
+    matchSummary.push({
+      raw_name: rawName || '(blank)',
+      matched_employee: match ? `${match.employee.first_name} ${match.employee.last_name}`.trim() : null,
+      employee_id: match ? match.employee.id : null
+    });
+
+    if (match) {
+      for (const [colIdxStr, day] of Object.entries(dayHeader.colToDay)) {
+        const colIdx = parseInt(colIdxStr, 10);
+        const punches = splitPunches(dataRow[colIdx]);
+        if (!punches) continue;
+
+        const entry_date = `${yearMonth.year}-${String(yearMonth.month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        entries.push({
+          raw_name: rawName,
+          employee_id: match.employee.id,
+          entry_date,
+          time_in: punches.time_in,
+          time_out: punches.time_out
+        });
+      }
+    }
+
+    i++; // skip the data row we just consumed
+  }
+
+  return { entries, matchSummary };
+}
+
+// ---- Legacy flat-spreadsheet fallback (date, name, Surname, Time in, Time out) ----
 
 function parseSheetDate(raw) {
   if (!raw) return null;
@@ -1437,6 +1675,45 @@ function parseSheetTime(raw) {
   return null;
 }
 
+function parseFlatTimesheet(workbook, employees) {
+  const sheet = workbook.Sheets[workbook.SheetNames[0]];
+  const rows = XLSX.utils.sheet_to_json(sheet, { defval: '', raw: false });
+
+  const empMap = new Map();
+  employees.forEach(e => {
+    const key = `${(e.first_name || '').trim().toLowerCase()}|${(e.last_name || '').trim().toLowerCase()}`;
+    empMap.set(key, e.id);
+  });
+
+  const entries = [];
+  const matchSummary = [];
+
+  for (const row of rows) {
+    const norm = {};
+    Object.keys(row).forEach(k => { norm[k.trim().toLowerCase()] = row[k]; });
+
+    const name = (norm['name'] || '').toString().trim();
+    const surname = (norm['surname'] || '').toString().trim();
+    if (!name && !surname) continue; // blank row
+
+    const entry_date = parseSheetDate(norm['date']);
+    const time_in = parseSheetTime(norm['time in']);
+    const time_out = parseSheetTime(norm['time out']);
+
+    const key = `${name.toLowerCase()}|${surname.toLowerCase()}`;
+    const employee_id = empMap.get(key) || null;
+    const rawName = `${name} ${surname}`.trim();
+
+    matchSummary.push({ raw_name: rawName, matched_employee: employee_id ? rawName : null, employee_id });
+
+    if (!employee_id || !entry_date) continue;
+
+    entries.push({ raw_name: rawName, employee_id, entry_date, time_in, time_out });
+  }
+
+  return { entries, matchSummary };
+}
+
 function minutesBetween(timeIn, timeOut) {
   if (!timeIn || !timeOut) return null;
   const [h1, m1] = timeIn.split(':').map(Number);
@@ -1450,58 +1727,68 @@ app.post('/api/timesheets/upload', memUpload.single('file'), async (req, res) =>
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
 
   try {
+    const bufferSize = req.file.buffer ? req.file.buffer.length : 0;
+    console.log(`TIMESHEET UPLOAD: received "${req.file.originalname}" (${bufferSize} bytes)`);
+
     const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    // raw:false returns cells as their displayed text (e.g. "15.09.2026", "08:00")
-    // rather than raw Excel serial numbers, which matches what's visible in the file.
-    const rows = XLSX.utils.sheet_to_json(sheet, { defval: '', raw: false });
+    const sheetNames = workbook.SheetNames || [];
+    console.log('TIMESHEET UPLOAD: sheets found ->', sheetNames);
+
+    // If XLSX couldn't extract any sheets at all, everything downstream would be
+    // silently empty (0 inserted, 0 skipped, no error) — which is useless for
+    // figuring out what went wrong. Fail loudly instead, with real diagnostics.
+    if (sheetNames.length === 0) {
+      return res.status(500).json({
+        error: `The uploaded file ("${req.file.originalname}", ${bufferSize} bytes) could not be read as a spreadsheet — no sheets were found in it. This usually means the file is empty, corrupted, or isn't actually a valid .xlsx/.xls file (e.g. it was renamed from a different format). Try re-downloading the export directly from the clock machine and uploading that file unmodified.`,
+        sheet_names: sheetNames,
+        buffer_size: bufferSize
+      });
+    }
 
     const empResult = await pool.query('SELECT id, first_name, last_name FROM employees');
-    const empMap = new Map();
-    empResult.rows.forEach(e => {
-      const key = `${(e.first_name || '').trim().toLowerCase()}|${(e.last_name || '').trim().toLowerCase()}`;
-      empMap.set(key, e.id);
-    });
+    const employees = empResult.rows;
+
+    const logsSheetName = findLogsSheetName(workbook);
+    console.log('TIMESHEET UPLOAD: "Logs" sheet resolved to ->', logsSheetName || '(not found, using fallback parser)');
+
+    let entries, matchSummary;
+    if (logsSheetName) {
+      ({ entries, matchSummary } = parseClockMachineLogs(workbook.Sheets[logsSheetName], employees));
+    } else {
+      ({ entries, matchSummary } = parseFlatTimesheet(workbook, employees));
+    }
+
+    console.log(`TIMESHEET UPLOAD: parsed ${entries.length} punch entrie(s), ${matchSummary.length} name block(s)`);
 
     let inserted = 0;
-    const skippedNames = [];
+    const skippedNames = [...new Set(
+      matchSummary.filter(m => !m.employee_id).map(m => m.raw_name)
+    )];
 
-    for (const row of rows) {
-      const norm = {};
-      Object.keys(row).forEach(k => { norm[k.trim().toLowerCase()] = row[k]; });
-
-      const name = (norm['name'] || '').toString().trim();
-      const surname = (norm['surname'] || '').toString().trim();
-      if (!name && !surname) continue; // blank row
-
-      const entry_date = parseSheetDate(norm['date']);
-      const time_in = parseSheetTime(norm['time in']);
-      const time_out = parseSheetTime(norm['time out']);
-
-      const key = `${name.toLowerCase()}|${surname.toLowerCase()}`;
-      const employee_id = empMap.get(key);
-
-      if (!employee_id || !entry_date) {
-        skippedNames.push(`${name} ${surname}`.trim() || '(unnamed row)');
-        continue;
-      }
-
-      const minutes_worked = minutesBetween(time_in, time_out);
-
+    for (const entry of entries) {
+      const minutes_worked = minutesBetween(entry.time_in, entry.time_out);
       await pool.query(
         `INSERT INTO timesheet_entries (employee_id, entry_date, time_in, time_out, minutes_worked)
          VALUES ($1,$2,$3,$4,$5)
          ON CONFLICT (employee_id, entry_date)
          DO UPDATE SET time_in = EXCLUDED.time_in, time_out = EXCLUDED.time_out, minutes_worked = EXCLUDED.minutes_worked`,
-        [employee_id, entry_date, time_in, time_out, minutes_worked]
+        [entry.employee_id, entry.entry_date, entry.time_in, entry.time_out, minutes_worked]
       );
       inserted++;
     }
 
-    res.json({ inserted, skipped: skippedNames.length, skipped_names: skippedNames });
+    res.json({
+      inserted,
+      skipped: skippedNames.length,
+      skipped_names: skippedNames,
+      sheet_used: logsSheetName || sheetNames[0] || 'unknown',
+      sheet_names: sheetNames,
+      used_fallback_format: !logsSheetName,
+      matches: matchSummary
+    });
   } catch (err) {
     console.error('EXACT TIMESHEET UPLOAD ERROR:', err);
-    res.status(500).json({ error: 'Failed to process timesheet file. Is it a valid spreadsheet with date/name/Surname/Time in/Time out columns?' });
+    res.status(500).json({ error: err.message || 'Failed to process timesheet file. Is it a valid spreadsheet export from the clock machine?' });
   }
 });
 
