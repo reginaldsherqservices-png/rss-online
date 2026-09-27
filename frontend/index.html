@@ -1441,14 +1441,30 @@
                 <button class="wf-modal-close" onclick="closeTimesheetUploadModal()">✕</button>
             </div>
             <div class="wf-modal-body" style="grid-template-columns: 1fr;">
-                <div class="wf-account-note">Upload the export straight from the clock machine (the "Logs" tab is read automatically). Names are matched by fuzzy-matching against employee records, so check the match list below after uploading.</div>
+                <div class="wf-account-note">Upload the export straight from the clock machine (the "Logs" tab is read automatically). Names are matched by fuzzy-matching against employee records — you'll see a summary of exactly who each name matched to once it's done.</div>
                 <div class="wf-field"><label>Spreadsheet File (.xlsx, .xls or .csv)</label><input type="file" id="timesheetUploadFile" accept=".xlsx,.xls,.csv"></div>
                 <div id="timesheetUploadResult" style="display:none; font-size:12.5px; padding:10px 12px; border-radius:8px; margin-top:4px;"></div>
-                <div id="timesheetUploadMatches" style="display:none;"></div>
             </div>
             <div class="wf-modal-footer">
                 <button class="wf-btn-secondary" onclick="closeTimesheetUploadModal()">Cancel</button>
                 <button class="wf-btn-primary" onclick="submitTimesheetUpload()">Upload</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TIMESHEET UPLOAD SUCCESS DIALOG (separate from the upload form, stays open until dismissed) -->
+    <div class="wf-modal-overlay" id="timesheetSuccessModalOverlay">
+        <div class="wf-modal" style="max-width: 480px;">
+            <div class="wf-modal-header">
+                <h2><i class="fas fa-check-circle" style="color:#5C7A1D; margin-right:8px;"></i>Upload Complete</h2>
+                <button class="wf-modal-close" onclick="closeTimesheetSuccessModal()">✕</button>
+            </div>
+            <div class="wf-modal-body" style="grid-template-columns: 1fr;">
+                <p id="timesheetSuccessSummary" style="font-size: 14px; color: #1D2333; margin: 0 0 4px;"></p>
+                <div id="timesheetSuccessMatches" style="display:none;"></div>
+            </div>
+            <div class="wf-modal-footer" style="justify-content: flex-end;">
+                <button class="wf-btn-primary" onclick="closeTimesheetSuccessModal()">Done</button>
             </div>
         </div>
     </div>
@@ -2928,7 +2944,7 @@
         // Builds exactly 12 rows starting from the employee's start month.
         // "Leave Days Granted" and "Sick Leave Days Granted" show the FLAT monthly rate
         // (not a running total) — matching the company's official leave form.
-        // "Leave Days Taken" / "Reason" auto-fill from APPROVED requests that start in that month.
+        // "Leave Days Taken" / "Leave Type" auto-fill from APPROVED requests that start in that month.
         let monthlyAccrualData = {};
 
         function renderMonthlyAccrual(startDateStr, history) {
@@ -4025,8 +4041,6 @@
         function openTimesheetUploadModal() {
             document.getElementById('timesheetUploadFile').value = '';
             document.getElementById('timesheetUploadResult').style.display = 'none';
-            document.getElementById('timesheetUploadMatches').style.display = 'none';
-            document.getElementById('timesheetUploadMatches').innerHTML = '';
             document.getElementById('timesheetUploadModalOverlay').classList.add('open');
         }
 
@@ -4036,9 +4050,10 @@
 
         // Renders the per-name fuzzy-match summary the backend returns, so whoever
         // uploaded the file can spot-check that "olwetu" really did resolve to the
-        // right employee before trusting the imported hours.
-        function renderTimesheetUploadMatches(matches) {
-            const wrap = document.getElementById('timesheetUploadMatches');
+        // right employee before trusting the imported hours. Used inside the
+        // separate success dialog (not the upload form itself).
+        function renderTimesheetSuccessMatches(matches) {
+            const wrap = document.getElementById('timesheetSuccessMatches');
             if (!matches || matches.length === 0) {
                 wrap.style.display = 'none';
                 wrap.innerHTML = '';
@@ -4047,7 +4062,7 @@
             wrap.style.display = 'block';
             wrap.innerHTML = `
                 <div style="font-size:11.5px; font-weight:700; color:var(--sherq-blue); margin:10px 0 6px; text-transform:uppercase; letter-spacing:0.4px;">Name matches found on the sheet</div>
-                <div style="border:1px solid var(--line); border-radius:8px; overflow:hidden;">
+                <div style="border:1px solid var(--line); border-radius:8px; overflow:hidden; max-height:260px; overflow-y:auto;">
                     ${matches.map((m, i) => `
                         <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 12px; font-size:12.5px; ${i > 0 ? 'border-top:1px solid var(--line);' : ''} ${m.employee_id ? '' : 'background:#FEF2F2;'}">
                             <span>"${m.raw_name}"</span>
@@ -4058,6 +4073,16 @@
                     `).join('')}
                 </div>
             `;
+        }
+
+        function openTimesheetSuccessModal(summaryText, matches) {
+            document.getElementById('timesheetSuccessSummary').innerText = summaryText;
+            renderTimesheetSuccessMatches(matches);
+            document.getElementById('timesheetSuccessModalOverlay').classList.add('open');
+        }
+
+        function closeTimesheetSuccessModal() {
+            document.getElementById('timesheetSuccessModalOverlay').classList.remove('open');
         }
 
         async function submitTimesheetUpload() {
@@ -4072,7 +4097,6 @@
             resultEl.style.background = '#F4F6F9';
             resultEl.style.color = 'var(--ink-soft)';
             resultEl.innerText = 'Uploading and processing...';
-            document.getElementById('timesheetUploadMatches').style.display = 'none';
 
             try {
                 const response = await fetch(`${API_BASE}/api/timesheets/upload`, {
@@ -4088,8 +4112,8 @@
                     return;
                 }
 
-                resultEl.style.background = 'rgba(153,204,51,0.15)';
-                resultEl.style.color = '#5C7A1D';
+                // Build the success message first, then close THIS form immediately and
+                // show it in a separate dialog — so the confirmation isn't gone in a blink.
                 let msg = `Imported ${data.inserted} row(s) from the "${data.sheet_used}" sheet.`;
                 if (data.used_fallback_format) {
                     msg += ` (No "Logs" tab was found, so this was read using the older simple date/name/Surname/Time-in/Time-out format instead.)`;
@@ -4097,16 +4121,14 @@
                 if (data.skipped > 0) {
                     msg += ` ${data.skipped} name(s) could not be confidently matched: ${data.skipped_names.join(', ')}. Check the list below, and their employee record's first/last name spelling.`;
                 }
-                if (data.sheet_names && data.sheet_names.length) {
-                    msg += ` [All sheets in file: ${data.sheet_names.join(', ')}]`;
-                }
-                resultEl.innerText = msg;
-                renderTimesheetUploadMatches(data.matches);
 
                 // Refresh the currently viewed employee's timesheet, if one is open
                 if (viewingTimesheetsEmployeeId && currentTimesheetsTab === 'timesheet') {
                     await fetchTimesheetForEmployee(viewingTimesheetsEmployeeId);
                 }
+
+                closeTimesheetUploadModal();
+                openTimesheetSuccessModal(msg, data.matches);
             } catch (err) {
                 console.error('Error uploading timesheet:', err);
                 resultEl.style.background = '#FEE2E2';
