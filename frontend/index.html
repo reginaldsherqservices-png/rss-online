@@ -1163,8 +1163,8 @@
             </div>
             <div class="wf-modal-footer">
                 <button class="wf-btn-secondary" id="wtDeleteBtn" style="display:none; color:#DC2626;" onclick="deleteWeeklyTraining()">Delete</button>
-                <button class="wf-btn-secondary" onclick="closeWeeklyTrainingModal()">Cancel</button>
-                <button class="wf-btn-primary" onclick="submitWeeklyTraining()">Save Weekly Tasks</button>
+                <button class="wf-btn-secondary" onclick="closeWeeklyTrainingModal()">Close</button>
+                <button class="wf-btn-primary" id="wtSaveBtn" onclick="saveWeeklyTasks()">Save</button>
             </div>
         </div>
     </div>
@@ -3393,8 +3393,7 @@
             const isWeeklyCategory = (cat === 'RSS In-House Training');
             if (theadRow) {
                 theadRow.innerHTML = `
-                    <th>${isWeeklyCategory ? 'Week Starting' : 'Date of Training'}</th>
-                    <th>${isWeeklyCategory ? 'Week' : 'Topic of Training'}</th>
+                    ${isWeeklyCategory ? '<th>Week</th>' : '<th>Date of Training</th><th>Topic of Training</th>'}
                     ${columns.map(c => `
                         <th>
                             <div style="display:flex; align-items:center; gap:4px;">
@@ -3403,12 +3402,12 @@
                             </div>
                         </th>
                     `).join('')}
-                    <th>Progress</th>
+                    ${isWeeklyCategory ? '' : '<th>Progress</th>'}
                     <th style="width:36px;"><button class="lv-add-col-btn" onclick="openAddColumnModal('${cat.replace(/'/g, "\\'")}')" title="Add column"><i class="fas fa-plus"></i></button></th>
                 `;
             }
 
-            const totalCols = 4 + columns.length;
+            const totalCols = (isWeeklyCategory ? 2 : 4) + columns.length;
 
             if (items.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="${totalCols}" class="wf-empty">No training added yet in this category.</td></tr>`;
@@ -3418,7 +3417,7 @@
             tbody.innerHTML = '';
             for (const item of items) {
                 let totalPct = 0;
-                if (viewingTrainingEmployeeId) {
+                if (!isWeeklyCategory && viewingTrainingEmployeeId) {
                     try {
                         const response = await fetch(`${API_BASE}/api/trainings/${item.id}/progress?employee_id=${viewingTrainingEmployeeId}`, { headers: API_HEADERS });
                         const progress = await response.json();
@@ -3432,15 +3431,14 @@
                 row.style.cursor = 'pointer';
                 row.onclick = () => openTrainingDetailModal(item.id);
 
-                let cellsHtml = `
-                    <td>${dateStr}</td>
-                    <td>${item.title || '(untitled)'}</td>
-                `;
+                let cellsHtml = isWeeklyCategory
+                    ? `<td>${item.title || '(untitled)'}</td>`
+                    : `<td>${dateStr}</td><td>${item.title || '(untitled)'}</td>`;
                 columns.forEach(c => {
                     const val = (item.extra_data && item.extra_data[c.column_name]) ? item.extra_data[c.column_name] : '';
                     cellsHtml += `<td onclick="event.stopPropagation()"><input type="text" class="lv-cell-input" value="${val.replace(/"/g, '&quot;')}" onchange="saveTrainingCell(${item.id}, '${c.column_name.replace(/'/g, "\\'")}', this.value)"></td>`;
                 });
-                cellsHtml += `<td>${progressBadgeHtml(totalPct, item.completed)}</td><td></td>`;
+                cellsHtml += isWeeklyCategory ? `<td></td>` : `<td>${progressBadgeHtml(totalPct, item.completed)}</td><td></td>`;
 
                 row.innerHTML = cellsHtml;
                 tbody.appendChild(row);
@@ -4663,6 +4661,15 @@
             document.getElementById('wtDeleteBtn').style.display = (trainingId && !isTrainingReadOnly) ? 'inline-block' : 'none';
             document.getElementById('weeklyTrainingModalOverlay').classList.add('open');
 
+            // Always reset the Save button back to normal every time the modal
+            // opens, so it never gets stuck showing "Saving..." from a
+            // previous visit (this is the same button element being reused).
+            const saveBtn = document.getElementById('wtSaveBtn');
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = 'Save';
+            }
+
             if (trainingId) {
                 document.getElementById('wt_week_label_display').innerText = 'Loading...';
                 fetch(`${API_BASE}/api/trainings/${trainingId}/weekly-tasks`, { headers: API_HEADERS })
@@ -4702,15 +4709,26 @@
             return days;
         }
 
-        async function submitWeeklyTraining() {
+        // ONE Save button for the whole modal. Whatever is currently in the
+        // form (days you already had saved, plus whatever you just typed)
+        // gets sent together, so you can write just Monday, hit Save, then
+        // come back later, add Tuesday, and hit Save again - nothing from
+        // before gets lost since it was already loaded into the form.
+        // If the save fails for any reason, the modal stays open and
+        // nothing is re-fetched, so what you typed is never wiped out.
+        async function saveWeeklyTasks() {
             const weekStart = document.getElementById('wt_week_start').value;
-            if (!weekStart) { alert('Please choose the Monday this week starts on.'); return; }
+            if (!weekStart) { alert('Please choose the Monday this week starts on first.'); return; }
             const weekLabel = formatWeekRangeLabel(weekStart);
             const startD = new Date(weekStart + 'T00:00:00');
             const endD = new Date(startD);
             endD.setDate(startD.getDate() + 4);
             const weekEnd = endD.toISOString().split('T')[0];
             const days = collectWeeklyTasksState();
+
+            const saveBtn = document.getElementById('wtSaveBtn');
+            const originalBtnHtml = saveBtn ? saveBtn.innerHTML : '';
+            if (saveBtn) { saveBtn.disabled = true; saveBtn.innerHTML = 'Saving...'; }
 
             try {
                 let trainingId = weeklyTrainingEditId;
@@ -4725,9 +4743,16 @@
                             created_by: viewingTrainingEmployeeId
                         })
                     });
-                    if (!response.ok) { alert('Failed to create weekly task list'); return; }
+                    if (!response.ok) {
+                        alert(`Could not create this week's entry (server said: ${response.status}). Nothing was lost - try Save again.`);
+                        if (saveBtn) { saveBtn.disabled = false; saveBtn.innerHTML = originalBtnHtml; }
+                        return;
+                    }
                     const created = await response.json();
                     trainingId = created.id;
+                    weeklyTrainingEditId = trainingId;
+                    document.getElementById('wtModalTitle').innerText = 'Edit Weekly Task List';
+                    document.getElementById('wtDeleteBtn').style.display = isTrainingReadOnly ? 'none' : 'inline-block';
                 } else {
                     await fetch(`${API_BASE}/api/trainings/${trainingId}`, {
                         method: 'PATCH',
@@ -4741,13 +4766,20 @@
                     headers: { 'Content-Type': 'application/json', ...API_HEADERS },
                     body: JSON.stringify({ week_start: weekStart, week_end: weekEnd, week_label: weekLabel, days })
                 });
-                if (!weeklyResponse.ok) { alert('Saved the training, but failed to save the weekly tasks.'); }
+                if (!weeklyResponse.ok) {
+                    let detail = '';
+                    try { const body = await weeklyResponse.json(); detail = body.error || body.detail || ''; } catch (e) {}
+                    alert(`Could not save your tasks (server said: ${weeklyResponse.status}${detail ? ' - ' + detail : ''}). What you typed is still here - try Save again.`);
+                    if (saveBtn) { saveBtn.disabled = false; saveBtn.innerHTML = originalBtnHtml; }
+                    return;
+                }
 
-                closeWeeklyTrainingModal();
                 await fetchTrainings();
+                closeWeeklyTrainingModal();
             } catch (err) {
                 console.error('Error saving weekly task list:', err);
-                alert('Server error while saving the weekly task list');
+                alert('Could not reach the server to save your tasks. What you typed is still here - check your connection and try Save again.');
+                if (saveBtn) { saveBtn.disabled = false; saveBtn.innerHTML = originalBtnHtml; }
             }
         }
 

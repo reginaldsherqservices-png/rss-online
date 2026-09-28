@@ -897,7 +897,7 @@ app.put('/api/trainings/:id/weekly-tasks', async (req, res) => {
     res.json(result.rows[0]);
   } catch (err) {
     console.error("EXACT WEEKLY TASKS SAVE ERROR:", err);
-    res.status(500).json({ error: 'Error saving weekly tasks' });
+    res.status(500).json({ error: 'Error saving weekly tasks', detail: err.message });
   }
 });
 

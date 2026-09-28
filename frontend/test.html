@@ -782,7 +782,7 @@
                                     <tr id="lvMonthlyHeadRow">
                                         <th>Month</th>
                                         <th>Leave Days Taken</th>
-                                        <th>Reason for Leave</th>
+                                        <th>Leave Type</th>
                                         <th>Leave Days Granted</th>
                                         <th>Sick Leave Days Granted</th>
                                     </tr>
@@ -1146,6 +1146,29 @@
         </div>
     </div>
 
+    <!-- WEEKLY TASK LIST MODAL (RSS In-House Training) -->
+    <div class="wf-modal-overlay" id="weeklyTrainingModalOverlay">
+        <div class="wf-modal" style="max-width: 760px;">
+            <div class="wf-modal-header">
+                <h2 id="wtModalTitle">Add Weekly Task List</h2>
+                <button class="wf-modal-close" onclick="closeWeeklyTrainingModal()">✕</button>
+            </div>
+            <div class="wf-modal-body" style="grid-template-columns: 1fr;">
+                <div class="wf-field">
+                    <label>Week Starting (Monday)</label>
+                    <input type="date" id="wt_week_start" onchange="onWeeklyWeekStartChange()">
+                </div>
+                <div style="font-weight:700; font-size:14px; color:var(--sherq-blue-mid); margin: 2px 0 14px;" id="wt_week_label_display">Select a week</div>
+                <div id="wt_days_container" style="display:flex; flex-direction:column; gap:14px;"></div>
+            </div>
+            <div class="wf-modal-footer">
+                <button class="wf-btn-secondary" id="wtDeleteBtn" style="display:none; color:#DC2626;" onclick="deleteWeeklyTraining()">Delete</button>
+                <button class="wf-btn-secondary" onclick="closeWeeklyTrainingModal()">Cancel</button>
+                <button class="wf-btn-primary" onclick="submitWeeklyTraining()">Save Weekly Tasks</button>
+            </div>
+        </div>
+    </div>
+
     <!-- ADD TRAINING TOPIC (CATEGORY) MODAL -->
     <div class="wf-modal-overlay" id="addCategoryModalOverlay">
         <div class="wf-modal" style="max-width: 420px;">
@@ -1441,13 +1464,30 @@
                 <button class="wf-modal-close" onclick="closeTimesheetUploadModal()">✕</button>
             </div>
             <div class="wf-modal-body" style="grid-template-columns: 1fr;">
-                <div class="wf-account-note">Expects columns: date, name, Surname, Time in, Time out — matching the export from the clock machine. Employees are matched by first name and surname, so make sure spelling matches what's on their employee record.</div>
-                <div class="wf-field"><label>Spreadsheet File (.xlsx or .csv)</label><input type="file" id="timesheetUploadFile" accept=".xlsx,.xls,.csv"></div>
+                <div class="wf-account-note">Upload the export straight from the clock machine (the "Logs" tab is read automatically). Names are matched by fuzzy-matching against employee records — you'll see a summary of exactly who each name matched to once it's done.</div>
+                <div class="wf-field"><label>Spreadsheet File (.xlsx, .xls or .csv)</label><input type="file" id="timesheetUploadFile" accept=".xlsx,.xls,.csv"></div>
                 <div id="timesheetUploadResult" style="display:none; font-size:12.5px; padding:10px 12px; border-radius:8px; margin-top:4px;"></div>
             </div>
             <div class="wf-modal-footer">
                 <button class="wf-btn-secondary" onclick="closeTimesheetUploadModal()">Cancel</button>
                 <button class="wf-btn-primary" onclick="submitTimesheetUpload()">Upload</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TIMESHEET UPLOAD SUCCESS DIALOG (separate from the upload form, stays open until dismissed) -->
+    <div class="wf-modal-overlay" id="timesheetSuccessModalOverlay">
+        <div class="wf-modal" style="max-width: 480px;">
+            <div class="wf-modal-header">
+                <h2><i class="fas fa-check-circle" style="color:#5C7A1D; margin-right:8px;"></i>Upload Complete</h2>
+                <button class="wf-modal-close" onclick="closeTimesheetSuccessModal()">✕</button>
+            </div>
+            <div class="wf-modal-body" style="grid-template-columns: 1fr;">
+                <p id="timesheetSuccessSummary" style="font-size: 14px; color: #1D2333; margin: 0 0 4px;"></p>
+                <div id="timesheetSuccessMatches" style="display:none;"></div>
+            </div>
+            <div class="wf-modal-footer" style="justify-content: flex-end;">
+                <button class="wf-btn-primary" onclick="closeTimesheetSuccessModal()">Done</button>
             </div>
         </div>
     </div>
@@ -1732,7 +1772,6 @@
                     }
 
                     grid.innerHTML = cardsHtml;
-                    renderDashRecentActivity(allLeave.slice(0, 5), true);
                 } else {
                     let cardsHtml = '';
                     let ownLeaveHistory = [];
@@ -1748,7 +1787,14 @@
                         const overtime = await overtimeResp.json();
                         ownLeaveHistory = leave.history || [];
 
-                        const leaveRemaining = leave.balances && leave.balances['Paid Leave'] ? (leave.balances['Paid Leave'].entitlement - leave.balances['Paid Leave'].used) : '—';
+                        // Match the Leave section's "Entitled / Taken" card: every approved
+                        // leave request across all types (Paid, Sick, Family, Unpaid) counts
+                        // against the same 15-day entitlement, same as the physical leave form.
+                        let leaveRemaining = '—';
+                        if (leave.balances && leave.balances['Paid Leave']) {
+                            const totalUsedAllTypes = Object.values(leave.balances).reduce((sum, t) => sum + (t.used || 0), 0);
+                            leaveRemaining = leave.balances['Paid Leave'].entitlement - totalUsedAllTypes;
+                        }
                         const completedTrainings = trainings.filter(t => t.completed).length;
                         const overtimeMinutes = overtime.reduce((sum, e) => sum + (e.minutes_worked || 0), 0);
                         const overtimeStr = formatDurationFromMinutes(overtimeMinutes);
@@ -1759,48 +1805,10 @@
                     }
 
                     grid.innerHTML = cardsHtml;
-                    renderDashRecentActivity(ownLeaveHistory.slice(0, 5), false);
                 }
             } catch (err) {
                 console.error('Error loading dashboard stats:', err);
             }
-        }
-
-        function renderDashRecentActivity(items, isAdminView) {
-            let panel = document.getElementById('dashRecentActivityPanel');
-            if (!panel) {
-                panel = document.createElement('div');
-                panel.id = 'dashRecentActivityPanel';
-                panel.className = 'wf-table-wrap';
-                panel.style.padding = '20px 24px';
-                panel.style.marginTop = '20px';
-                document.getElementById('dashStatsGrid').insertAdjacentElement('afterend', panel);
-            }
-
-            const title = isAdminView ? 'Recent leave requests' : 'Your recent leave history';
-
-            if (!items || items.length === 0) {
-                panel.innerHTML = `
-                    <div style="font-size:13px; font-weight:700; color:var(--sherq-blue); margin-bottom:10px;">${title}</div>
-                    <div class="wf-empty" style="padding:20px 0;">Nothing here yet.</div>
-                `;
-                return;
-            }
-
-            panel.innerHTML = `
-                <div style="font-size:13px; font-weight:700; color:var(--sherq-blue); margin-bottom:10px;">${title}</div>
-                ${items.map((item, i) => `
-                    <div class="dash-activity-row" data-index="${i}" style="display:flex; justify-content:space-between; align-items:center; padding:9px 0; border-bottom:1px solid var(--line); font-size:13px; cursor:pointer;">
-                        <span style="color:#1D2333;">
-                            ${isAdminView ? `<b>${item.first_name} ${item.last_name}</b> &middot; ` : ''}${item.leave_type} &middot; ${item.days_requested} day${item.days_requested === 1 ? '' : 's'}
-                        </span>
-                        <span class="lv-status-badge status-${item.status}">${item.status}</span>
-                    </div>
-                `).join('')}
-            `;
-            panel.querySelectorAll('.dash-activity-row').forEach(row => {
-                row.onclick = () => openHistoryRequestDetail(items[parseInt(row.dataset.index, 10)]);
-            });
         }
 
         function showDashboardHome() {
@@ -2891,6 +2899,11 @@
             const b = balances['Paid Leave'];
             if (!b) return;
 
+            // "Taken" counts every approved leave request regardless of type (Paid,
+            // Sick, Family Responsibility, Unpaid) — any day taken off reduces this
+            // same 15-day counter, matching how the physical leave form is tracked.
+            const totalUsed = Object.values(balances).reduce((sum, t) => sum + (t.used || 0), 0);
+
             const card = document.createElement('div');
             card.className = 'lv-balance-card';
             card.innerHTML = `
@@ -2902,7 +2915,7 @@
                     </div>
                     <div class="lv-frac-slash">/</div>
                     <div class="lv-frac-col">
-                        <div class="lv-frac-num used">${b.used}</div>
+                        <div class="lv-frac-num used">${totalUsed}</div>
                         <div class="lv-frac-label">Taken</div>
                     </div>
                 </div>
@@ -2961,7 +2974,7 @@
         // Builds exactly 12 rows starting from the employee's start month.
         // "Leave Days Granted" and "Sick Leave Days Granted" show the FLAT monthly rate
         // (not a running total) — matching the company's official leave form.
-        // "Leave Days Taken" / "Reason" auto-fill from APPROVED requests that start in that month.
+        // "Leave Days Taken" / "Leave Type" auto-fill from APPROVED requests that start in that month.
         let monthlyAccrualData = {};
 
         function renderMonthlyAccrual(startDateStr, history) {
@@ -2993,7 +3006,9 @@
                     return reqDate.getFullYear() === rowDate.getFullYear() && reqDate.getMonth() === rowDate.getMonth();
                 });
                 const daysTaken = matches.reduce((sum, r) => sum + Number(r.days_requested), 0);
-                const reasons = matches.map(r => r.reason).filter(Boolean).join(', ');
+                // The reason stays available in the detail popup (click the row) —
+                // the table itself only shows the leave type per your admin's request.
+                const types = [...new Set(matches.map(r => r.leave_type).filter(Boolean))].join(', ');
 
                 monthlyAccrualData[i] = { monthLabel, matches };
 
@@ -3007,7 +3022,7 @@
                 row.innerHTML = `
                     <td>${monthLabel}</td>
                     <td>${daysTaken > 0 ? daysTaken : ''}</td>
-                    <td>${reasons || ''}</td>
+                    <td>${types || ''}</td>
                     <td>${PAID_RATE}</td>
                     <td>${SICK_RATE}</td>
                 `;
@@ -3060,7 +3075,7 @@
             headRow.innerHTML = `
                 <th>Month</th>
                 <th>Leave Days Taken</th>
-                <th>Reason for Leave</th>
+                <th>Leave Type</th>
                 <th>Leave Days Granted</th>
                 <th>Sick Leave Days Granted</th>
                 ${customColumns.map(col => `<th>${col}<button class="lv-col-remove" onclick="removeCustomColumn('${col.replace(/'/g, "\\'")}')" title="Remove column">&times;</button></th>`).join('')}
@@ -3375,10 +3390,11 @@
             }
             trainingCustomColumns[cat] = columns;
 
+            const isWeeklyCategory = (cat === 'RSS In-House Training');
             if (theadRow) {
                 theadRow.innerHTML = `
-                    <th>Date of Training</th>
-                    <th>Topic of Training</th>
+                    <th>${isWeeklyCategory ? 'Week Starting' : 'Date of Training'}</th>
+                    <th>${isWeeklyCategory ? 'Week' : 'Topic of Training'}</th>
                     ${columns.map(c => `
                         <th>
                             <div style="display:flex; align-items:center; gap:4px;">
@@ -3434,9 +3450,13 @@
         let currentTrainingDetailId = null;
 
         async function openTrainingDetailModal(trainingId) {
-            currentTrainingDetailId = trainingId;
             const item = allTrainings.find(t => t.id === trainingId);
             if (!item) return;
+            if (item.category === 'RSS In-House Training') {
+                openWeeklyTrainingModal(trainingId);
+                return;
+            }
+            currentTrainingDetailId = trainingId;
             const isPresentation = (item.category === 'Presentation Day Topics');
             document.getElementById('tdModalTitle').innerText = isPresentation ? 'Presentation Details' : 'Training Details';
             document.getElementById('td_title_label').innerText = isPresentation ? 'Presentation Topic' : 'Topic of Training';
@@ -4063,6 +4083,43 @@
             document.getElementById('timesheetUploadModalOverlay').classList.remove('open');
         }
 
+        // Renders the per-name fuzzy-match summary the backend returns, so whoever
+        // uploaded the file can spot-check that "olwetu" really did resolve to the
+        // right employee before trusting the imported hours. Used inside the
+        // separate success dialog (not the upload form itself).
+        function renderTimesheetSuccessMatches(matches) {
+            const wrap = document.getElementById('timesheetSuccessMatches');
+            if (!matches || matches.length === 0) {
+                wrap.style.display = 'none';
+                wrap.innerHTML = '';
+                return;
+            }
+            wrap.style.display = 'block';
+            wrap.innerHTML = `
+                <div style="font-size:11.5px; font-weight:700; color:var(--sherq-blue); margin:10px 0 6px; text-transform:uppercase; letter-spacing:0.4px;">Name matches found on the sheet</div>
+                <div style="border:1px solid var(--line); border-radius:8px; overflow:hidden; max-height:260px; overflow-y:auto;">
+                    ${matches.map((m, i) => `
+                        <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 12px; font-size:12.5px; ${i > 0 ? 'border-top:1px solid var(--line);' : ''} ${m.employee_id ? '' : 'background:#FEF2F2;'}">
+                            <span>"${m.raw_name}"</span>
+                            <span style="font-weight:700; color:${m.employee_id ? '#5C7A1D' : '#DC2626'};">
+                                ${m.matched_employee ? `→ ${m.matched_employee}` : 'No confident match — skipped'}
+                            </span>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function openTimesheetSuccessModal(summaryText, matches) {
+            document.getElementById('timesheetSuccessSummary').innerText = summaryText;
+            renderTimesheetSuccessMatches(matches);
+            document.getElementById('timesheetSuccessModalOverlay').classList.add('open');
+        }
+
+        function closeTimesheetSuccessModal() {
+            document.getElementById('timesheetSuccessModalOverlay').classList.remove('open');
+        }
+
         async function submitTimesheetUpload() {
             const file = document.getElementById('timesheetUploadFile').files[0];
             if (!file) { alert('Please choose a spreadsheet file first.'); return; }
@@ -4084,22 +4141,29 @@
                 if (!response.ok) {
                     resultEl.style.background = '#FEE2E2';
                     resultEl.style.color = '#DC2626';
-                    resultEl.innerText = data.error || 'Failed to process the file.';
+                    let errMsg = data.error || 'Failed to process the file.';
+                    if (data.sheet_names) errMsg += ` (sheets found: ${data.sheet_names.length ? data.sheet_names.join(', ') : 'none'})`;
+                    resultEl.innerText = errMsg;
                     return;
                 }
 
-                resultEl.style.background = 'rgba(153,204,51,0.15)';
-                resultEl.style.color = '#5C7A1D';
-                let msg = `Imported ${data.inserted} row(s) successfully.`;
-                if (data.skipped > 0) {
-                    msg += ` ${data.skipped} row(s) could not be matched to an employee: ${data.skipped_names.join(', ')}. Check that the name/surname spelling matches their employee record.`;
+                // Build the success message first, then close THIS form immediately and
+                // show it in a separate dialog — so the confirmation isn't gone in a blink.
+                let msg = `Imported ${data.inserted} row(s) from the "${data.sheet_used}" sheet.`;
+                if (data.used_fallback_format) {
+                    msg += ` (No "Logs" tab was found, so this was read using the older simple date/name/Surname/Time-in/Time-out format instead.)`;
                 }
-                resultEl.innerText = msg;
+                if (data.skipped > 0) {
+                    msg += ` ${data.skipped} name(s) could not be confidently matched: ${data.skipped_names.join(', ')}. Check the list below, and their employee record's first/last name spelling.`;
+                }
 
                 // Refresh the currently viewed employee's timesheet, if one is open
                 if (viewingTimesheetsEmployeeId && currentTimesheetsTab === 'timesheet') {
                     await fetchTimesheetForEmployee(viewingTimesheetsEmployeeId);
                 }
+
+                closeTimesheetUploadModal();
+                openTimesheetSuccessModal(msg, data.matches);
             } catch (err) {
                 console.error('Error uploading timesheet:', err);
                 resultEl.style.background = '#FEE2E2';
@@ -4474,6 +4538,10 @@
         let pendingTrainingCategory = null;
 
         function openAddTrainingModal(category) {
+            if (category === 'RSS In-House Training') {
+                openWeeklyTrainingModal(null);
+                return;
+            }
             pendingTrainingCategory = category;
             const isPresentation = (category === 'Presentation Day Topics');
             document.getElementById('trModalTitle').innerText = isPresentation ? 'Add Presentation Topic' : 'Add Training';
@@ -4508,6 +4576,186 @@
                 console.error('Error adding training:', err);
                 alert('Server error while adding training');
             }
+        }
+
+        // ===== RSS In-House Training: Weekly Task List (Mon-Fri) =====
+        const WEEKLY_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+        let weeklyTrainingEditId = null;
+        let weeklyTasksState = {};
+
+        function formatWeekRangeLabel(startDateStr) {
+            if (!startDateStr) return '';
+            const start = new Date(startDateStr + 'T00:00:00');
+            const end = new Date(start);
+            end.setDate(start.getDate() + 4);
+            const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+            const startDay = start.getDate();
+            const endDay = end.getDate();
+            const startMonth = monthNames[start.getMonth()];
+            const endMonth = monthNames[end.getMonth()];
+            const year = end.getFullYear();
+            if (startMonth === endMonth) {
+                return `${startDay}-${endDay} ${startMonth} ${year}`;
+            }
+            return `${startDay} ${startMonth} - ${endDay} ${endMonth} ${year}`;
+        }
+
+        function getMostRecentMonday() {
+            const today = new Date();
+            const day = today.getDay();
+            const diff = (day === 0) ? -6 : (1 - day);
+            const monday = new Date(today);
+            monday.setDate(today.getDate() + diff);
+            return monday.toISOString().split('T')[0];
+        }
+
+        function renderWeeklyDayBlocks() {
+            const container = document.getElementById('wt_days_container');
+            container.innerHTML = '';
+            const weekStart = document.getElementById('wt_week_start').value;
+            const startD = weekStart ? new Date(weekStart + 'T00:00:00') : null;
+            WEEKLY_DAYS.forEach((day, idx) => {
+                let dateLabel = '';
+                if (startD) {
+                    const d = new Date(startD);
+                    d.setDate(startD.getDate() + idx);
+                    dateLabel = d.toLocaleDateString('en-ZA', { day: 'numeric', month: 'short' });
+                }
+                const block = document.createElement('div');
+                block.style.cssText = 'border:1px solid #E2E8F0; border-radius:10px; padding:12px 14px;';
+                block.innerHTML = `
+                    <div style="font-weight:700; font-size:13px; margin-bottom:8px; color:#1E293B;">${day} ${dateLabel ? `<span style="font-weight:500; color:#64748B;">(${dateLabel})</span>` : ''}</div>
+                    <div id="wt_tasks_${day}" style="display:flex; flex-direction:column; gap:6px; margin-bottom:8px;"></div>
+                    <button class="wf-btn-secondary" type="button" style="font-size:12px; padding:5px 10px;" onclick="addWeeklyTaskRow('${day}')"><i class="fas fa-plus"></i> Add Task</button>
+                `;
+                container.appendChild(block);
+                const existing = weeklyTasksState[day] || [];
+                if (existing.length > 0) {
+                    existing.forEach(taskText => addWeeklyTaskRow(day, taskText));
+                } else {
+                    addWeeklyTaskRow(day, '');
+                }
+            });
+        }
+
+        function addWeeklyTaskRow(day, value) {
+            const wrap = document.getElementById(`wt_tasks_${day}`);
+            if (!wrap) return;
+            const row = document.createElement('div');
+            row.style.cssText = 'display:flex; gap:6px; align-items:center;';
+            row.innerHTML = `
+                <input type="text" class="wt-task-input" value="${(value || '').replace(/"/g, '&quot;')}" placeholder="e.g. Worked on the frontend of the RSS training" style="flex:1;">
+                <button class="lv-col-remove" type="button" onclick="this.parentElement.remove()" title="Remove task">&times;</button>
+            `;
+            wrap.appendChild(row);
+        }
+
+        function onWeeklyWeekStartChange() {
+            const start = document.getElementById('wt_week_start').value;
+            document.getElementById('wt_week_label_display').innerText = start ? formatWeekRangeLabel(start) : 'Select a week';
+            renderWeeklyDayBlocks();
+        }
+
+        function openWeeklyTrainingModal(trainingId) {
+            weeklyTrainingEditId = trainingId || null;
+            weeklyTasksState = {};
+            document.getElementById('wtModalTitle').innerText = trainingId ? 'Edit Weekly Task List' : 'Add Weekly Task List';
+            document.getElementById('wtDeleteBtn').style.display = (trainingId && !isTrainingReadOnly) ? 'inline-block' : 'none';
+            document.getElementById('weeklyTrainingModalOverlay').classList.add('open');
+
+            if (trainingId) {
+                document.getElementById('wt_week_label_display').innerText = 'Loading...';
+                fetch(`${API_BASE}/api/trainings/${trainingId}/weekly-tasks`, { headers: API_HEADERS })
+                    .then(r => r.json())
+                    .then(data => {
+                        weeklyTasksState = (data && data.days) || {};
+                        const weekStart = (data && data.week_start) ? data.week_start.split('T')[0] : getMostRecentMonday();
+                        document.getElementById('wt_week_start').value = weekStart;
+                        document.getElementById('wt_week_label_display').innerText = formatWeekRangeLabel(weekStart);
+                        renderWeeklyDayBlocks();
+                    })
+                    .catch(err => {
+                        console.error('Error loading weekly tasks:', err);
+                        document.getElementById('wt_week_start').value = getMostRecentMonday();
+                        onWeeklyWeekStartChange();
+                    });
+            } else {
+                document.getElementById('wt_week_start').value = getMostRecentMonday();
+                onWeeklyWeekStartChange();
+            }
+        }
+
+        function closeWeeklyTrainingModal() {
+            document.getElementById('weeklyTrainingModalOverlay').classList.remove('open');
+            weeklyTrainingEditId = null;
+        }
+
+        function collectWeeklyTasksState() {
+            const days = {};
+            WEEKLY_DAYS.forEach(day => {
+                const wrap = document.getElementById(`wt_tasks_${day}`);
+                const values = wrap ? Array.from(wrap.querySelectorAll('.wt-task-input'))
+                    .map(input => input.value.trim())
+                    .filter(v => v.length > 0) : [];
+                days[day] = values;
+            });
+            return days;
+        }
+
+        async function submitWeeklyTraining() {
+            const weekStart = document.getElementById('wt_week_start').value;
+            if (!weekStart) { alert('Please choose the Monday this week starts on.'); return; }
+            const weekLabel = formatWeekRangeLabel(weekStart);
+            const startD = new Date(weekStart + 'T00:00:00');
+            const endD = new Date(startD);
+            endD.setDate(startD.getDate() + 4);
+            const weekEnd = endD.toISOString().split('T')[0];
+            const days = collectWeeklyTasksState();
+
+            try {
+                let trainingId = weeklyTrainingEditId;
+                if (!trainingId) {
+                    const response = await fetch(`${API_BASE}/api/trainings`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', ...API_HEADERS },
+                        body: JSON.stringify({
+                            category: 'RSS In-House Training',
+                            title: weekLabel,
+                            training_date: weekStart,
+                            created_by: viewingTrainingEmployeeId
+                        })
+                    });
+                    if (!response.ok) { alert('Failed to create weekly task list'); return; }
+                    const created = await response.json();
+                    trainingId = created.id;
+                } else {
+                    await fetch(`${API_BASE}/api/trainings/${trainingId}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json', ...API_HEADERS },
+                        body: JSON.stringify({ title: weekLabel, training_date: weekStart })
+                    });
+                }
+
+                const weeklyResponse = await fetch(`${API_BASE}/api/trainings/${trainingId}/weekly-tasks`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', ...API_HEADERS },
+                    body: JSON.stringify({ week_start: weekStart, week_end: weekEnd, week_label: weekLabel, days })
+                });
+                if (!weeklyResponse.ok) { alert('Saved the training, but failed to save the weekly tasks.'); }
+
+                closeWeeklyTrainingModal();
+                await fetchTrainings();
+            } catch (err) {
+                console.error('Error saving weekly task list:', err);
+                alert('Server error while saving the weekly task list');
+            }
+        }
+
+        async function deleteWeeklyTraining() {
+            if (!weeklyTrainingEditId) return;
+            const id = weeklyTrainingEditId;
+            closeWeeklyTrainingModal();
+            await removeTrainingRow(id);
         }
 
         function openLeaveRequestModal() {
