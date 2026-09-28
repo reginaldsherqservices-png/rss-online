@@ -1146,6 +1146,29 @@
         </div>
     </div>
 
+    <!-- WEEKLY TASK LIST MODAL (RSS In-House Training) -->
+    <div class="wf-modal-overlay" id="weeklyTrainingModalOverlay">
+        <div class="wf-modal" style="max-width: 760px;">
+            <div class="wf-modal-header">
+                <h2 id="wtModalTitle">Add Weekly Task List</h2>
+                <button class="wf-modal-close" onclick="closeWeeklyTrainingModal()">✕</button>
+            </div>
+            <div class="wf-modal-body" style="grid-template-columns: 1fr;">
+                <div class="wf-field">
+                    <label>Week Starting (Monday)</label>
+                    <input type="date" id="wt_week_start" onchange="onWeeklyWeekStartChange()">
+                </div>
+                <div style="font-weight:700; font-size:14px; color:var(--sherq-blue-mid); margin: 2px 0 14px;" id="wt_week_label_display">Select a week</div>
+                <div id="wt_days_container" style="display:flex; flex-direction:column; gap:14px;"></div>
+            </div>
+            <div class="wf-modal-footer">
+                <button class="wf-btn-secondary" id="wtDeleteBtn" style="display:none; color:#DC2626;" onclick="deleteWeeklyTraining()">Delete</button>
+                <button class="wf-btn-secondary" onclick="closeWeeklyTrainingModal()">Cancel</button>
+                <button class="wf-btn-primary" onclick="submitWeeklyTraining()">Save Weekly Tasks</button>
+            </div>
+        </div>
+    </div>
+
     <!-- ADD TRAINING TOPIC (CATEGORY) MODAL -->
     <div class="wf-modal-overlay" id="addCategoryModalOverlay">
         <div class="wf-modal" style="max-width: 420px;">
@@ -3360,10 +3383,11 @@
             }
             trainingCustomColumns[cat] = columns;
 
+            const isWeeklyCategory = (cat === 'RSS In-House Training');
             if (theadRow) {
                 theadRow.innerHTML = `
-                    <th>Date of Training</th>
-                    <th>Topic of Training</th>
+                    <th>${isWeeklyCategory ? 'Week Starting' : 'Date of Training'}</th>
+                    <th>${isWeeklyCategory ? 'Week' : 'Topic of Training'}</th>
                     ${columns.map(c => `
                         <th>
                             <div style="display:flex; align-items:center; gap:4px;">
@@ -3419,9 +3443,13 @@
         let currentTrainingDetailId = null;
 
         async function openTrainingDetailModal(trainingId) {
-            currentTrainingDetailId = trainingId;
             const item = allTrainings.find(t => t.id === trainingId);
             if (!item) return;
+            if (item.category === 'RSS In-House Training') {
+                openWeeklyTrainingModal(trainingId);
+                return;
+            }
+            currentTrainingDetailId = trainingId;
             const isPresentation = (item.category === 'Presentation Day Topics');
             document.getElementById('tdModalTitle').innerText = isPresentation ? 'Presentation Details' : 'Training Details';
             document.getElementById('td_title_label').innerText = isPresentation ? 'Presentation Topic' : 'Topic of Training';
@@ -4503,6 +4531,10 @@
         let pendingTrainingCategory = null;
 
         function openAddTrainingModal(category) {
+            if (category === 'RSS In-House Training') {
+                openWeeklyTrainingModal(null);
+                return;
+            }
             pendingTrainingCategory = category;
             const isPresentation = (category === 'Presentation Day Topics');
             document.getElementById('trModalTitle').innerText = isPresentation ? 'Add Presentation Topic' : 'Add Training';
@@ -4537,6 +4569,186 @@
                 console.error('Error adding training:', err);
                 alert('Server error while adding training');
             }
+        }
+
+        // ===== RSS In-House Training: Weekly Task List (Mon-Fri) =====
+        const WEEKLY_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+        let weeklyTrainingEditId = null;
+        let weeklyTasksState = {};
+
+        function formatWeekRangeLabel(startDateStr) {
+            if (!startDateStr) return '';
+            const start = new Date(startDateStr + 'T00:00:00');
+            const end = new Date(start);
+            end.setDate(start.getDate() + 4);
+            const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+            const startDay = start.getDate();
+            const endDay = end.getDate();
+            const startMonth = monthNames[start.getMonth()];
+            const endMonth = monthNames[end.getMonth()];
+            const year = end.getFullYear();
+            if (startMonth === endMonth) {
+                return `${startDay}-${endDay} ${startMonth} ${year}`;
+            }
+            return `${startDay} ${startMonth} - ${endDay} ${endMonth} ${year}`;
+        }
+
+        function getMostRecentMonday() {
+            const today = new Date();
+            const day = today.getDay();
+            const diff = (day === 0) ? -6 : (1 - day);
+            const monday = new Date(today);
+            monday.setDate(today.getDate() + diff);
+            return monday.toISOString().split('T')[0];
+        }
+
+        function renderWeeklyDayBlocks() {
+            const container = document.getElementById('wt_days_container');
+            container.innerHTML = '';
+            const weekStart = document.getElementById('wt_week_start').value;
+            const startD = weekStart ? new Date(weekStart + 'T00:00:00') : null;
+            WEEKLY_DAYS.forEach((day, idx) => {
+                let dateLabel = '';
+                if (startD) {
+                    const d = new Date(startD);
+                    d.setDate(startD.getDate() + idx);
+                    dateLabel = d.toLocaleDateString('en-ZA', { day: 'numeric', month: 'short' });
+                }
+                const block = document.createElement('div');
+                block.style.cssText = 'border:1px solid #E2E8F0; border-radius:10px; padding:12px 14px;';
+                block.innerHTML = `
+                    <div style="font-weight:700; font-size:13px; margin-bottom:8px; color:#1E293B;">${day} ${dateLabel ? `<span style="font-weight:500; color:#64748B;">(${dateLabel})</span>` : ''}</div>
+                    <div id="wt_tasks_${day}" style="display:flex; flex-direction:column; gap:6px; margin-bottom:8px;"></div>
+                    <button class="wf-btn-secondary" type="button" style="font-size:12px; padding:5px 10px;" onclick="addWeeklyTaskRow('${day}')"><i class="fas fa-plus"></i> Add Task</button>
+                `;
+                container.appendChild(block);
+                const existing = weeklyTasksState[day] || [];
+                if (existing.length > 0) {
+                    existing.forEach(taskText => addWeeklyTaskRow(day, taskText));
+                } else {
+                    addWeeklyTaskRow(day, '');
+                }
+            });
+        }
+
+        function addWeeklyTaskRow(day, value) {
+            const wrap = document.getElementById(`wt_tasks_${day}`);
+            if (!wrap) return;
+            const row = document.createElement('div');
+            row.style.cssText = 'display:flex; gap:6px; align-items:center;';
+            row.innerHTML = `
+                <input type="text" class="wt-task-input" value="${(value || '').replace(/"/g, '&quot;')}" placeholder="e.g. Worked on the frontend of the RSS training" style="flex:1;">
+                <button class="lv-col-remove" type="button" onclick="this.parentElement.remove()" title="Remove task">&times;</button>
+            `;
+            wrap.appendChild(row);
+        }
+
+        function onWeeklyWeekStartChange() {
+            const start = document.getElementById('wt_week_start').value;
+            document.getElementById('wt_week_label_display').innerText = start ? formatWeekRangeLabel(start) : 'Select a week';
+            renderWeeklyDayBlocks();
+        }
+
+        function openWeeklyTrainingModal(trainingId) {
+            weeklyTrainingEditId = trainingId || null;
+            weeklyTasksState = {};
+            document.getElementById('wtModalTitle').innerText = trainingId ? 'Edit Weekly Task List' : 'Add Weekly Task List';
+            document.getElementById('wtDeleteBtn').style.display = (trainingId && !isTrainingReadOnly) ? 'inline-block' : 'none';
+            document.getElementById('weeklyTrainingModalOverlay').classList.add('open');
+
+            if (trainingId) {
+                document.getElementById('wt_week_label_display').innerText = 'Loading...';
+                fetch(`${API_BASE}/api/trainings/${trainingId}/weekly-tasks`, { headers: API_HEADERS })
+                    .then(r => r.json())
+                    .then(data => {
+                        weeklyTasksState = (data && data.days) || {};
+                        const weekStart = (data && data.week_start) ? data.week_start.split('T')[0] : getMostRecentMonday();
+                        document.getElementById('wt_week_start').value = weekStart;
+                        document.getElementById('wt_week_label_display').innerText = formatWeekRangeLabel(weekStart);
+                        renderWeeklyDayBlocks();
+                    })
+                    .catch(err => {
+                        console.error('Error loading weekly tasks:', err);
+                        document.getElementById('wt_week_start').value = getMostRecentMonday();
+                        onWeeklyWeekStartChange();
+                    });
+            } else {
+                document.getElementById('wt_week_start').value = getMostRecentMonday();
+                onWeeklyWeekStartChange();
+            }
+        }
+
+        function closeWeeklyTrainingModal() {
+            document.getElementById('weeklyTrainingModalOverlay').classList.remove('open');
+            weeklyTrainingEditId = null;
+        }
+
+        function collectWeeklyTasksState() {
+            const days = {};
+            WEEKLY_DAYS.forEach(day => {
+                const wrap = document.getElementById(`wt_tasks_${day}`);
+                const values = wrap ? Array.from(wrap.querySelectorAll('.wt-task-input'))
+                    .map(input => input.value.trim())
+                    .filter(v => v.length > 0) : [];
+                days[day] = values;
+            });
+            return days;
+        }
+
+        async function submitWeeklyTraining() {
+            const weekStart = document.getElementById('wt_week_start').value;
+            if (!weekStart) { alert('Please choose the Monday this week starts on.'); return; }
+            const weekLabel = formatWeekRangeLabel(weekStart);
+            const startD = new Date(weekStart + 'T00:00:00');
+            const endD = new Date(startD);
+            endD.setDate(startD.getDate() + 4);
+            const weekEnd = endD.toISOString().split('T')[0];
+            const days = collectWeeklyTasksState();
+
+            try {
+                let trainingId = weeklyTrainingEditId;
+                if (!trainingId) {
+                    const response = await fetch(`${API_BASE}/api/trainings`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', ...API_HEADERS },
+                        body: JSON.stringify({
+                            category: 'RSS In-House Training',
+                            title: weekLabel,
+                            training_date: weekStart,
+                            created_by: viewingTrainingEmployeeId
+                        })
+                    });
+                    if (!response.ok) { alert('Failed to create weekly task list'); return; }
+                    const created = await response.json();
+                    trainingId = created.id;
+                } else {
+                    await fetch(`${API_BASE}/api/trainings/${trainingId}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json', ...API_HEADERS },
+                        body: JSON.stringify({ title: weekLabel, training_date: weekStart })
+                    });
+                }
+
+                const weeklyResponse = await fetch(`${API_BASE}/api/trainings/${trainingId}/weekly-tasks`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', ...API_HEADERS },
+                    body: JSON.stringify({ week_start: weekStart, week_end: weekEnd, week_label: weekLabel, days })
+                });
+                if (!weeklyResponse.ok) { alert('Saved the training, but failed to save the weekly tasks.'); }
+
+                closeWeeklyTrainingModal();
+                await fetchTrainings();
+            } catch (err) {
+                console.error('Error saving weekly task list:', err);
+                alert('Server error while saving the weekly task list');
+            }
+        }
+
+        async function deleteWeeklyTraining() {
+            if (!weeklyTrainingEditId) return;
+            const id = weeklyTrainingEditId;
+            closeWeeklyTrainingModal();
+            await removeTrainingRow(id);
         }
 
         function openLeaveRequestModal() {

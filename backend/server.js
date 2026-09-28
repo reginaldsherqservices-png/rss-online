@@ -859,6 +859,48 @@ app.patch('/api/trainings/:id/extra', async (req, res) => {
   }
 });
 
+// RSS In-House Training weekly task list (Mon-Fri), stored in trainings.extra_data.weekly_tasks
+app.get('/api/trainings/:id/weekly-tasks', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await pool.query('SELECT extra_data FROM trainings WHERE id = $1', [id]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Training not found' });
+    }
+    const weekly = (result.rows[0].extra_data && result.rows[0].extra_data.weekly_tasks) || null;
+    res.json(weekly || { week_start: null, week_end: null, week_label: '', days: {} });
+  } catch (err) {
+    console.error("EXACT WEEKLY TASKS FETCH ERROR:", err);
+    res.status(500).json({ error: 'Error fetching weekly tasks' });
+  }
+});
+
+app.put('/api/trainings/:id/weekly-tasks', async (req, res) => {
+  const { id } = req.params;
+  const { week_start, week_end, week_label, days } = req.body;
+  if (!week_start || !week_end || !days) {
+    return res.status(400).json({ error: 'week_start, week_end and days are required' });
+  }
+  try {
+    const weeklyData = { week_start, week_end, week_label: week_label || '', days };
+    const result = await pool.query(
+      `UPDATE trainings
+       SET extra_data = jsonb_set(COALESCE(extra_data, '{}'::jsonb), ARRAY['weekly_tasks'], $2::jsonb),
+           training_date = $3
+       WHERE id = $1
+       RETURNING *`,
+      [id, JSON.stringify(weeklyData), week_start]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Training not found' });
+    }
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error("EXACT WEEKLY TASKS SAVE ERROR:", err);
+    res.status(500).json({ error: 'Error saving weekly tasks' });
+  }
+});
+
 app.get('/api/trainings/:id/tasks', async (req, res) => {
   const { id } = req.params;
   const { employee_id } = req.query;
