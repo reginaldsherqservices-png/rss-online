@@ -3294,11 +3294,18 @@
         function renderTrainingProgress() {
             const container = document.getElementById('trainingProgressStats');
             container.innerHTML = TRAINING_CATEGORIES.map(cat => {
-                const completedCount = allTrainings.filter(t => t.category === cat && t.completed).length;
+                // RSS In-House Training is a list of weekly task lists, not
+                // individual completable trainings, so there's no
+                // "completed" flag to count for it - show how many weeks
+                // have been logged instead, matching the list below.
+                const isWeeklyCategory = (cat === 'RSS In-House Training');
+                const count = isWeeklyCategory
+                    ? allTrainings.filter(t => t.category === cat).length
+                    : allTrainings.filter(t => t.category === cat && t.completed).length;
                 return `
                     <div class="wf-stat-card active">
                         <div class="label">${cat}</div>
-                        <div class="value">${completedCount}</div>
+                        <div class="value">${count}</div>
                     </div>
                 `;
             }).join('');
