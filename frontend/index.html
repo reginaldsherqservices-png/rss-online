@@ -1787,7 +1787,14 @@
                         const overtime = await overtimeResp.json();
                         ownLeaveHistory = leave.history || [];
 
-                        const leaveRemaining = leave.balances && leave.balances['Paid Leave'] ? (leave.balances['Paid Leave'].entitlement - leave.balances['Paid Leave'].used) : '—';
+                        // Match the Leave section's "Entitled / Taken" card: every approved
+                        // leave request across all types (Paid, Sick, Family, Unpaid) counts
+                        // against the same 15-day entitlement, same as the physical leave form.
+                        let leaveRemaining = '—';
+                        if (leave.balances && leave.balances['Paid Leave']) {
+                            const totalUsedAllTypes = Object.values(leave.balances).reduce((sum, t) => sum + (t.used || 0), 0);
+                            leaveRemaining = leave.balances['Paid Leave'].entitlement - totalUsedAllTypes;
+                        }
                         const completedTrainings = trainings.filter(t => t.completed).length;
                         const overtimeMinutes = overtime.reduce((sum, e) => sum + (e.minutes_worked || 0), 0);
                         const overtimeStr = formatDurationFromMinutes(overtimeMinutes);
