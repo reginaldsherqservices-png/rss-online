@@ -124,6 +124,38 @@
         .wf-btn-primary:hover { background: var(--sherq-blue-mid); }
         .wf-btn-ghost { padding: 10px 16px; border-radius: 8px; border: none; background: none; color: var(--ink-soft); font-weight: 600; font-size: 13.5px; cursor: pointer; }
         .wf-btn-ghost:hover { text-decoration: underline; }
+        /* Reports: checklist rows (question | Yes/No | comment) */
+        .rpt-q { display: grid; grid-template-columns: minmax(0, 1.4fr) auto minmax(0, 1fr); gap: 12px; align-items: center; padding: 12px 18px; border-bottom: 1px solid var(--line); }
+        .rpt-q:last-child { border-bottom: none; }
+        .rpt-q-text { font-size: 13.5px; color: #1D2333; }
+        .rpt-yn { display: flex; gap: 6px; }
+        .rpt-yn-btn { padding: 6px 16px; border-radius: 8px; border: 1.5px solid var(--line); background: #fff; font-weight: 700; font-size: 12.5px; cursor: pointer; color: var(--ink-soft); }
+        .rpt-yn-btn.sel-yes { background: #DCFCE7; border-color: #16A34A; color: #166534; }
+        .rpt-yn-btn.sel-no { background: #FEE2E2; border-color: #DC2626; color: #991B1B; }
+        .rpt-q input[type=text] { width: 100%; padding: 8px 10px; border: 1.5px solid var(--line); border-radius: 8px; font-family: 'Archivo', sans-serif; font-size: 13px; }
+        .rpt-heading-bar { padding: 14px 18px; background: #FAFBFC; border-bottom: 1px solid var(--line); font-weight: 700; color: var(--sherq-blue); font-size: 14px; }
+        </style><style id="rptMonthlyCss">
+        .mr-title { font-size: 20px; font-weight: 700; color: #1D2333; margin: 0 0 4px; }
+        .mr-meta { color: #64748B; font-size: 13px; margin-bottom: 14px; }
+        .mr-summary { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+        .mr-box { border: 1px solid #E2E8F0; border-radius: 8px; padding: 8px 14px; min-width: 90px; }
+        .mr-box b { display: block; font-size: 18px; }
+        .mr-box span { font-size: 11.5px; color: #64748B; }
+        .mr-table { width: 100%; border-collapse: collapse; font-size: 12.5px; margin-bottom: 16px; }
+        .mr-table th { background: #1E3A8A; color: #fff; text-align: left; padding: 6px 8px; font-size: 11.5px; }
+        .mr-table td { padding: 6px 8px; border-bottom: 1px solid #E2E8F0; vertical-align: top; }
+        .mr-table td.c { text-align: center; white-space: nowrap; font-weight: 700; }
+        .mr-table tr.mr-h td { background: #EEF2FF; font-weight: 700; color: #1E3A8A; }
+        .mr-y { color: #166534; } .mr-n { color: #991B1B; } .mr-x { color: #94A3B8; font-weight: 400; }
+        .mr-week { margin-bottom: 22px; } .mr-week tr { page-break-inside: avoid; }
+        .mr-table tr.mr-sub th { background: #E2E8F0; color: #1D2333; }
+        .mr-issues { font-size: 13px; margin: 0 0 16px; padding-left: 18px; }
+        </style><style>
+        .rpt-badge { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 11.5px; font-weight: 700; }
+        .rpt-badge.yes { background: #DCFCE7; color: #166534; }
+        .rpt-badge.no { background: #FEE2E2; color: #991B1B; }
+        .rpt-badge.none { background: #F1F5F9; color: #64748B; }
+        @media (max-width: 720px) { .rpt-q { grid-template-columns: 1fr; } }
         .wf-account-note { grid-column: 1 / -1; background: #F0F4FF; border: 1px solid #DCE4FA; border-radius: 10px; padding: 12px 14px; font-size: 12.5px; color: var(--sherq-blue-mid); margin-bottom: 4px; }
         .wf-password-row { display: flex; gap: 8px; }
         .wf-password-row input { flex: 1; }
@@ -361,6 +393,16 @@
                     <div class="nav-item" onclick="showRssManualsView()" style="font-size: 13px;">Training Manuals</div>
                 </div>
 
+                <div id="reportsSection" class="nav-item" onclick="toggleReportsMenu()" style="display: none; color: #fff; font-weight: bold;">
+                    <i class="fas fa-clipboard-check"></i> Reports
+                </div>
+                <div id="reportsSubmenu" style="display: none; padding-left: 14px;">
+                    <div class="nav-item" onclick="showStartReportView()" style="font-size: 13px;">Start Report</div>
+                    <div class="nav-item" onclick="showReportsListView()" style="font-size: 13px;">Weekly Reports</div>
+                    <div class="nav-item" onclick="showMonthlyReportsView()" style="font-size: 13px;">Monthly Reports</div>
+                    <div class="nav-item" id="reportsTemplatesNavItem" onclick="showReportTemplatesView()" style="font-size: 13px; display: none;">Checklist</div>
+                </div>
+
                 <div id="inboxNavItem" class="nav-item" onclick="showInboxView()" style="display: none; color: #fff; font-weight: bold;">
                     <i class="fas fa-inbox"></i> Inbox
                 </div>
@@ -477,6 +519,89 @@
                         </div>
                     </div>
                     <div id="rssManualsCategoriesContainer"></div>
+                </div>
+
+                <!-- REPORTS: START REPORT VIEW -->
+                <div id="reportsStartView" style="display: none;">
+                    <div class="wf-header">
+                        <div>
+                            <h1>Start Report</h1>
+                            <p>Select your name, type the client name, choose the date and the checklist, then answer every question with Yes or No and add a comment where needed</p>
+                        </div>
+                    </div>
+                    <div class="wf-table-wrap" style="padding: 20px; margin-bottom: 20px;">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; align-items: end;">
+                            <div class="wf-field"><label>Your Name</label><select id="rpt_employee" onchange="rptEmployeeChanged()"></select></div>
+                            <div class="wf-field"><label>Client Name</label><input type="text" id="rpt_client" list="rptClientList" placeholder="e.g. Claremont Metals" autocomplete="off" oninput="rptClientTyped()"><datalist id="rptClientList"></datalist></div>
+                            <div class="wf-field"><label>Date Report Done</label><input type="date" id="rpt_date" readonly tabindex="-1" style="background:#F1F5F9; color:#475569; cursor:not-allowed; pointer-events:none;" title="The date is filled in automatically"></div>
+                            <div class="wf-field"><label>Checklist Name</label><select id="rpt_template" onchange="rptTemplateChanged()"></select></div>
+                            <div><button class="wf-btn-primary" onclick="beginReport()">Begin</button></div>
+                        </div>
+                        <div id="rptStartNote" style="font-size: 12.5px; color: var(--ink-soft); margin-top: 12px;"></div>
+                    </div>
+                    <div id="reportFormArea"></div>
+                </div>
+
+                <!-- REPORTS: PAST REPORTS VIEW -->
+                <div id="reportsListView" style="display: none;">
+                    <div class="wf-header">
+                        <div>
+                            <h1>Weekly Reports</h1>
+                            <p>Every weekly report submitted. Click a row to open it, print it or delete it. Tick the weeks you want, then click Generate Monthly Report to look at it and save it</p>
+                        </div>
+                    </div>
+                    <div class="wf-table-wrap" style="padding: 16px 20px; margin-bottom: 16px;">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; align-items: end;">
+                            <div class="wf-field" id="rptFilterWrap" style="display: none;"><label>Employee</label><select id="rptFilterEmployee" onchange="loadReportsList()"></select></div>
+                            <div class="wf-field"><label>Client</label><select id="rptFilterClient" onchange="renderReportsList()"></select></div>
+                            <div class="wf-field"><label>Month</label><input type="month" id="rptFilterMonth" onchange="renderReportsList()"></div>
+                            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                                <button class="wf-btn-secondary" onclick="rptClearFilters()">Clear filters</button>
+                                <button class="wf-btn-primary" onclick="generateMonthlyReport()"><i class="fas fa-file-alt"></i> Generate Monthly Report <span id="rptSelCount"></span></button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="wf-table-wrap">
+                        <table class="wf-table">
+                            <thead>
+                                <tr><th style="width: 40px;"></th><th>Date</th><th>Employee</th><th>Client</th><th>Checklist</th><th>Yes</th><th>No</th><th>Unanswered</th><th style="width: 70px;"></th></tr>
+                            </thead>
+                            <tbody id="reportsListBody"></tbody>
+                        </table>
+                        <div class="wf-empty" id="reportsListEmpty" style="display: none;">No reports found.</div>
+                    </div>
+                </div>
+
+<!-- REPORTS: MONTHLY REPORTS FOLDER -->
+                <div id="reportsMonthlyView" style="display: none;">
+                    <div class="wf-header">
+                        <div>
+                            <h1>Monthly Reports</h1>
+                            <p>Every monthly report you generate from Weekly Reports is saved here, one folder per month. Click one to open, print or delete it</p>
+                        </div>
+                    </div>
+                    <div id="monthlyFolders"></div>
+                    <div class="wf-empty" id="monthlyEmpty" style="display: none;">No monthly reports yet. Open Weekly Reports and click "Generate Monthly Report".</div>
+                </div>
+
+                <!-- REPORTS: MANAGE TEMPLATES VIEW -->
+                <div id="reportsTemplatesView" style="display: none;">
+                    <div class="wf-header">
+                        <div>
+                            <h1>Checklists</h1>
+                            <p>Build the checklists people fill in: headings with questions. Add or remove headings and questions any time</p>
+                        </div>
+                        <button class="wf-btn-primary" onclick="openReportTemplateModal(null)"><i class="fas fa-plus"></i> New Template</button>
+                    </div>
+                    <div class="wf-table-wrap">
+                        <table class="wf-table">
+                            <thead>
+                                <tr><th>Checklist</th><th>Job description of</th><th>Headings</th><th>Questions</th><th style="width: 90px;"></th></tr>
+                            </thead>
+                            <tbody id="reportTemplatesBody"></tbody>
+                        </table>
+                        <div class="wf-empty" id="reportTemplatesEmpty" style="display: none;">No templates yet. Click "New Template" to build the first checklist.</div>
+                    </div>
                 </div>
 
                 <!-- RSS TRAINING REGISTER VIEW -->
@@ -1370,6 +1495,67 @@
         </div>
     </div>
 
+    <!-- REPORT TEMPLATE EDITOR MODAL -->
+    <div class="wf-modal-overlay" id="reportTemplateModalOverlay">
+        <div class="wf-modal" style="max-width: 760px;">
+            <div class="wf-modal-header">
+                <h2 id="reportTemplateModalTitle">New Template</h2>
+                <button class="wf-modal-close" onclick="closeReportTemplateModal()">✕</button>
+            </div>
+            <div class="wf-modal-body" style="grid-template-columns: 1fr;">
+                <div class="wf-field"><label>Checklist Name</label><input type="text" id="rpt_tpl_name" placeholder="Checklist name"></div>
+                <div class="wf-field">
+                    <label>Whose job description is this?</label>
+                    <select id="rpt_tpl_employee"></select>
+                    <div id="rpt_tpl_employee_note" style="font-size: 11.5px; color: var(--ink-soft); margin-top: 5px;">When this person starts a report, this checklist loads automatically. Leave on "Anyone" for a general checklist.</div>
+                </div>
+                <div id="rtHeadingsContainer"></div>
+                <div><button class="wf-btn-secondary" onclick="rtAddHeading()"><i class="fas fa-plus"></i> Add Heading</button></div>
+            </div>
+            <div class="wf-modal-footer">
+                <button class="wf-btn-secondary" onclick="closeReportTemplateModal()">Cancel</button>
+                <button class="wf-btn-primary" id="rtSaveBtn" onclick="saveReportTemplate()">Save Template</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MONTHLY REPORT MODAL -->
+    <div class="wf-modal-overlay" id="reportMonthlyModalOverlay">
+        <div class="wf-modal" style="max-width: 1000px;">
+            <div class="wf-modal-header">
+                <h2>Monthly Report</h2>
+                <button class="wf-modal-close" onclick="closeMonthlyReport()">✕</button>
+            </div>
+            <div class="wf-modal-body" style="grid-template-columns: 1fr; overflow-x: auto;" id="reportMonthlyBody"></div>
+            <div class="wf-modal-footer">
+                <button class="wf-btn-secondary" id="monthlyDeleteBtn" style="color:#DC2626; display:none;" onclick="deleteViewingMonthly()">Delete</button>
+                <div style="display:flex; gap:10px;">
+                    <button class="wf-btn-secondary" onclick="closeMonthlyReport()">Close</button>
+                    <button class="wf-btn-secondary" onclick="printMonthlyReport()"><i class="fas fa-print"></i> Print / Save as PDF</button>
+                    <button class="wf-btn-primary" id="monthlySaveBtn" style="display:none;" onclick="saveMonthlyReport()">Save to Monthly Reports</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- VIEW SUBMITTED REPORT MODAL -->
+    <div class="wf-modal-overlay" id="reportViewModalOverlay">
+        <div class="wf-modal" style="max-width: 820px;">
+            <div class="wf-modal-header">
+                <h2 id="reportViewTitle">Report</h2>
+                <button class="wf-modal-close" onclick="closeReportViewModal()">✕</button>
+            </div>
+            <div class="wf-modal-body" style="grid-template-columns: 1fr;" id="reportViewBody"></div>
+            <div class="wf-modal-footer">
+                <button class="wf-btn-secondary" id="reportViewDeleteBtn" style="color:#DC2626; display:none;" onclick="deleteReportSubmission()">Delete</button>
+                <div style="display:flex; gap:10px;">
+                    <button class="wf-btn-secondary" onclick="closeReportViewModal()">Close</button>
+                    <button class="wf-btn-primary" onclick="printReportSubmission()"><i class="fas fa-print"></i> Print</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- UPLOAD MANUAL MODAL -->
     <div class="wf-modal-overlay" id="rssManualModalOverlay">
         <div class="wf-modal" style="max-width: 420px;">
@@ -1608,6 +1794,9 @@
             document.getElementById('financeSection').style.display = isManagement ? 'block' : 'none';
             document.getElementById('rssTrainingSection').style.display = isAdmin ? 'block' : 'none';
             document.getElementById('inboxNavItem').style.display = isAdmin ? 'block' : 'none';
+            document.getElementById('reportsSection').style.display = 'block';
+            document.getElementById('reportsTemplatesNavItem').style.display = isManagement ? 'block' : 'none';
+            document.getElementById('reportsSubmenu').style.display = 'none';
 
             // Reset submenus so leftover open/closed state from a previous role doesn't leak through
             document.getElementById('hrSubmenu').style.display = 'none';
@@ -1706,6 +1895,10 @@
             document.getElementById('rssTrainingView').style.display = 'none';
             document.getElementById('rssManualsView').style.display = 'none';
             document.getElementById('rssTrainingTypesView').style.display = 'none';
+            document.getElementById('reportsStartView').style.display = 'none';
+            document.getElementById('reportsListView').style.display = 'none';
+            document.getElementById('reportsMonthlyView').style.display = 'none';
+            document.getElementById('reportsTemplatesView').style.display = 'none';
             document.getElementById('inboxListView').style.display = 'block';
             document.getElementById('inboxDetailView').style.display = 'none';
         }
@@ -1849,6 +2042,1028 @@
             const submenu = document.getElementById('timesheetsSubmenu');
             const isOpen = submenu.style.display === 'block';
             submenu.style.display = isOpen ? 'none' : 'block';
+        }
+
+        // ============ REPORTS (checklist templates + submitted reports) ============
+        let reportTemplates = [];
+        let reportEmployees = [];
+        let reportDraft = null;          // { template, answers: [[{answer, comment}]] } while a report is being filled in
+        let reportSubmissions = [];
+        let viewingReportId = null;
+        let rtEditId = null;
+        let rtStructure = [];
+
+        // fetch that gives up after 20 seconds, so a button can never sit on
+        // "Saving..." forever if the server doesn't answer.
+        async function rptFetch(url, options) {
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 20000);
+            try {
+                return await fetch(url, { ...(options || {}), signal: controller.signal });
+            } finally {
+                clearTimeout(timer);
+            }
+        }
+
+        // In-app messages (instead of the browser's own "This page says" boxes).
+        function rptToast(message, type) {
+            if (!type) {
+                type = /^(Report submitted|Report deleted|Checklist deleted|Checklist saved|Monthly report saved|Monthly report deleted)/.test(message) ? 'success'
+                    : /^Could not|took too long/.test(message) ? 'error' : 'warn';
+            }
+            const styles = {
+                success: { bg: '#F0FDF4', border: '#16A34A', fg: '#166534', icon: 'fa-circle-check' },
+                error:   { bg: '#FEF2F2', border: '#DC2626', fg: '#991B1B', icon: 'fa-circle-exclamation' },
+                warn:    { bg: '#FFFBEB', border: '#D97706', fg: '#92400E', icon: 'fa-triangle-exclamation' }
+            }[type];
+            let host = document.getElementById('rptToastHost');
+            if (!host) {
+                host = document.createElement('div');
+                host.id = 'rptToastHost';
+                host.style.cssText = 'position:fixed; top:20px; right:20px; z-index:600; display:flex; flex-direction:column; gap:10px; width:380px; max-width:calc(100vw - 40px);';
+                document.body.appendChild(host);
+            }
+            const toast = document.createElement('div');
+            toast.style.cssText = `display:flex; align-items:flex-start; gap:10px; padding:12px 14px; background:${styles.bg}; border:1.5px solid ${styles.border}; color:${styles.fg}; border-radius:10px; font-size:13.5px; font-weight:600; line-height:1.4; box-shadow:0 8px 24px rgba(15,23,42,0.18);`;
+            toast.innerHTML = `<i class="fas ${styles.icon}" style="margin-top:2px;"></i><div style="flex:1;">${rptEsc(message)}</div><button type="button" style="background:none; border:none; color:inherit; font-size:16px; cursor:pointer; line-height:1;" aria-label="Close">&times;</button>`;
+            toast.querySelector('button').onclick = () => toast.remove();
+            host.appendChild(toast);
+            setTimeout(() => toast.remove(), type === 'error' ? 9000 : 4500);
+        }
+
+        // In-app Yes/No question. Resolves true (go ahead) or false (cancel).
+        function rptConfirm(message) {
+            return new Promise(resolve => {
+                const danger = /Delete|Remove/.test(message);
+                const label = /Delete/.test(message) ? 'Delete' : /Remove/.test(message) ? 'Remove'
+                    : /Submit anyway/.test(message) ? 'Submit anyway' : /discard/i.test(message) ? 'Discard' : 'Continue';
+                const overlay = document.createElement('div');
+                overlay.className = 'wf-modal-overlay open';
+                overlay.style.zIndex = '500';
+                overlay.innerHTML = `
+                    <div class="wf-modal" style="max-width: 420px;">
+                        <div class="wf-modal-body" style="grid-template-columns: 1fr; padding: 24px; font-size: 14.5px; line-height: 1.5; color: #1D2333;">${rptEsc(message)}</div>
+                        <div class="wf-modal-footer" style="justify-content: flex-end;">
+                            <button type="button" class="wf-btn-secondary" data-r="0">Cancel</button>
+                            <button type="button" class="wf-btn-primary" data-r="1" ${danger ? 'style="background:#DC2626;"' : ''}>${label}</button>
+                        </div>
+                    </div>`;
+                const onKey = e => { if (e.key === 'Escape') done(false); };
+                const done = value => { document.removeEventListener('keydown', onKey); overlay.remove(); resolve(value); };
+                overlay.addEventListener('click', e => {
+                    const r = e.target.getAttribute ? e.target.getAttribute('data-r') : null;
+                    if (r !== null) done(r === '1');
+                    else if (e.target === overlay) done(false);
+                });
+                document.addEventListener('keydown', onKey);
+                document.body.appendChild(overlay);
+                overlay.querySelector('[data-r="1"]').focus();
+            });
+        }
+
+        function rptEsc(value) {
+            return String(value == null ? '' : value)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
+        function rptToday() {
+            const d = new Date();
+            d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+            return d.toISOString().split('T')[0];
+        }
+        function rptFormatDate(ymd) {
+            return ymd ? formatDate(String(ymd).split('T')[0] + 'T00:00:00') : '—';
+        }
+        function rptEmployeeName(emp) {
+            return `${emp.first_name || ''} ${emp.last_name || ''}`.trim();
+        }
+        function rptIsManagement() {
+            return currentUserRole === 'admin' || currentUserRole === 'manager';
+        }
+
+        function toggleReportsMenu() {
+            const submenu = document.getElementById('reportsSubmenu');
+            submenu.style.display = submenu.style.display === 'block' ? 'none' : 'block';
+        }
+
+        async function fetchReportTemplates() {
+            try {
+                const response = await rptFetch(`${API_BASE}/api/report-templates`, { headers: API_HEADERS });
+                reportTemplates = response.ok ? await response.json() : [];
+            } catch (err) {
+                console.error('Error fetching report templates:', err);
+                reportTemplates = [];
+            }
+        }
+
+        let rptEmployeesError = '';
+        async function fetchReportEmployees() {
+            rptEmployeesError = '';
+            try {
+                const response = await rptFetch(`${API_BASE}/api/employees`, { headers: API_HEADERS });
+                if (!response.ok) {
+                    rptEmployeesError = `the server answered ${response.status}`;
+                    reportEmployees = [];
+                    return;
+                }
+                const data = await response.json();
+                reportEmployees = Array.isArray(data) ? data : [];
+                if (reportEmployees.length === 0) rptEmployeesError = 'the employee list came back empty';
+            } catch (err) {
+                console.error('Error fetching employees for reports:', err);
+                rptEmployeesError = 'the server could not be reached';
+                reportEmployees = [];
+            }
+        }
+
+        // ---------- Start Report ----------
+        async function showStartReportView() {
+            hideAllContentViews();
+            document.getElementById('reportsStartView').style.display = 'block';
+            reportDraft = null;
+            document.getElementById('reportFormArea').innerHTML = '';
+            await Promise.all([fetchReportEmployees(), fetchReportTemplates()]);
+
+            const empSelect = document.getElementById('rpt_employee');
+            empSelect.innerHTML = '<option value="">Select your name...</option>' +
+                reportEmployees.map(e => `<option value="${e.id}">${rptEsc(rptEmployeeName(e))}</option>`).join('');
+            if (currentUserEmployeeId && reportEmployees.some(e => e.id === currentUserEmployeeId)) {
+                empSelect.value = String(currentUserEmployeeId);
+            }
+
+            // The date is always today's date, chosen automatically. Nobody can change it.
+            document.getElementById('rpt_date').value = rptToday();
+            document.getElementById('rpt_client').value = '';
+            rptLoadClientSuggestions();
+            rptPrevEmployee = empSelect.value;
+            populateReportTemplateOptions();
+        }
+
+        // Lists the checklists that fit the chosen person: their own first
+        // (and auto-selected), then the general ones anyone can use.
+        function populateReportTemplateOptions() {
+            const employeeId = document.getElementById('rpt_employee').value;
+            const tplSelect = document.getElementById('rpt_template');
+            const note = document.getElementById('rptStartNote');
+
+            const own = employeeId ? reportTemplates.filter(t => String(t.employee_id) === String(employeeId)) : [];
+            const general = reportTemplates.filter(t => !t.employee_id);
+            const options = own.concat(general);
+
+            if (options.length === 0) {
+                tplSelect.innerHTML = '<option value="">No checklist available</option>';
+                if (!employeeId) {
+                    note.innerText = 'Select your name to load your checklist.';
+                } else {
+                    note.innerText = rptIsManagement()
+                        ? 'There is no checklist for this person yet. Open Reports → Checklist and build one from their job description.'
+                        : 'There is no checklist for you yet. Ask your manager to set one up from your job description.';
+                }
+            } else {
+                tplSelect.innerHTML = options.map(t => {
+                    const label = (t.employee_id && String(t.employee_id) === String(employeeId)) ? t.name : (t.employee_id ? t.name : `${t.name} (general)`);
+                    return `<option value="${t.id}">${rptEsc(label)}</option>`;
+                }).join('');
+                tplSelect.value = String(options[0].id);
+                if (!employeeId) {
+                    note.innerText = 'Select your name to load your own checklist.';
+                } else if (own.length === 0) {
+                    note.innerText = 'There is no checklist linked to this person, so only general checklists are listed.';
+                } else {
+                    note.innerText = '';
+                }
+            }
+            rptPrevTemplate = tplSelect.value;
+        }
+
+        // Suggests client names already used so the same client is spelled the same every time.
+        async function rptLoadClientSuggestions() {
+            try {
+                const response = await rptFetch(`${API_BASE}/api/report-submissions`, { headers: API_HEADERS });
+                const list = response.ok ? await response.json() : [];
+                const names = [...new Set(list.map(r => (r.client_name || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+                document.getElementById('rptClientList').innerHTML = names.map(n => `<option value="${rptEsc(n)}"></option>`).join('');
+            } catch (e) { /* suggestions are optional */ }
+        }
+        function rptClientTyped() { /* typing a client never discards the form */ }
+
+        let rptPrevEmployee = '';
+        let rptPrevTemplate = '';
+
+        // Changing the name or checklist half way through would mix up answers,
+        // so the half-filled form is only dropped after the person agrees.
+        async function rptEmployeeChanged() {
+            const select = document.getElementById('rpt_employee');
+            if (reportDraft && !(await rptConfirm('Changing the name will discard the report you are filling in. Continue?'))) {
+                select.value = rptPrevEmployee;
+                return;
+            }
+            reportDraft = null;
+            document.getElementById('reportFormArea').innerHTML = '';
+            rptPrevEmployee = select.value;
+            populateReportTemplateOptions();
+        }
+
+        async function rptTemplateChanged() {
+            const select = document.getElementById('rpt_template');
+            if (reportDraft && !(await rptConfirm('Changing the checklist will discard the report you are filling in. Continue?'))) {
+                select.value = rptPrevTemplate;
+                return;
+            }
+            reportDraft = null;
+            document.getElementById('reportFormArea').innerHTML = '';
+            rptPrevTemplate = select.value;
+        }
+
+        function beginReport() {
+            const employeeId = document.getElementById('rpt_employee').value;
+            document.getElementById('rpt_date').value = rptToday();
+            const reportDate = document.getElementById('rpt_date').value;
+            const templateId = document.getElementById('rpt_template').value;
+            if (!employeeId) { rptToast('Please select your name first.'); return; }
+            if (!document.getElementById('rpt_client').value.trim()) { rptToast('Please type the client name first.'); return; }
+            if (!reportDate) { rptToast('Please choose the date the report was done.'); return; }
+            const template = reportTemplates.find(t => String(t.id) === String(templateId));
+            if (!template) { rptToast('Please choose a checklist.'); return; }
+
+            const structure = Array.isArray(template.structure) ? template.structure : [];
+            reportDraft = {
+                template,
+                answers: structure.map(h => (h.questions || []).map(() => ({ answer: null, comment: '' })))
+            };
+            renderReportForm();
+        }
+
+        function renderReportForm() {
+            const area = document.getElementById('reportFormArea');
+            if (!reportDraft) { area.innerHTML = ''; return; }
+            const structure = reportDraft.template.structure || [];
+            if (structure.length === 0) {
+                area.innerHTML = '<div class="wf-empty">This checklist has no headings or questions yet.</div>';
+                return;
+            }
+
+            const headingsHtml = structure.map((h, hi) => `
+                <div class="wf-table-wrap" style="margin-bottom: 16px;">
+                    <div class="rpt-heading-bar">${hi + 1}. ${rptEsc(h.title)}</div>
+                    ${(h.questions || []).map((q, qi) => `
+                        <div class="rpt-q" id="rpt_q_${hi}_${qi}">
+                            <div class="rpt-q-text">${rptEsc(q)}</div>
+                            <div class="rpt-yn">
+                                <button type="button" class="rpt-yn-btn" data-val="yes" onclick="setReportAnswer(${hi}, ${qi}, 'yes')">Yes</button>
+                                <button type="button" class="rpt-yn-btn" data-val="no" onclick="setReportAnswer(${hi}, ${qi}, 'no')">No</button>
+                            </div>
+                            <input type="text" placeholder="Comment" oninput="setReportComment(${hi}, ${qi}, this.value)">
+                        </div>
+                    `).join('')}
+                </div>
+            `).join('');
+
+            area.innerHTML = `
+                <div style="font-size: 15px; font-weight: 700; color: var(--sherq-blue); margin-bottom: 12px;">${rptEsc(reportDraft.template.name)} <span style="font-weight: 500; color: var(--ink-soft);">&middot; Client: ${rptEsc(document.getElementById('rpt_client').value.trim())}</span></div>
+                ${headingsHtml}
+                <div style="display: flex; gap: 10px; justify-content: flex-end; margin-bottom: 40px;">
+                    <button class="wf-btn-secondary" onclick="cancelReportDraft()">Cancel</button>
+                    <button class="wf-btn-primary" id="rptSubmitBtn" onclick="submitReport()">Submit Report</button>
+                </div>
+            `;
+        }
+
+        function setReportAnswer(hi, qi, value) {
+            if (!reportDraft) return;
+            const entry = reportDraft.answers[hi][qi];
+            // Clicking the selected answer again clears it.
+            entry.answer = (entry.answer === value) ? null : value;
+            const row = document.getElementById(`rpt_q_${hi}_${qi}`);
+            if (row) {
+                row.querySelectorAll('.rpt-yn-btn').forEach(btn => {
+                    btn.classList.toggle('sel-yes', entry.answer === 'yes' && btn.dataset.val === 'yes');
+                    btn.classList.toggle('sel-no', entry.answer === 'no' && btn.dataset.val === 'no');
+                });
+            }
+        }
+
+        function setReportComment(hi, qi, value) {
+            if (reportDraft) reportDraft.answers[hi][qi].comment = value;
+        }
+
+        async function cancelReportDraft() {
+            if (reportDraft && !(await rptConfirm('Discard this report? Nothing has been saved yet.'))) return;
+            reportDraft = null;
+            document.getElementById('reportFormArea').innerHTML = '';
+        }
+
+        async function submitReport() {
+            if (!reportDraft) return;
+            const employeeId = document.getElementById('rpt_employee').value;
+            document.getElementById('rpt_date').value = rptToday();
+            const reportDate = document.getElementById('rpt_date').value;
+            const clientName = document.getElementById('rpt_client').value.trim();
+            if (!employeeId || !reportDate) { rptToast('Please select your name and the date first.'); return; }
+            if (!clientName) { rptToast('Please type the client name first.'); return; }
+            const emp = reportEmployees.find(e => String(e.id) === String(employeeId));
+
+            const structure = reportDraft.template.structure || [];
+            const answers = [];
+            let unanswered = 0;
+            structure.forEach((h, hi) => {
+                (h.questions || []).forEach((q, qi) => {
+                    const entry = reportDraft.answers[hi][qi];
+                    if (!entry.answer) unanswered++;
+                    answers.push({ heading: h.title, question: q, answer: entry.answer, comment: entry.comment.trim() });
+                });
+            });
+            if (unanswered > 0 && !(await rptConfirm(`${unanswered} question${unanswered === 1 ? ' is' : 's are'} still not answered. Submit anyway?`))) return;
+
+            const btn = document.getElementById('rptSubmitBtn');
+            if (btn) { btn.disabled = true; btn.innerText = 'Submitting...'; }
+            try {
+                const response = await rptFetch(`${API_BASE}/api/report-submissions`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', ...API_HEADERS },
+                    body: JSON.stringify({
+                        template_id: reportDraft.template.id,
+                        template_name: reportDraft.template.name,
+                        employee_id: Number(employeeId),
+                        employee_name: emp ? rptEmployeeName(emp) : '',
+                        client_name: clientName,
+                        report_date: reportDate,
+                        answers
+                    })
+                });
+                if (!response.ok) {
+                    let detail = '';
+                    try { const body = await response.json(); detail = body.detail || body.error || ''; } catch (e) {}
+                    if (btn) { btn.disabled = false; btn.innerText = 'Submit Report'; }
+                    rptToast(`Could not submit the report (server said: ${response.status}${detail ? ' - ' + detail : ''}). Your answers are still here - try again.`);
+                    return;
+                }
+                reportDraft = null;
+                rptToast('Report submitted.');
+                showReportsListView();
+            } catch (err) {
+                console.error('Error submitting report:', err);
+                if (btn) { btn.disabled = false; btn.innerText = 'Submit Report'; }
+                rptToast('Could not reach the server (or it took too long to answer). Your answers are still here - check that the backend is running and try again.');
+            }
+        }
+
+        // ---------- Weekly Reports ----------
+        async function showReportsListView() {
+            hideAllContentViews();
+            document.getElementById('reportsListView').style.display = 'block';
+
+            const filterWrap = document.getElementById('rptFilterWrap');
+            if (rptIsManagement()) {
+                filterWrap.style.display = 'block';
+                await fetchReportEmployees();
+                const select = document.getElementById('rptFilterEmployee');
+                const previous = select.value;
+                select.innerHTML = '<option value="">All employees</option>' +
+                    reportEmployees.map(e => `<option value="${e.id}">${rptEsc(rptEmployeeName(e))}</option>`).join('');
+                select.value = previous;
+            } else {
+                filterWrap.style.display = 'none';
+            }
+            await loadReportsList();
+        }
+
+        async function loadReportsList() {
+            const body = document.getElementById('reportsListBody');
+            const empty = document.getElementById('reportsListEmpty');
+            let employeeId = '';
+            if (rptIsManagement()) {
+                employeeId = document.getElementById('rptFilterEmployee').value;
+            } else if (currentUserEmployeeId) {
+                employeeId = String(currentUserEmployeeId);
+            }
+            try {
+                const url = `${API_BASE}/api/report-submissions` + (employeeId ? `?employee_id=${employeeId}` : '');
+                const response = await rptFetch(url, { headers: API_HEADERS });
+                reportSubmissions = response.ok ? await response.json() : [];
+            } catch (err) {
+                console.error('Error fetching reports:', err);
+                reportSubmissions = [];
+            }
+
+            const clientSel = document.getElementById('rptFilterClient');
+            const prevClient = clientSel.value;
+            const clients = [...new Set(reportSubmissions.map(r => (r.client_name || '').trim()).filter(Boolean))].sort((x, y) => x.localeCompare(y));
+            clientSel.innerHTML = '<option value="">All clients</option>' + clients.map(c => `<option value="${rptEsc(c)}">${rptEsc(c)}</option>`).join('');
+            clientSel.value = clients.includes(prevClient) ? prevClient : '';
+            renderReportsList();
+        }
+
+        function rptVisibleReports() {
+            const client = document.getElementById('rptFilterClient').value;
+            const month = document.getElementById('rptFilterMonth').value; // YYYY-MM
+            return reportSubmissions.filter(r =>
+                (!client || (r.client_name || '').trim() === client) &&
+                (!month || String(r.report_date).startsWith(month)));
+        }
+
+        function rptClearFilters() {
+            document.getElementById('rptFilterClient').value = '';
+            document.getElementById('rptFilterMonth').value = '';
+            if (rptIsManagement()) {
+                document.getElementById('rptFilterEmployee').value = '';
+                loadReportsList();
+            } else {
+                renderReportsList();
+            }
+        }
+
+        function renderReportsList() {
+            const body = document.getElementById('reportsListBody');
+            const empty = document.getElementById('reportsListEmpty');
+            const visible = rptVisibleReports();
+
+            body.innerHTML = '';
+            if (visible.length === 0) {
+                empty.innerText = reportSubmissions.length === 0 ? 'No reports submitted yet.' : 'No reports match these filters.';
+                empty.style.display = 'block';
+                rptUpdateSelCount();
+                return;
+            }
+            empty.style.display = 'none';
+            visible.forEach(s => {
+                const answers = Array.isArray(s.answers) ? s.answers : [];
+                const yes = answers.filter(a => a.answer === 'yes').length;
+                const no = answers.filter(a => a.answer === 'no').length;
+                const none = answers.length - yes - no;
+                const row = document.createElement('tr');
+                row.onclick = () => openReportViewModal(s.id);
+                row.innerHTML = `
+                    <td onclick="event.stopPropagation()"><input type="checkbox" title="Tick to include this week in the monthly report" ${rptSelected.has(s.id) ? 'checked' : ''} onchange="rptToggleSelect(${s.id}, this.checked)"></td>
+                    <td>${rptFormatDate(s.report_date)}</td>
+                    <td>${rptEsc(s.employee_name || '—')}</td>
+                    <td>${rptEsc(s.client_name || '—')}</td>
+                    <td>${rptEsc(s.template_name || '—')}</td>
+                    <td><span class="rpt-badge yes">${yes}</span></td>
+                    <td><span class="rpt-badge no">${no}</span></td>
+                    <td><span class="rpt-badge none">${none}</span></td>
+                    <td><button class="wf-action-btn delete" title="Delete this report" onclick="event.stopPropagation(); deleteReportFromList(${s.id})"><i class="fas fa-trash"></i></button></td>
+                `;
+                body.appendChild(row);
+            });
+            rptUpdateSelCount();
+        }
+
+        // ---------- Monthly report (combines the ticked weekly reports) ----------
+        function buildMonthlyHtml(list, generatedOn) {
+            const sorted = list.slice().sort((a, b) => String(a.report_date).localeCompare(String(b.report_date)) || a.id - b.id);
+            const uniq = arr => [...new Set(arr.map(x => (x || '').trim()).filter(Boolean))];
+            const employees = uniq(sorted.map(r => r.employee_name));
+            const clients = uniq(sorted.map(r => r.client_name));
+            const checklists = uniq(sorted.map(r => r.template_name));
+            const first = sorted[0].report_date, last = sorted[sorted.length - 1].report_date;
+            const monthLabel = new Date(last + 'T12:00:00').toLocaleDateString('en-ZA', { month: 'long', year: 'numeric' });
+
+            let yes = 0, no = 0, none = 0;
+            const issues = [];
+            sorted.forEach((r, ri) => (r.answers || []).forEach(a => {
+                if (a.answer === 'yes') yes++;
+                else if (a.answer === 'no') { no++; issues.push(`<strong>Week ${ri + 1}</strong> (${rptFormatDate(r.report_date)}) &ndash; ${rptEsc(a.heading)}: ${rptEsc(a.question)}${a.comment ? ' &mdash; <em>' + rptEsc(a.comment) + '</em>' : ''}`); }
+                else none++;
+            }));
+            const pct = (yes + no) ? Math.round(yes * 100 / (yes + no)) + '%' : '—';
+
+            const cell = a => !a.answer ? '<td class="c mr-x">–</td>' : a.answer === 'yes' ? '<td class="c mr-y">Yes</td>' : '<td class="c mr-n">No</td>';
+            // One table per week: Week 1 with everything for week 1, then Week 2, and so on.
+            const weekTables = sorted.map((r, ri) => {
+                const groups = [];
+                (r.answers || []).forEach(a => {
+                    let g = groups.find(x => x.heading === a.heading);
+                    if (!g) { g = { heading: a.heading, items: [] }; groups.push(g); }
+                    g.items.push(a);
+                });
+                const answers = r.answers || [];
+                const wy = answers.filter(a => a.answer === 'yes').length;
+                const wn = answers.filter(a => a.answer === 'no').length;
+                return `
+                <table class="mr-table mr-week">
+                    <thead><tr><th colspan="3">Week ${ri + 1} &ndash; ${rptFormatDate(r.report_date)} <span style="font-weight:400; margin-left:10px;">${wy} Yes &middot; ${wn} No</span></th></tr>
+                    <tr class="mr-sub"><th>Question</th><th style="text-align:center; width:70px;">Answer</th><th style="width:34%;">Comment</th></tr></thead>
+                    <tbody>
+                    ${groups.map((g, gi) => `
+                        <tr class="mr-h"><td colspan="3">${gi + 1}. ${rptEsc(g.heading)}</td></tr>
+                        ${g.items.map(a => `<tr><td>${rptEsc(a.question)}</td>${cell(a)}<td>${a.comment ? rptEsc(a.comment) : ''}</td></tr>`).join('')}`).join('')}
+                    </tbody>
+                </table>`;
+            }).join('');
+
+            return `
+                <div class="mr-title">Monthly Report &ndash; ${rptEsc(monthLabel)}</div>
+                <div class="mr-meta">
+                    ${employees.length ? 'Employee: <strong>' + rptEsc(employees.join(', ')) + '</strong> &middot; ' : ''}
+                    ${clients.length ? 'Client: <strong>' + rptEsc(clients.join(', ')) + '</strong> &middot; ' : ''}
+                    ${checklists.length ? 'Checklist: <strong>' + rptEsc(checklists.join(', ')) + '</strong> &middot; ' : ''}
+                    ${rptFormatDate(first)} to ${rptFormatDate(last)}
+                    ${generatedOn ? '<br>Report generated on: <strong>' + rptFormatDate(generatedOn) + '</strong>' : ''}
+                </div>
+                <div class="mr-summary">
+                    <div class="mr-box"><b>${sorted.length}</b><span>Weekly reports</span></div>
+                    <div class="mr-box"><b class="mr-y">${yes}</b><span>Yes</span></div>
+                    <div class="mr-box"><b class="mr-n">${no}</b><span>No</span></div>
+                    <div class="mr-box"><b>${none}</b><span>Unanswered</span></div>
+                    <div class="mr-box"><b>${pct}</b><span>Yes rate</span></div>
+                </div>
+                ${weekTables}
+            `;
+        }
+
+        // Step 1: pick the weeks. Step 2: look at the report. Step 3: Save (or close to discard).
+        let rptSelected = new Set();
+        let pendingMonthly = null;
+
+        function rptToggleSelect(id, checked) {
+            if (checked) rptSelected.add(id); else rptSelected.delete(id);
+            rptUpdateSelCount();
+        }
+
+        function rptUpdateSelCount() {
+            const n = rptSelected.size;
+            document.getElementById('rptSelCount').innerText = n ? `(${n})` : '';
+        }
+
+        function generateMonthlyReport() {
+            // Only ticked reports that are still shown count.
+            const visibleIds = new Set(rptVisibleReports().map(r => r.id));
+            rptSelected.forEach(id => { if (!visibleIds.has(id)) rptSelected.delete(id); });
+            if (rptSelected.size === 0) { rptToast('Tick the weekly reports you want in the monthly report first.'); return; }
+            previewMonthlyReport();
+        }
+
+        // Shows the monthly report for the ticked weeks. Nothing is saved yet.
+        async function previewMonthlyReport() {
+            const list = reportSubmissions.filter(r => rptSelected.has(r.id));
+            if (list.length === 0) { rptToast('Tick the weeks you want in the monthly report first.'); return; }
+            const people = new Set(list.map(r => r.employee_id)).size;
+            const clients = new Set(list.map(r => (r.client_name || '').trim().toLowerCase())).size;
+            if ((people > 1 || clients > 1) &&
+                !(await rptConfirm('The ticked reports are for different employees or clients. Combine them into one monthly report anyway?'))) return;
+            const sorted = list.slice().sort((a, b) => String(a.report_date).localeCompare(String(b.report_date)) || a.id - b.id);
+            const last = sorted[sorted.length - 1];
+            const uniq = arr => [...new Set(arr.map(x => (x || '').trim()).filter(Boolean))];
+            pendingMonthly = {
+                month: String(last.report_date).slice(0, 7),
+                employee_id: people === 1 ? sorted[0].employee_id : null,
+                employee_name: uniq(sorted.map(r => r.employee_name)).join(', '),
+                client_name: uniq(sorted.map(r => r.client_name)).join(', '),
+                checklist_name: uniq(sorted.map(r => r.template_name)).join(', '),
+                period_start: sorted[0].report_date,
+                period_end: last.report_date,
+                reports: sorted
+            };
+            document.getElementById('reportMonthlyBody').innerHTML = buildMonthlyHtml(sorted, rptToday());
+            viewingMonthlyId = null;
+            document.getElementById('monthlyDeleteBtn').style.display = 'none';
+            const saveBtn = document.getElementById('monthlySaveBtn');
+            saveBtn.style.display = 'inline-block';
+            saveBtn.disabled = false;
+            saveBtn.innerText = 'Save to Monthly Reports';
+            document.getElementById('reportMonthlyModalOverlay').classList.add('open');
+        }
+
+        async function saveMonthlyReport() {
+            if (!pendingMonthly) return;
+            const saveBtn = document.getElementById('monthlySaveBtn');
+            saveBtn.disabled = true;
+            saveBtn.innerText = 'Saving...';
+            try {
+                const response = await rptFetch(`${API_BASE}/api/monthly-reports`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', ...API_HEADERS },
+                    body: JSON.stringify(pendingMonthly)
+                });
+                if (!response.ok) throw new Error('save failed ' + response.status);
+                pendingMonthly = null;
+                rptSelected = new Set();
+                closeMonthlyReport();
+                rptToast('Monthly report saved in Monthly Reports.');
+                showMonthlyReportsView();
+            } catch (err) {
+                console.error('Error saving monthly report:', err);
+                saveBtn.disabled = false;
+                saveBtn.innerText = 'Save to Monthly Reports';
+                rptToast('Could not save the monthly report. Make sure the backend has been restarted with the newest server.js, then try again.');
+            }
+        }
+
+        function rptDateFromTs(ts) {
+            const d = ts ? new Date(ts) : new Date();
+            d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+            return d.toISOString().split('T')[0];
+        }
+
+        let viewingMonthlyId = null;
+        let monthlyReportsList = [];
+
+        async function showMonthlyReportsView() {
+            hideAllContentViews();
+            document.getElementById('reportsMonthlyView').style.display = 'block';
+            await loadMonthlyReports();
+        }
+
+        async function loadMonthlyReports() {
+            const wrap = document.getElementById('monthlyFolders');
+            const empty = document.getElementById('monthlyEmpty');
+            let url = `${API_BASE}/api/monthly-reports`;
+            if (!rptIsManagement() && currentUserEmployeeId) url += `?employee_id=${currentUserEmployeeId}`;
+            try {
+                const response = await rptFetch(url, { headers: API_HEADERS });
+                monthlyReportsList = response.ok ? await response.json() : [];
+            } catch (err) {
+                console.error('Error fetching monthly reports:', err);
+                monthlyReportsList = [];
+            }
+            wrap.innerHTML = '';
+            empty.style.display = monthlyReportsList.length ? 'none' : 'block';
+            const months = [...new Set(monthlyReportsList.map(m => m.month))].sort().reverse();
+            months.forEach(month => {
+                const label = new Date(month + '-15T12:00:00').toLocaleDateString('en-ZA', { month: 'long', year: 'numeric' });
+                const items = monthlyReportsList.filter(m => m.month === month);
+                const block = document.createElement('div');
+                block.className = 'wf-table-wrap';
+                block.style.marginBottom = '16px';
+                block.innerHTML = `
+                    <div class="rpt-heading-bar"><i class="fas fa-folder-open" style="margin-right: 8px;"></i>${rptEsc(label)} <span style="font-weight:400; opacity:.8;">(${items.length})</span></div>
+                    <table class="wf-table">
+                        <thead><tr><th>Employee</th><th>Client</th><th>Checklist</th><th>Weeks</th><th>Period</th><th style="width: 70px;"></th></tr></thead>
+                        <tbody>${items.map(m => `
+                            <tr onclick="openSavedMonthly(${m.id})">
+                                <td>${rptEsc(m.employee_name || '—')}</td>
+                                <td>${rptEsc(m.client_name || '—')}</td>
+                                <td>${rptEsc(m.checklist_name || '—')}</td>
+                                <td>${m.weeks}</td>
+                                <td>${rptFormatDate(m.period_start)} – ${rptFormatDate(m.period_end)}</td>
+                                <td><button class="wf-action-btn delete" title="Delete this monthly report" onclick="event.stopPropagation(); deleteSavedMonthly(${m.id})"><i class="fas fa-trash"></i></button></td>
+                            </tr>`).join('')}
+                        </tbody>
+                    </table>`;
+                wrap.appendChild(block);
+            });
+        }
+
+        function openSavedMonthly(id) {
+            const m = monthlyReportsList.find(x => x.id === id);
+            if (!m) return;
+            viewingMonthlyId = id;
+            document.getElementById('reportMonthlyBody').innerHTML = buildMonthlyHtml(m.reports || [], rptDateFromTs(m.created_at));
+            document.getElementById('monthlySaveBtn').style.display = 'none';
+            document.getElementById('monthlyDeleteBtn').style.display = 'inline-block';
+            document.getElementById('reportMonthlyModalOverlay').classList.add('open');
+        }
+
+        async function deleteSavedMonthly(id) {
+            const m = monthlyReportsList.find(x => x.id === id);
+            const label = m ? `the monthly report for ${m.client_name || m.employee_name || 'this client'} (${m.month})` : 'this monthly report';
+            if (!(await rptConfirm(`Delete ${label} permanently? The weekly reports stay in Weekly Reports.`))) return false;
+            try {
+                const response = await rptFetch(`${API_BASE}/api/monthly-reports/${id}`, { method: 'DELETE', headers: API_HEADERS });
+                if (!response.ok) { rptToast('Could not delete the monthly report. Please try again.'); return false; }
+                rptToast('Monthly report deleted.');
+                if (document.getElementById('reportsMonthlyView').style.display === 'block') await loadMonthlyReports();
+                return true;
+            } catch (err) {
+                console.error('Error deleting monthly report:', err);
+                rptToast('Could not reach the server to delete the monthly report.');
+                return false;
+            }
+        }
+
+        async function deleteViewingMonthly() {
+            if (!viewingMonthlyId) return;
+            if (await deleteSavedMonthly(viewingMonthlyId)) closeMonthlyReport();
+        }
+
+        function closeMonthlyReport() {
+            viewingMonthlyId = null;
+            pendingMonthly = null;
+            document.getElementById('reportMonthlyModalOverlay').classList.remove('open');
+        }
+
+        function printMonthlyReport() {
+            const win = window.open('', '_blank');
+            if (!win) { rptToast('Please allow pop-ups for this site so the report can open for printing.'); return; }
+            win.document.write(`<!DOCTYPE html><html><head><title>Monthly Report</title>
+                <style>body { font-family: Arial, sans-serif; color: #1D2333; padding: 24px; } * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                ${document.getElementById('rptMonthlyCss').textContent}</style></head>
+                <body>${document.getElementById('reportMonthlyBody').innerHTML}</body></html>`);
+            win.document.close();
+            win.focus();
+            setTimeout(() => win.print(), 400);
+        }
+
+        function buildReportDetailHtml(s) {
+            const answers = Array.isArray(s.answers) ? s.answers : [];
+            const groups = [];
+            answers.forEach(a => {
+                let g = groups.find(x => x.heading === a.heading);
+                if (!g) { g = { heading: a.heading, items: [] }; groups.push(g); }
+                g.items.push(a);
+            });
+            const badge = a => a.answer === 'yes' ? '<span class="rpt-badge yes">Yes</span>'
+                : a.answer === 'no' ? '<span class="rpt-badge no">No</span>'
+                : '<span class="rpt-badge none">Not answered</span>';
+            return `
+                <div style="font-size: 13px; color: var(--ink-soft); margin-bottom: 14px;">
+                    <strong style="color: var(--sherq-blue);">${rptEsc(s.employee_name || '—')}</strong> &middot; Client: <strong>${rptEsc(s.client_name || '—')}</strong> &middot; ${rptFormatDate(s.report_date)} &middot; ${rptEsc(s.template_name || '')}
+                </div>
+                ${groups.map((g, gi) => `
+                    <div class="wf-table-wrap" style="margin-bottom: 14px;">
+                        <div class="rpt-heading-bar">${gi + 1}. ${rptEsc(g.heading)}</div>
+                        ${g.items.map(a => `
+                            <div class="rpt-q" style="grid-template-columns: minmax(0, 1.4fr) auto minmax(0, 1fr);">
+                                <div class="rpt-q-text">${rptEsc(a.question)}</div>
+                                <div>${badge(a)}</div>
+                                <div style="font-size: 13px; color: #475569;">${a.comment ? rptEsc(a.comment) : '<span style="color:#94A3B8;">—</span>'}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `).join('')}
+            `;
+        }
+
+        function openReportViewModal(id) {
+            const s = reportSubmissions.find(x => x.id === id);
+            if (!s) return;
+            viewingReportId = id;
+            document.getElementById('reportViewTitle').innerText = `${s.template_name || 'Report'} - ${rptFormatDate(s.report_date)}`;
+            document.getElementById('reportViewBody').innerHTML = buildReportDetailHtml(s);
+            document.getElementById('reportViewDeleteBtn').style.display = 'inline-block';
+            document.getElementById('reportViewModalOverlay').classList.add('open');
+        }
+
+        function closeReportViewModal() {
+            document.getElementById('reportViewModalOverlay').classList.remove('open');
+            viewingReportId = null;
+        }
+
+        async function deleteReportSubmission() {
+            if (!viewingReportId) return;
+            const deleted = await deleteReportById(viewingReportId);
+            if (deleted) closeReportViewModal();
+        }
+
+        function deleteReportFromList(id) {
+            return deleteReportById(id);
+        }
+
+        // Asks first, deletes, refreshes the list and confirms. Returns true if deleted.
+        async function deleteReportById(id) {
+            const s = reportSubmissions.find(x => x.id === id);
+            const who = s ? `${s.employee_name || 'this person'}'s report of ${rptFormatDate(s.report_date)}` : 'this report';
+            if (!(await rptConfirm(`Delete ${who} permanently?`))) return false;
+            try {
+                const response = await rptFetch(`${API_BASE}/api/report-submissions/${id}`, { method: 'DELETE', headers: API_HEADERS });
+                if (!response.ok) { rptToast('Could not delete the report. Please try again.'); return false; }
+                await loadReportsList();
+                rptToast('Report deleted.');
+                return true;
+            } catch (err) {
+                console.error('Error deleting report:', err);
+                rptToast('Could not reach the server to delete the report.');
+                return false;
+            }
+        }
+
+        function printReportSubmission() {
+            const s = reportSubmissions.find(x => x.id === viewingReportId);
+            if (!s) return;
+            const win = window.open('', '_blank');
+            if (!win) { rptToast('Please allow pop-ups for this site so the report can open for printing.'); return; }
+            win.document.write(`<!DOCTYPE html><html><head><title>${rptEsc(s.template_name || 'Report')} - ${rptEsc(s.employee_name || '')}</title>
+                <style>
+                    body { font-family: Arial, sans-serif; color: #1D2333; padding: 24px; }
+                    h1 { font-size: 20px; margin: 0 0 4px; } .meta { color: #64748B; font-size: 13px; margin-bottom: 18px; }
+                    h2 { font-size: 15px; margin: 18px 0 6px; border-bottom: 2px solid #CBD5E1; padding-bottom: 4px; }
+                    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+                    td { padding: 7px 8px; border-bottom: 1px solid #E2E8F0; vertical-align: top; }
+                    td.ans { width: 90px; font-weight: bold; } td.yes { color: #166534; } td.no { color: #991B1B; } td.none { color: #64748B; font-weight: normal; }
+                </style></head><body>
+                <h1>${rptEsc(s.template_name || 'Report')}</h1>
+                <div class="meta">${rptEsc(s.employee_name || '')} &middot; Client: ${rptEsc(s.client_name || '—')} &middot; ${rptFormatDate(s.report_date)}</div>
+                ${(() => {
+                    const groups = [];
+                    (s.answers || []).forEach(a => {
+                        let g = groups.find(x => x.heading === a.heading);
+                        if (!g) { g = { heading: a.heading, items: [] }; groups.push(g); }
+                        g.items.push(a);
+                    });
+                    return groups.map((g, gi) => `<h2>${gi + 1}. ${rptEsc(g.heading)}</h2><table>${g.items.map(a => `
+                        <tr><td>${rptEsc(a.question)}</td>
+                        <td class="ans ${a.answer || 'none'}">${a.answer === 'yes' ? 'Yes' : a.answer === 'no' ? 'No' : 'Not answered'}</td>
+                        <td>${rptEsc(a.comment || '')}</td></tr>`).join('')}</table>`).join('');
+                })()}
+                </body></html>`);
+            win.document.close();
+            win.focus();
+            setTimeout(() => win.print(), 400);
+        }
+
+        // ---------- Manage Templates (managers/admins) ----------
+        async function showReportTemplatesView() {
+            if (!rptIsManagement()) return;
+            hideAllContentViews();
+            document.getElementById('reportsTemplatesView').style.display = 'block';
+            await Promise.all([fetchReportTemplates(), fetchReportEmployees()]);
+            renderReportTemplatesList();
+        }
+
+        function renderReportTemplatesList() {
+            const body = document.getElementById('reportTemplatesBody');
+            const empty = document.getElementById('reportTemplatesEmpty');
+            body.innerHTML = '';
+            if (reportTemplates.length === 0) { empty.style.display = 'block'; return; }
+            empty.style.display = 'none';
+            reportTemplates.forEach(t => {
+                const structure = Array.isArray(t.structure) ? t.structure : [];
+                const questionCount = structure.reduce((sum, h) => sum + (h.questions || []).length, 0);
+                const row = document.createElement('tr');
+                row.onclick = () => openReportTemplateModal(t.id);
+                const owner = t.employee_id ? reportEmployees.find(e => e.id === t.employee_id) : null;
+                row.innerHTML = `
+                    <td>${rptEsc(t.name)}</td>
+                    <td>${t.employee_id ? rptEsc(owner ? rptEmployeeName(owner) : 'Unknown employee') : '<span style="color:#94A3B8;">Anyone (general)</span>'}</td>
+                    <td>${structure.length}</td>
+                    <td>${questionCount}</td>
+                    <td><button class="wf-action-btn delete" title="Delete template" onclick="event.stopPropagation(); deleteReportTemplate(${t.id})"><i class="fas fa-trash"></i></button></td>
+                `;
+                body.appendChild(row);
+            });
+        }
+
+        async function deleteReportTemplate(id) {
+            const t = reportTemplates.find(x => x.id === id);
+            if (!(await rptConfirm(`Delete the checklist "${t ? t.name : ''}"? Reports already submitted from it are kept.`))) return;
+            try {
+                const response = await rptFetch(`${API_BASE}/api/report-templates/${id}`, { method: 'DELETE', headers: API_HEADERS });
+                if (!response.ok) { rptToast('Could not delete the template. Please try again.'); return; }
+                await fetchReportTemplates();
+                renderReportTemplatesList();
+                rptToast('Checklist deleted.');
+            } catch (err) {
+                console.error('Error deleting template:', err);
+                rptToast('Could not reach the server to delete the template.');
+            }
+        }
+
+        async function openReportTemplateModal(id) {
+            rtEditId = id;
+            const t = id ? reportTemplates.find(x => x.id === id) : null;
+            document.getElementById('reportTemplateModalTitle').innerText = t ? 'Edit Template' : 'New Template';
+            document.getElementById('rpt_tpl_name').value = t ? t.name : '';
+            await fetchReportEmployees();
+            const empSelect = document.getElementById('rpt_tpl_employee');
+            empSelect.innerHTML = '<option value="">Anyone (general checklist)</option>' +
+                reportEmployees.map(e => `<option value="${e.id}">${rptEsc(rptEmployeeName(e))}</option>`).join('');
+            empSelect.value = t && t.employee_id ? String(t.employee_id) : '';
+            const empNote = document.getElementById('rpt_tpl_employee_note');
+            empNote.style.color = rptEmployeesError ? '#B91C1C' : 'var(--ink-soft)';
+            empNote.innerText = rptEmployeesError
+                ? `The list of employees could not be loaded (${rptEmployeesError}). Close this window and open it again, and check the backend is running.`
+                : 'When this person starts a report, this checklist loads automatically. Leave on "Anyone" for a general checklist.';
+            rtStructure = t && Array.isArray(t.structure)
+                ? JSON.parse(JSON.stringify(t.structure))
+                : [{ title: '', questions: [''] }];
+            const btn = document.getElementById('rtSaveBtn');
+            btn.disabled = false;
+            btn.innerText = 'Save Template';
+            renderTemplateEditor();
+            document.getElementById('reportTemplateModalOverlay').classList.add('open');
+        }
+
+        function closeReportTemplateModal() {
+            document.getElementById('reportTemplateModalOverlay').classList.remove('open');
+            rtEditId = null;
+        }
+
+        function renderTemplateEditor() {
+            const container = document.getElementById('rtHeadingsContainer');
+            if (rtStructure.length === 0) {
+                container.innerHTML = '<div class="wf-empty" style="padding:16px;">No headings yet. Click "Add Heading".</div>';
+                return;
+            }
+            container.innerHTML = rtStructure.map((h, hi) => `
+                <div style="border: 1.5px solid var(--line); border-radius: 10px; padding: 12px; margin-bottom: 12px;">
+                    <div style="display: flex; gap: 8px; margin-bottom: 8px; align-items: center;">
+                        <input type="text" id="rt_h_${hi}" value="${rptEsc(h.title)}" placeholder="Heading (e.g. First Aid Boxes)"
+                            oninput="rtStructure[${hi}].title = this.value"
+                            style="flex: 1; padding: 9px 11px; border: 1.5px solid var(--line); border-radius: 8px; font-weight: 700; font-size: 13.5px; font-family: 'Archivo', sans-serif;">
+                        <button class="wf-action-btn delete" title="Remove this heading" onclick="rtRemoveHeading(${hi})"><i class="fas fa-trash"></i></button>
+                    </div>
+                    ${(h.questions || []).map((q, qi) => `
+                        <div style="display: flex; gap: 8px; margin-bottom: 6px; align-items: center;">
+                            <input type="text" id="rt_q_${hi}_${qi}" value="${rptEsc(q)}" placeholder="Question"
+                                oninput="rtStructure[${hi}].questions[${qi}] = this.value"
+                                style="flex: 1; padding: 8px 10px; border: 1.5px solid var(--line); border-radius: 8px; font-size: 13px; font-family: 'Archivo', sans-serif;">
+                            <button class="lv-col-remove" title="Remove this question" onclick="rtRemoveQuestion(${hi}, ${qi})">&times;</button>
+                        </div>
+                    `).join('')}
+                    <div style="display: flex; gap: 8px; margin-top: 8px;">
+                        <button class="wf-btn-secondary" style="font-size: 12px; padding: 6px 12px;" onclick="rtAddQuestion(${hi})"><i class="fas fa-plus"></i> Add Question</button>
+                        <button class="wf-btn-secondary" style="font-size: 12px; padding: 6px 12px;" onclick="rtTogglePaste(${hi})">Paste several</button>
+                    </div>
+                    <div id="rt_paste_${hi}" style="display: none; margin-top: 8px;">
+                        <textarea id="rt_paste_text_${hi}" rows="4" placeholder="Paste one question per line"
+                            style="width: 100%; padding: 8px 10px; border: 1.5px solid var(--line); border-radius: 8px; font-size: 13px; font-family: 'Archivo', sans-serif;"></textarea>
+                        <button class="wf-btn-primary" style="font-size: 12px; padding: 6px 12px; margin-top: 6px;" onclick="rtApplyPaste(${hi})">Add these questions</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function rtAddHeading() {
+            rtStructure.push({ title: '', questions: [''] });
+            renderTemplateEditor();
+            const input = document.getElementById(`rt_h_${rtStructure.length - 1}`);
+            if (input) { input.focus(); input.scrollIntoView({ block: 'center' }); }
+        }
+
+        async function rtRemoveHeading(hi) {
+            const h = rtStructure[hi];
+            const hasContent = (h.title || '').trim() || (h.questions || []).some(q => (q || '').trim());
+            if (hasContent && !(await rptConfirm('Remove this heading and all its questions?'))) return;
+            rtStructure.splice(hi, 1);
+            renderTemplateEditor();
+        }
+
+        function rtAddQuestion(hi) {
+            rtStructure[hi].questions.push('');
+            renderTemplateEditor();
+            const input = document.getElementById(`rt_q_${hi}_${rtStructure[hi].questions.length - 1}`);
+            if (input) input.focus();
+        }
+
+        function rtRemoveQuestion(hi, qi) {
+            rtStructure[hi].questions.splice(qi, 1);
+            renderTemplateEditor();
+        }
+
+        function rtTogglePaste(hi) {
+            const box = document.getElementById(`rt_paste_${hi}`);
+            box.style.display = box.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function rtApplyPaste(hi) {
+            const text = document.getElementById(`rt_paste_text_${hi}`).value;
+            // Drop any leading bullet characters or numbering people paste in.
+            const lines = text.split(/\r?\n/)
+                .map(l => l.replace(/^\s*(?:[-•*·▪]|\d+[.)])\s*/, '').trim())
+                .filter(l => l.length > 0);
+            if (lines.length === 0) return;
+            // Replace a lone empty placeholder question instead of keeping it.
+            rtStructure[hi].questions = rtStructure[hi].questions.filter(q => (q || '').trim().length > 0).concat(lines);
+            renderTemplateEditor();
+        }
+
+        async function saveReportTemplate() {
+            const name = document.getElementById('rpt_tpl_name').value.trim();
+            if (!name) { rptToast('Please give the checklist a name.'); return; }
+            const structure = rtStructure
+                .map(h => ({
+                    title: (h.title || '').trim(),
+                    questions: (h.questions || []).map(q => (q || '').trim()).filter(q => q.length > 0)
+                }))
+                .filter(h => h.title.length > 0 || h.questions.length > 0);
+            if (structure.some(h => !h.title)) { rptToast('Every group of questions needs a heading. Please fill in or remove the empty heading.'); return; }
+            if (structure.length === 0) { rptToast('Add at least one heading with a question.'); return; }
+
+            const btn = document.getElementById('rtSaveBtn');
+            btn.disabled = true;
+            btn.innerText = 'Saving...';
+            try {
+                const response = await rptFetch(
+                    rtEditId ? `${API_BASE}/api/report-templates/${rtEditId}` : `${API_BASE}/api/report-templates`,
+                    {
+                        method: rtEditId ? 'PUT' : 'POST',
+                        headers: { 'Content-Type': 'application/json', ...API_HEADERS },
+                        body: JSON.stringify({
+                            name,
+                            structure,
+                            employee_id: document.getElementById('rpt_tpl_employee').value || null
+                        })
+                    }
+                );
+                if (!response.ok) {
+                    let detail = '';
+                    try { const body = await response.json(); detail = body.detail || body.error || ''; } catch (e) {}
+                    btn.disabled = false;
+                    btn.innerText = 'Save Template';
+                    rptToast(`Could not save the template (server said: ${response.status}${detail ? ' - ' + detail : ''}). What you typed is still here - try Save again.`);
+                    return;
+                }
+                closeReportTemplateModal();
+                await fetchReportTemplates();
+                renderReportTemplatesList();
+                rptToast('Checklist saved.');
+            } catch (err) {
+                console.error('Error saving template:', err);
+                btn.disabled = false;
+                btn.innerText = 'Save Template';
+                rptToast('Could not reach the server (or it took too long to answer). What you typed is still here - check that the backend is running and try Save again.');
+            }
         }
 
         // ============ RSS TRAINING REGISTER ============
@@ -2025,18 +3240,65 @@
                     list.innerHTML = `<div class="wf-empty">No manuals uploaded yet for this course.</div>`;
                 } else {
                     list.innerHTML = items.map(m => `
-                        <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 14px; border:1px solid var(--line); border-radius:8px; margin-bottom:8px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 14px; border:1px solid var(--line); border-radius:8px; margin-bottom:8px; flex-wrap:wrap; gap:8px;">
                             <a href="${API_BASE}/${m.file_path}" target="_blank" style="font-size:13px; color:var(--sherq-blue-mid); font-weight:600;">
                                 <i class="fas fa-file-pdf"></i> ${m.file_name || 'Manual'}
                             </a>
-                            <div style="display:flex; align-items:center; gap:10px;">
+                            <div style="display:flex; align-items:center; gap:8px;">
                                 <span style="font-size:11.5px; color:var(--ink-soft);">${formatDate(m.uploaded_at)}</span>
+                                <button class="wf-btn-secondary" style="font-size:12px; padding:5px 10px;" onclick="downloadManual('${API_BASE}/${m.file_path}', '${(m.file_name || 'manual').replace(/'/g, "\\'")}')">
+                                    <i class="fas fa-download"></i> Download
+                                </button>
+                                <button class="wf-btn-secondary" style="font-size:12px; padding:5px 10px;" onclick="printManual('${API_BASE}/${m.file_path}')">
+                                    <i class="fas fa-print"></i> Print
+                                </button>
                                 <button class="lv-col-remove" onclick="deleteRssManual(${m.id})" title="Remove">&times;</button>
                             </div>
                         </div>
                     `).join('');
                 }
             });
+        }
+
+        // Force a real "Save As" download with the manual's original file name,
+        // rather than just opening/navigating to it (works even though the
+        // file lives on a different domain than the app itself).
+        async function downloadManual(fileUrl, fileName) {
+            try {
+                const response = await fetch(fileUrl, { headers: API_HEADERS });
+                if (!response.ok) throw new Error('Could not fetch file');
+                const blob = await response.blob();
+                const blobUrl = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = blobUrl;
+                a.download = fileName;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(blobUrl);
+            } catch (err) {
+                console.error('Error downloading manual:', err);
+                // Fall back to just opening it so the person can save it manually.
+                window.open(fileUrl, '_blank');
+            }
+        }
+
+        // Opens the manual and triggers the browser's print dialog on it.
+        // Works best for PDFs, which open in the browser's built-in viewer;
+        // other file types will still open so the person can print from
+        // whatever app handles them.
+        function printManual(fileUrl) {
+            const printWindow = window.open(fileUrl, '_blank');
+            if (!printWindow) {
+                alert('Please allow pop-ups for this site so the manual can open for printing.');
+                return;
+            }
+            const triggerPrint = () => {
+                try { printWindow.print(); } catch (err) { /* ignore */ }
+            };
+            printWindow.addEventListener('load', triggerPrint);
+            // Fallback in case the load event doesn't fire for this file type.
+            setTimeout(triggerPrint, 1500);
         }
 
         function toggleRssManualCategory(safeId) {

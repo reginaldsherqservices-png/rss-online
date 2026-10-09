@@ -229,6 +229,15 @@ app.delete('/api/employees/:id', async (req, res) => {
       if (hasColumn('leave_table_customizations', 'employee_id')) {
         await client.query('DELETE FROM leave_table_customizations WHERE employee_id = $1', [id]);
       }
+      if (hasColumn('report_submissions', 'employee_id')) {
+        await client.query('DELETE FROM report_submissions WHERE employee_id = $1', [id]);
+      }
+      if (hasColumn('monthly_reports', 'employee_id')) {
+        await client.query('DELETE FROM monthly_reports WHERE employee_id = $1', [id]);
+      }
+      if (hasColumn('report_templates', 'employee_id')) {
+        await client.query('DELETE FROM report_templates WHERE employee_id = $1', [id]);
+      }
       if (hasColumn('training_completions', 'employee_id')) {
         await client.query('DELETE FROM training_completions WHERE employee_id = $1', [id]);
       }
@@ -1895,6 +1904,237 @@ app.get('/api/employees/:id/timesheet', async (req, res) => {
     res.status(500).json({ error: 'Error fetching timesheet' });
   }
 });
+
+// ============ REPORTS (checklist templates + submitted reports) ============
+//
+// A template is a named checklist made of headings, each with a list of
+// questions:  structure = [{ title: 'First Aid Boxes', questions: ['Ensure ...', ...] }, ...]
+// A submission is one filled-in report. It stores a snapshot of the heading /
+// question text next to each answer, so editing a template later never
+// changes reports that were already submitted.
+//
+// The tables are created automatically on startup (CREATE TABLE IF NOT EXISTS),
+// so nothing has to be run by hand on the local or the Azure database.
+async function ensureReportTables() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS report_templates (
+      id SERIAL PRIMARY KEY,
+      name VARCHAR(200) NOT NULL,
+      structure JSONB NOT NULL DEFAULT '[]'::jsonb,
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW()
+    )
+  `);
+  // A template can belong to one employee (their own job description headings).
+  // NULL means a general template anyone can use. Added with ALTER so databases
+  // that already created the table in the earlier version are upgraded too.
+  await pool.query('ALTER TABLE report_templates ADD COLUMN IF NOT EXISTS employee_id INTEGER');
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS report_submissions (
+      id SERIAL PRIMARY KEY,
+      template_id INTEGER,
+      template_name VARCHAR(200),
+      employee_id INTEGER,
+      employee_name VARCHAR(200),
+      report_date DATE NOT NULL,
+      answers JSONB NOT NULL DEFAULT '[]'::jsonb,
+      created_at TIMESTAMP DEFAULT NOW()
+    )
+  `);
+  await pool.query("ALTER TABLE report_submissions ADD COLUMN IF NOT EXISTS client_name VARCHAR(200) DEFAULT ''");
+  // Saved monthly reports ("Monthly Reports" folder). Keeps a copy of the weekly
+  // reports it was built from, so it stays complete even if a weekly one is deleted later.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS monthly_reports (
+      id SERIAL PRIMARY KEY,
+      month VARCHAR(7) NOT NULL,
+      employee_id INTEGER,
+      employee_name VARCHAR(200),
+      client_name VARCHAR(200) DEFAULT '',
+      checklist_name VARCHAR(200) DEFAULT '',
+      period_start VARCHAR(10),
+      period_end VARCHAR(10),
+      weeks INTEGER DEFAULT 0,
+      reports JSONB NOT NULL DEFAULT '[]'::jsonb,
+      created_at TIMESTAMP DEFAULT NOW()
+    )
+  `);
+}
+
+// Keeps only well-formed headings/questions and trims blanks.
+function cleanReportStructure(structure) {
+  if (!Array.isArray(structure)) return [];
+  return structure
+    .map(h => ({
+      title: String((h && h.title) || '').trim(),
+      questions: Array.isArray(h && h.questions)
+        ? h.questions.map(q => String(q || '').trim()).filter(q => q.length > 0)
+        : []
+    }))
+    .filter(h => h.title.length > 0);
+}
+
+app.get('/api/report-templates', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM report_templates ORDER BY name ASC');
+    res.json(result.rows);
+  } catch (err) {
+    console.error("EXACT REPORT TEMPLATES FETCH ERROR:", err);
+    res.status(500).json({ error: 'Error fetching report templates' });
+  }
+});
+
+app.post('/api/report-templates', async (req, res) => {
+  const name = String(req.body.name || '').trim();
+  if (!name) return res.status(400).json({ error: 'Template name is required' });
+  try {
+    const result = await pool.query(
+      'INSERT INTO report_templates (name, structure, employee_id) VALUES ($1, $2::jsonb, $3) RETURNING *',
+      [name, JSON.stringify(cleanReportStructure(req.body.structure)), req.body.employee_id || null]
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error("EXACT REPORT TEMPLATE CREATE ERROR:", err);
+    res.status(500).json({ error: 'Error creating report template', detail: err.message });
+  }
+});
+
+app.put('/api/report-templates/:id', async (req, res) => {
+  const { id } = req.params;
+  const name = String(req.body.name || '').trim();
+  if (!name) return res.status(400).json({ error: 'Template name is required' });
+  try {
+    const result = await pool.query(
+      `UPDATE report_templates
+       SET name = $2, structure = $3::jsonb, employee_id = $4, updated_at = NOW()
+       WHERE id = $1 RETURNING *`,
+      [id, name, JSON.stringify(cleanReportStructure(req.body.structure)), req.body.employee_id || null]
+    );
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Template not found' });
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error("EXACT REPORT TEMPLATE UPDATE ERROR:", err);
+    res.status(500).json({ error: 'Error updating report template', detail: err.message });
+  }
+});
+
+// Deleting a template does not touch reports already submitted from it.
+app.delete('/api/report-templates/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    await pool.query('DELETE FROM report_templates WHERE id = $1', [id]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error("EXACT REPORT TEMPLATE DELETE ERROR:", err);
+    res.status(500).json({ error: 'Error deleting report template' });
+  }
+});
+
+app.get('/api/report-submissions', async (req, res) => {
+  const { employee_id, template_id } = req.query;
+  try {
+    const params = [];
+    const where = [];
+    if (employee_id) { params.push(employee_id); where.push(`employee_id = $${params.length}`); }
+    if (template_id) { params.push(template_id); where.push(`template_id = $${params.length}`); }
+    // report_date is returned as plain 'YYYY-MM-DD' text so time zones can
+    // never shift it to the previous/next day.
+    const sql = `SELECT id, template_id, template_name, employee_id, employee_name,
+                        to_char(report_date, 'YYYY-MM-DD') AS report_date, client_name, answers, created_at
+                 FROM report_submissions
+                 ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
+                 ORDER BY report_date DESC, id DESC`;
+    const result = await pool.query(sql, params);
+    res.json(result.rows);
+  } catch (err) {
+    console.error("EXACT REPORT SUBMISSIONS FETCH ERROR:", err);
+    res.status(500).json({ error: 'Error fetching reports' });
+  }
+});
+
+app.post('/api/report-submissions', async (req, res) => {
+  const { template_id, template_name, employee_id, employee_name, client_name, report_date, answers } = req.body;
+  if (!employee_id || !report_date || !Array.isArray(answers)) {
+    return res.status(400).json({ error: 'employee_id, report_date and answers are required' });
+  }
+  try {
+    const cleanAnswers = answers.map(a => ({
+      heading: String(a.heading || ''),
+      question: String(a.question || ''),
+      answer: a.answer === 'yes' || a.answer === 'no' ? a.answer : null,
+      comment: String(a.comment || '')
+    }));
+    const result = await pool.query(
+      `INSERT INTO report_submissions
+         (template_id, template_name, employee_id, employee_name, client_name, report_date, answers)
+       VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb) RETURNING *`,
+      [template_id || null, template_name || '', employee_id, employee_name || '', String(client_name || '').trim().slice(0, 200), report_date, JSON.stringify(cleanAnswers)]
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error("EXACT REPORT SUBMISSION CREATE ERROR:", err);
+    res.status(500).json({ error: 'Error saving report', detail: err.message });
+  }
+});
+
+app.delete('/api/report-submissions/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    await pool.query('DELETE FROM report_submissions WHERE id = $1', [id]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error("EXACT REPORT SUBMISSION DELETE ERROR:", err);
+    res.status(500).json({ error: 'Error deleting report' });
+  }
+});
+
+app.get('/api/monthly-reports', async (req, res) => {
+  const { employee_id } = req.query;
+  try {
+    const params = [];
+    let where = '';
+    if (employee_id) { params.push(employee_id); where = 'WHERE employee_id = $1'; }
+    const result = await pool.query(`SELECT * FROM monthly_reports ${where} ORDER BY month DESC, client_name, id DESC`, params);
+    res.json(result.rows);
+  } catch (err) {
+    console.error("EXACT MONTHLY REPORTS FETCH ERROR:", err);
+    res.status(500).json({ error: 'Error fetching monthly reports' });
+  }
+});
+
+// One monthly report per person + client + month: generating it again replaces the earlier copy.
+app.post('/api/monthly-reports', async (req, res) => {
+  const { month, employee_id, employee_name, client_name, checklist_name, period_start, period_end, reports } = req.body;
+  if (!/^\d{4}-\d{2}$/.test(String(month || '')) || !Array.isArray(reports) || reports.length === 0) {
+    return res.status(400).json({ error: 'month (YYYY-MM) and reports are required' });
+  }
+  const client = pool;
+  try {
+    await client.query('DELETE FROM monthly_reports WHERE month = $1 AND COALESCE(employee_id, 0) = COALESCE($2::int, 0) AND COALESCE(client_name, \'\') = $3',
+      [month, employee_id || null, String(client_name || '')]);
+    const result = await client.query(
+      `INSERT INTO monthly_reports (month, employee_id, employee_name, client_name, checklist_name, period_start, period_end, weeks, reports)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb) RETURNING *`,
+      [month, employee_id || null, employee_name || '', String(client_name || ''), checklist_name || '', period_start || null, period_end || null, reports.length, JSON.stringify(reports)]
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error("EXACT MONTHLY REPORT CREATE ERROR:", err);
+    res.status(500).json({ error: 'Error saving monthly report', detail: err.message });
+  }
+});
+
+app.delete('/api/monthly-reports/:id', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM monthly_reports WHERE id = $1', [req.params.id]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error("EXACT MONTHLY REPORT DELETE ERROR:", err);
+    res.status(500).json({ error: 'Error deleting monthly report' });
+  }
+});
+
+ensureReportTables().catch(err => console.error('Could not create report tables:', err));
 
 // Start Server
 app.listen(PORT, () => {
