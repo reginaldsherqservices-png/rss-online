@@ -1246,7 +1246,12 @@ app.get('/api/rss-learners', async (req, res) => {
       query += ` AND valid_until IS NOT NULL AND valid_until < CURRENT_DATE`;
     }
 
-    query += ' ORDER BY date_of_training ASC NULLS LAST, certificate_number ASC NULLS LAST, id ASC';
+    // Ascending by certificate number: year first, then the running number at the end
+    // (so ...2025/029 comes before ...2025/030 whatever the prefix). Records without a number go last.
+    query += String.raw` ORDER BY
+      NULLIF(substring(certificate_number from '(\d{4})/\d+\s*$'), '')::int ASC NULLS LAST,
+      NULLIF(substring(certificate_number from '/(\d+)\s*$'), '')::int ASC NULLS LAST,
+      date_of_training ASC NULLS LAST, id ASC`;
 
     const result = await pool.query(query, params);
     res.json(result.rows);
