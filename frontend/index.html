@@ -1598,20 +1598,21 @@
                 <div class="wf-field full-width"><label>Client (company they work for)</label><input type="text" id="rl_client" placeholder="e.g. Acme Construction"></div>
                 <div class="wf-field full-width">
                     <label>Type of Training</label>
-                    <select id="rl_training_type"></select>
+                    <select id="rl_training_type" onchange="rlSuggestCertNumber()"></select>
                 </div>
-                <div class="wf-field"><label>Date of Training</label><input type="date" id="rl_date_of_training"></div>
+                <div class="wf-field"><label>Date of Training</label><input type="date" id="rl_date_of_training" onchange="rlSuggestCertNumber()"></div>
                 <div class="wf-field"><label>Valid Until</label><input type="date" id="rl_valid_until"></div>
                 <div class="wf-field">
                     <label>Result</label>
-                    <select id="rl_passed" onchange="document.getElementById('rl_view_cert_btn').style.display = (this.value === 'true' && editingRssLearnerId) ? 'inline-block' : 'none';">
+                    <select id="rl_passed" onchange="document.getElementById('rl_view_cert_btn').style.display = (this.value === 'true' && editingRssLearnerId) ? 'inline-block' : 'none'; rlSuggestCertNumber(true);">
                         <option value="true">Passed</option>
                         <option value="false">Failed</option>
                     </select>
                 </div>
                 <div class="wf-field">
                     <label>Certificate Number</label>
-                    <input type="text" id="rl_certificate_number" disabled style="background:#F4F6F9; color:var(--ink-soft);">
+                    <input type="text" id="rl_certificate_number" oninput="rlCertTouched = true" placeholder="Appears when you pick the date">
+                    <div style="font-size:11.5px; color:var(--ink-soft); margin-top:4px;">Fills in automatically. You can change it, for example to match an older certificate.</div>
                 </div>
                 <div class="wf-field full-width"><label>Assessor Name</label><input type="text" id="rl_assessor_name" value="M. Reginald"></div>
 
@@ -3519,7 +3520,28 @@
             }).join('');
         }
 
+        // Fills the certificate number field with the next number for this training and year.
+        // It never overwrites a number the person has typed or one that already belongs to the learner.
+        let rlCertTouched = false;
+        async function rlSuggestCertNumber(resultChanged) {
+            const field = document.getElementById('rl_certificate_number');
+            if (document.getElementById('rl_passed').value !== 'true') { field.value = ''; rlCertTouched = false; return; }
+            if (rlCertTouched) return;
+            const editing = editingRssLearnerId ? rssLearners.find(x => x.id === editingRssLearnerId) : null;
+            if (editing && editing.certificate_number && !resultChanged) return;
+            const type = document.getElementById('rl_training_type').value;
+            const date = document.getElementById('rl_date_of_training').value;
+            if (!type || !date) return;
+            try {
+                const response = await fetch(`${API_BASE}/api/rss-learners/next-certificate-number?training_type=${encodeURIComponent(type)}&date_of_training=${encodeURIComponent(date)}`, { headers: API_HEADERS });
+                if (!response.ok) return;
+                const data = await response.json();
+                if (!rlCertTouched && document.getElementById('rl_passed').value === 'true') field.value = data.certificate_number || '';
+            } catch (err) { console.error('Could not get the next certificate number:', err); }
+        }
+
         function openRegisterLearnerModal() {
+            rlCertTouched = false;
             editingRssLearnerId = null;
             document.getElementById('rssLearnerModalTitle').innerText = 'Register Learner';
             document.getElementById('rl_first_name').value = '';
@@ -3531,7 +3553,7 @@
             document.getElementById('rl_valid_until').value = '';
             document.getElementById('rl_passed').value = 'true';
             document.getElementById('rl_certificate_number').value = '';
-            document.getElementById('rl_certificate_number').placeholder = 'Generated automatically when saved';
+            document.getElementById('rl_certificate_number').placeholder = 'Appears when you pick the date';
             document.getElementById('rl_assessor_name').value = 'M. Reginald';
             document.getElementById('rl_id_document').value = '';
             document.getElementById('rl_marked_test').value = '';
@@ -3556,6 +3578,7 @@
             const l = rssLearners.find(x => x.id === id);
             if (!l) return;
             editingRssLearnerId = id;
+            rlCertTouched = false;
             document.getElementById('rssLearnerModalTitle').innerText = 'Edit Learner';
             document.getElementById('rl_first_name').value = l.first_name || '';
             document.getElementById('rl_last_name').value = l.last_name || '';
@@ -3626,6 +3649,7 @@
             const valid_until = document.getElementById('rl_valid_until').value;
             const passed = document.getElementById('rl_passed').value;
             const assessor_name = document.getElementById('rl_assessor_name').value.trim();
+            const certificate_number = document.getElementById('rl_certificate_number').value.trim();
 
             const idFile = document.getElementById('rl_id_document').files[0];
             const testFile = document.getElementById('rl_marked_test').files[0];
@@ -3633,11 +3657,17 @@
 
             try {
                 if (editingRssLearnerId) {
-                    await fetch(`${API_BASE}/api/rss-learners/${editingRssLearnerId}`, {
+                    const patchResponse = await fetch(`${API_BASE}/api/rss-learners/${editingRssLearnerId}`, {
                         method: 'PATCH',
                         headers: { 'Content-Type': 'application/json', ...API_HEADERS },
-                        body: JSON.stringify({ first_name, last_name, id_number, client, training_type, date_of_training, valid_until, passed, assessor_name })
+                        body: JSON.stringify({ first_name, last_name, id_number, client, training_type, date_of_training, valid_until, passed, assessor_name, certificate_number })
                     });
+                    if (!patchResponse.ok) {
+                        let msg = 'Failed to save the learner';
+                        try { const b = await patchResponse.json(); if (b.error) msg = b.error; } catch (e) {}
+                        alert(msg);
+                        return;
+                    }
 
                     if (idFile || testFile || regFile) {
                         const docForm = new FormData();
@@ -3659,6 +3689,7 @@
                     formData.append('valid_until', valid_until);
                     formData.append('passed', passed);
                     formData.append('assessor_name', assessor_name);
+                    formData.append('certificate_number', certificate_number);
                     formData.append('created_by', currentUserEmployeeId || '');
                     if (idFile) formData.append('id_document', idFile);
                     if (testFile) formData.append('marked_test', testFile);
@@ -3667,7 +3698,12 @@
                     const response = await fetch(`${API_BASE}/api/rss-learners`, {
                         method: 'POST', headers: API_HEADERS, body: formData
                     });
-                    if (!response.ok) { alert('Failed to register learner'); return; }
+                    if (!response.ok) {
+                        let msg = 'Failed to register learner';
+                        try { const b = await response.json(); if (b.error) msg = b.error; } catch (e) {}
+                        alert(msg);
+                        return;
+                    }
                 }
 
                 closeRssLearnerModal();

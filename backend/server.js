@@ -1256,6 +1256,62 @@ app.get('/api/rss-learners', async (req, res) => {
   }
 });
 
+// ---- Certificate numbers: PREFIX + YEAR + / + 3-digit counter (e.g. CBFF2025/023) ----
+// The next number continues after the highest number already used for that training
+// and year, so numbers typed in by hand (to match older paper records) are respected.
+async function nextCertificateNumber(trainingType, year, db) {
+  db = db || pool;
+  const typeResult = await db.query('SELECT prefix FROM rss_training_types WHERE name = $1', [trainingType]);
+  const prefix = (typeResult.rows[0] && typeResult.rows[0].prefix) || String(trainingType || '').substring(0, 2).toUpperCase();
+  const used = await db.query(
+    'SELECT certificate_number FROM rss_training_learners WHERE training_type = $1 AND certificate_number LIKE $2',
+    [trainingType, `${prefix}${year}/%`]
+  );
+  let maxSeq = 0;
+  used.rows.forEach(r => {
+    const n = parseInt(String(r.certificate_number).split('/').pop(), 10);
+    if (!isNaN(n) && n > maxSeq) maxSeq = n;
+  });
+  const counter = await db.query('SELECT last_number FROM rss_certificate_counters WHERE training_type = $1 AND year = $2', [trainingType, year]);
+  const counterSeq = counter.rows[0] ? Number(counter.rows[0].last_number) : 0;
+  const seq = Math.max(maxSeq, counterSeq) + 1;
+  return { prefix, seq, number: `${prefix}${year}/${String(seq).padStart(3, '0')}` };
+}
+
+// Keeps the counter at or above the highest number saved, so the next automatic one never repeats it.
+async function bumpCertificateCounter(trainingType, year, certificateNumber, db) {
+  db = db || pool;
+  const n = parseInt(String(certificateNumber).split('/').pop(), 10);
+  if (isNaN(n)) return;
+  // If the number was typed by hand, count it under the year written in the number itself.
+  const yearInNumber = /(\d{4})\/\d+$/.exec(String(certificateNumber));
+  if (yearInNumber) year = parseInt(yearInNumber[1], 10);
+  await db.query(
+    `INSERT INTO rss_certificate_counters (training_type, year, last_number)
+     VALUES ($1, $2, $3)
+     ON CONFLICT (training_type, year) DO UPDATE SET last_number = GREATEST(rss_certificate_counters.last_number, $3)`,
+    [trainingType, year, n]
+  );
+}
+
+function certYearFrom(dateOfTraining) {
+  const m = /^(\d{4})/.exec(String(dateOfTraining || ''));
+  return m ? parseInt(m[1], 10) : new Date().getFullYear();
+}
+
+// Suggests the next certificate number (shown in the form when the date is chosen). Nothing is saved.
+app.get('/api/rss-learners/next-certificate-number', async (req, res) => {
+  const { training_type, date_of_training } = req.query;
+  if (!training_type) return res.status(400).json({ error: 'training_type is required' });
+  try {
+    const next = await nextCertificateNumber(training_type, certYearFrom(date_of_training));
+    res.json({ certificate_number: next.number });
+  } catch (err) {
+    console.error("EXACT NEXT CERTIFICATE NUMBER ERROR:", err);
+    res.status(500).json({ error: 'Error working out the next certificate number' });
+  }
+});
+
 app.get('/api/rss-learners/summary', async (req, res) => {
   try {
     const result = await pool.query(
@@ -1278,6 +1334,7 @@ app.post('/api/rss-learners', upload.fields([
     first_name, last_name, id_number, training_type, client,
     date_of_training, valid_until, passed, assessor_name, created_by
   } = req.body;
+  const typedCertNumber = String(req.body.certificate_number || '').trim();
 
   if (!first_name || !last_name || !training_type) {
     return res.status(400).json({ error: 'First name, last name, and training type are required' });
@@ -1292,20 +1349,17 @@ app.post('/api/rss-learners', upload.fields([
     const typeResult = await pool.query('SELECT prefix, unit_standard, nqf_level, credits FROM rss_training_types WHERE name = $1', [training_type]);
     typeRow = typeResult.rows[0] || {};
 
-    // Only a passed result generates a certificate number
+    // A passed result gets a certificate number: the one typed in the form, or the next automatic one.
     if (hasPassed) {
-      const year = date_of_training ? new Date(date_of_training).getFullYear() : new Date().getFullYear();
-
-      const counterResult = await pool.query(
-        `INSERT INTO rss_certificate_counters (training_type, year, last_number)
-         VALUES ($1, $2, 1)
-         ON CONFLICT (training_type, year) DO UPDATE SET last_number = rss_certificate_counters.last_number + 1
-         RETURNING last_number`,
-        [training_type, year]
-      );
-      const seq = counterResult.rows[0].last_number;
-      const prefix = typeRow.prefix || training_type.substring(0, 2).toUpperCase();
-      certificate_number = `${prefix}${year}/${String(seq).padStart(3, '0')}`;
+      const year = certYearFrom(date_of_training);
+      if (typedCertNumber) {
+        const dup = await pool.query('SELECT id FROM rss_training_learners WHERE certificate_number = $1', [typedCertNumber]);
+        if (dup.rows.length) return res.status(409).json({ error: `Certificate number ${typedCertNumber} is already used by another learner.` });
+        certificate_number = typedCertNumber;
+      } else {
+        certificate_number = (await nextCertificateNumber(training_type, year)).number;
+      }
+      await bumpCertificateCounter(training_type, year, certificate_number);
     }
 
     const files = req.files || {};
@@ -1336,10 +1390,23 @@ app.patch('/api/rss-learners/:id', async (req, res) => {
     first_name, last_name, id_number, training_type, client,
     date_of_training, valid_until, passed, assessor_name
   } = req.body;
+  const typedCertNumber = String(req.body.certificate_number || '').trim();
   const hasPassed = passed === true || passed === 'true';
   try {
     if (!hasPassed) {
       await pool.query('UPDATE rss_training_learners SET certificate_number = NULL WHERE id = $1', [id]);
+    } else {
+      const current = await pool.query('SELECT certificate_number FROM rss_training_learners WHERE id = $1', [id]);
+      const existing = current.rows[0] ? current.rows[0].certificate_number : null;
+      let newNumber = typedCertNumber || existing;
+      if (typedCertNumber && typedCertNumber !== existing) {
+        const dup = await pool.query('SELECT id FROM rss_training_learners WHERE certificate_number = $1 AND id <> $2', [typedCertNumber, id]);
+        if (dup.rows.length) return res.status(409).json({ error: `Certificate number ${typedCertNumber} is already used by another learner.` });
+      }
+      const year = certYearFrom(date_of_training);
+      if (!newNumber) newNumber = (await nextCertificateNumber(training_type, year)).number;
+      await pool.query('UPDATE rss_training_learners SET certificate_number = $2 WHERE id = $1', [id, newNumber]);
+      await bumpCertificateCounter(training_type, year, newNumber);
     }
 
     const result = await pool.query(
