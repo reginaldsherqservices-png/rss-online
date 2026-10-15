@@ -133,22 +133,33 @@
         .rpt-yn-btn.sel-yes { background: #DCFCE7; border-color: #16A34A; color: #166534; }
         .rpt-yn-btn.sel-no { background: #FEE2E2; border-color: #DC2626; color: #991B1B; }
         .rpt-q input[type=text] { width: 100%; padding: 8px 10px; border: 1.5px solid var(--line); border-radius: 8px; font-family: 'Archivo', sans-serif; font-size: 13px; }
-        .rpt-heading-bar { padding: 14px 18px; background: #FAFBFC; border-bottom: 1px solid var(--line); font-weight: 700; color: var(--sherq-blue); font-size: 14px; }
+        .rpt-heading-bar { padding: 14px 18px; background: linear-gradient(90deg, #1a365d 0%, #24409E 100%); border-bottom: 3px solid #99CC33; font-weight: 700; color: #fff; font-size: 14px; }
+        .rpt-q.row-yes { background: #F0FDF4; border-left: 4px solid #16A34A; }
+        .rpt-q.row-no { background: #FEF2F2; border-left: 4px solid #DC2626; }
+        .rpt-q.row-none { border-left: 4px solid #CBD5E1; }
+        .rpt-info-card { background: #EEF4FF; border: 1px solid #C7D7F5; border-left: 5px solid #99CC33; border-radius: 10px; padding: 12px 16px; }
+        #reportsListView table.wf-table thead th { background: #1a365d; color: #fff; border-bottom: 3px solid #99CC33; }
+        #reportsListView table.wf-table tbody tr:nth-child(even) { background: #F5F8FF; }
+        #reportsListView table.wf-table tbody tr:hover { background: #E3ECFF; }
         </style><style id="rptMonthlyCss">
-        .mr-title { font-size: 20px; font-weight: 700; color: #1D2333; margin: 0 0 4px; }
-        .mr-meta { color: #64748B; font-size: 13px; margin-bottom: 14px; }
+        * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .mr-title { font-size: 20px; font-weight: 700; color: #1a365d; margin: 0 0 8px; }
+        .mr-meta { color: #475569; font-size: 13px; margin-bottom: 14px; background: #EEF4FF; border: 1px solid #C7D7F5; border-left: 5px solid #99CC33; border-radius: 10px; padding: 12px 16px; }
         .mr-summary { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
-        .mr-box { border: 1px solid #E2E8F0; border-radius: 8px; padding: 8px 14px; min-width: 90px; }
-        .mr-box b { display: block; font-size: 18px; }
+        .mr-box { border: 1px solid #C7D7F5; background: #F5F8FF; border-radius: 8px; padding: 8px 14px; min-width: 90px; }
+        .mr-box b { display: block; font-size: 18px; color: #1a365d; }
         .mr-box span { font-size: 11.5px; color: #64748B; }
         .mr-table { width: 100%; border-collapse: collapse; font-size: 12.5px; margin-bottom: 16px; }
-        .mr-table th { background: #1E3A8A; color: #fff; text-align: left; padding: 6px 8px; font-size: 11.5px; }
-        .mr-table td { padding: 6px 8px; border-bottom: 1px solid #E2E8F0; vertical-align: top; }
+        .mr-table th { background: #1a365d; color: #fff; text-align: left; padding: 10px 12px; font-size: 13px; border-bottom: 3px solid #99CC33; }
+        .mr-table td { padding: 7px 12px; border-bottom: 1px solid #E2E8F0; vertical-align: top; }
         .mr-table td.c { text-align: center; white-space: nowrap; font-weight: 700; }
-        .mr-table tr.mr-h td { background: #EEF2FF; font-weight: 700; color: #1E3A8A; }
+        .mr-table tr.mr-h td { background: linear-gradient(90deg, #1a365d 0%, #24409E 100%); font-weight: 700; color: #fff; border-bottom: 3px solid #99CC33; }
+        .mr-table tr.mr-row-yes td { background: #F0FDF4; } .mr-table tr.mr-row-yes td:first-child { border-left: 4px solid #16A34A; }
+        .mr-table tr.mr-row-no td { background: #FEF2F2; } .mr-table tr.mr-row-no td:first-child { border-left: 4px solid #DC2626; }
+        .mr-table tr.mr-row-none td:first-child { border-left: 4px solid #CBD5E1; }
         .mr-y { color: #166534; } .mr-n { color: #991B1B; } .mr-x { color: #94A3B8; font-weight: 400; }
         .mr-week { margin-bottom: 22px; } .mr-week tr { page-break-inside: avoid; }
-        .mr-table tr.mr-sub th { background: #E2E8F0; color: #1D2333; }
+        .mr-table tr.mr-sub th { background: #DCE6FA; color: #1a365d; border-bottom: 1px solid #C7D7F5; font-size: 11.5px; }
         .mr-issues { font-size: 13px; margin: 0 0 16px; padding-left: 18px; }
         </style><style>
         .rpt-badge { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 11.5px; font-weight: 700; }
@@ -533,7 +544,7 @@
                         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; align-items: end;">
                             <div class="wf-field"><label>Your Name</label><select id="rpt_employee" onchange="rptEmployeeChanged()"></select></div>
                             <div class="wf-field"><label>Client Name</label><input type="text" id="rpt_client" list="rptClientList" placeholder="e.g. Claremont Metals" autocomplete="off" oninput="rptClientTyped()"><datalist id="rptClientList"></datalist></div>
-                            <div class="wf-field"><label>Date Report Done</label><input type="date" id="rpt_date" readonly tabindex="-1" style="background:#F1F5F9; color:#475569; cursor:not-allowed; pointer-events:none;" title="The date is filled in automatically"></div>
+                            <div class="wf-field"><label>Date Report Done</label><input type="date" id="rpt_date"></div>
                             <div class="wf-field"><label>Checklist Name</label><select id="rpt_template" onchange="rptTemplateChanged()"></select></div>
                             <div><button class="wf-btn-primary" onclick="beginReport()">Begin</button></div>
                         </div>
@@ -2191,8 +2202,9 @@
                 empSelect.value = String(currentUserEmployeeId);
             }
 
-            // The date is always today's date, chosen automatically. Nobody can change it.
+            // Starts on today's date; the person can pick another date if the report was done on a different day.
             document.getElementById('rpt_date').value = rptToday();
+            document.getElementById('rpt_date').readOnly = false;
             document.getElementById('rpt_client').value = '';
             rptLoadClientSuggestions();
             rptPrevEmployee = empSelect.value;
@@ -2277,7 +2289,6 @@
 
         function beginReport() {
             const employeeId = document.getElementById('rpt_employee').value;
-            document.getElementById('rpt_date').value = rptToday();
             const reportDate = document.getElementById('rpt_date').value;
             const templateId = document.getElementById('rpt_template').value;
             if (!employeeId) { rptToast('Please select your name first.'); return; }
@@ -2356,7 +2367,6 @@
         async function submitReport() {
             if (!reportDraft) return;
             const employeeId = document.getElementById('rpt_employee').value;
-            document.getElementById('rpt_date').value = rptToday();
             const reportDate = document.getElementById('rpt_date').value;
             const clientName = document.getElementById('rpt_client').value.trim();
             if (!employeeId || !reportDate) { rptToast('Please select your name and the date first.'); return; }
@@ -2547,26 +2557,26 @@
                     <tbody>
                     ${groups.map((g, gi) => `
                         <tr class="mr-h"><td colspan="3">${gi + 1}. ${rptEsc(g.heading)}</td></tr>
-                        ${g.items.map(a => `<tr><td>${rptEsc(a.question)}</td>${cell(a)}<td>${a.comment ? rptEsc(a.comment) : ''}</td></tr>`).join('')}`).join('')}
+                        ${g.items.map(a => `<tr class="mr-row-${a.answer || 'none'}"><td>${rptEsc(a.question)}</td>${cell(a)}<td>${a.comment ? rptEsc(a.comment) : ''}</td></tr>`).join('')}`).join('')}
                     </tbody>
                 </table>`;
             }).join('');
 
             return `
                 <div class="mr-title">Monthly Report &ndash; ${rptEsc(monthLabel)}</div>
-                <div class="mr-meta">
-                    ${employees.length ? 'Employee: <strong>' + rptEsc(employees.join(', ')) + '</strong> &middot; ' : ''}
-                    ${clients.length ? 'Client: <strong>' + rptEsc(clients.join(', ')) + '</strong> &middot; ' : ''}
-                    ${checklists.length ? 'Checklist: <strong>' + rptEsc(checklists.join(', ')) + '</strong> &middot; ' : ''}
-                    ${rptFormatDate(first)} to ${rptFormatDate(last)}
-                    ${generatedOn ? '<br>Report generated on: <strong>' + rptFormatDate(generatedOn) + '</strong>' : ''}
+                <div class="mr-meta" style="line-height: 1.7;">
+                    ${employees.length ? '<div>Employee: <strong>' + rptEsc(employees.join(', ')) + '</strong></div>' : ''}
+                    ${clients.length ? '<div>Client: <strong>' + rptEsc(clients.join(', ')) + '</strong></div>' : ''}
+                    ${checklists.length ? '<div>Checklist: <strong>' + rptEsc(checklists.join(', ')) + '</strong></div>' : ''}
+                    <div>Period: <strong>${rptFormatDate(first)} to ${rptFormatDate(last)}</strong></div>
+                    ${generatedOn ? '<div>Report generated on: <strong>' + rptFormatDate(generatedOn) + '</strong></div>' : ''}
                 </div>
                 <div class="mr-summary">
                     <div class="mr-box"><b>${sorted.length}</b><span>Weekly reports</span></div>
                     <div class="mr-box"><b class="mr-y">${yes}</b><span>Yes</span></div>
                     <div class="mr-box"><b class="mr-n">${no}</b><span>No</span></div>
                     <div class="mr-box"><b>${none}</b><span>Unanswered</span></div>
-                    <div class="mr-box"><b>${pct}</b><span>Yes rate</span></div>
+                    <div class="mr-box"><b>${pct}</b><span title="Yes answers divided by all answered questions (Yes + No). Unanswered questions are not counted.">Yes rate</span></div>
                 </div>
                 ${weekTables}
             `;
@@ -2767,14 +2777,17 @@
                 : a.answer === 'no' ? '<span class="rpt-badge no">No</span>'
                 : '<span class="rpt-badge none">Not answered</span>';
             return `
-                <div style="font-size: 13px; color: var(--ink-soft); margin-bottom: 14px;">
-                    <strong style="color: var(--sherq-blue);">${rptEsc(s.employee_name || '—')}</strong> &middot; Client: <strong>${rptEsc(s.client_name || '—')}</strong> &middot; ${rptFormatDate(s.report_date)} &middot; ${rptEsc(s.template_name || '')}
+                <div class="rpt-info-card" style="font-size: 13px; color: var(--ink-soft); margin-bottom: 14px; line-height: 1.7;">
+                    <div>Employee: <strong style="color: var(--sherq-blue);">${rptEsc(s.employee_name || '—')}</strong></div>
+                    <div>Client: <strong style="color: var(--sherq-blue);">${rptEsc(s.client_name || '—')}</strong></div>
+                    <div>Checklist: <strong style="color: var(--sherq-blue);">${rptEsc(s.template_name || '—')}</strong></div>
+                    <div>Date: <strong style="color: var(--sherq-blue);">${rptFormatDate(s.report_date)}</strong></div>
                 </div>
                 ${groups.map((g, gi) => `
                     <div class="wf-table-wrap" style="margin-bottom: 14px;">
                         <div class="rpt-heading-bar">${gi + 1}. ${rptEsc(g.heading)}</div>
                         ${g.items.map(a => `
-                            <div class="rpt-q" style="grid-template-columns: minmax(0, 1.4fr) auto minmax(0, 1fr);">
+                            <div class="rpt-q row-${a.answer || 'none'}" style="grid-template-columns: minmax(0, 1.4fr) auto minmax(0, 1fr);">
                                 <div class="rpt-q-text">${rptEsc(a.question)}</div>
                                 <div>${badge(a)}</div>
                                 <div style="font-size: 13px; color: #475569;">${a.comment ? rptEsc(a.comment) : '<span style="color:#94A3B8;">—</span>'}</div>
@@ -2835,15 +2848,21 @@
             if (!win) { rptToast('Please allow pop-ups for this site so the report can open for printing.'); return; }
             win.document.write(`<!DOCTYPE html><html><head><title>${rptEsc(s.template_name || 'Report')} - ${rptEsc(s.employee_name || '')}</title>
                 <style>
+                    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
                     body { font-family: Arial, sans-serif; color: #1D2333; padding: 24px; }
-                    h1 { font-size: 20px; margin: 0 0 4px; } .meta { color: #64748B; font-size: 13px; margin-bottom: 18px; }
-                    h2 { font-size: 15px; margin: 18px 0 6px; border-bottom: 2px solid #CBD5E1; padding-bottom: 4px; }
+                    h1 { font-size: 20px; margin: 0 0 8px; color: #1a365d; }
+                    .meta { color: #475569; font-size: 13px; margin-bottom: 18px; background: #EEF4FF; border: 1px solid #C7D7F5; border-left: 5px solid #99CC33; border-radius: 10px; padding: 12px 16px; }
+                    h2 { font-size: 14px; margin: 18px 0 0; padding: 10px 12px; background: #1a365d; color: #fff; border-bottom: 3px solid #99CC33; }
                     table { width: 100%; border-collapse: collapse; font-size: 13px; }
-                    td { padding: 7px 8px; border-bottom: 1px solid #E2E8F0; vertical-align: top; }
+                    td { padding: 7px 10px; border-bottom: 1px solid #E2E8F0; vertical-align: top; }
+                    tr.row-yes td { background: #F0FDF4; } tr.row-yes td:first-child { border-left: 4px solid #16A34A; }
+                    tr.row-no td { background: #FEF2F2; } tr.row-no td:first-child { border-left: 4px solid #DC2626; }
+                    tr.row-none td:first-child { border-left: 4px solid #CBD5E1; }
+                    tr { page-break-inside: avoid; }
                     td.ans { width: 90px; font-weight: bold; } td.yes { color: #166534; } td.no { color: #991B1B; } td.none { color: #64748B; font-weight: normal; }
                 </style></head><body>
                 <h1>${rptEsc(s.template_name || 'Report')}</h1>
-                <div class="meta">${rptEsc(s.employee_name || '')} &middot; Client: ${rptEsc(s.client_name || '—')} &middot; ${rptFormatDate(s.report_date)}</div>
+                <div class="meta" style="line-height: 1.7;"><div>Employee: ${rptEsc(s.employee_name || '')}</div><div>Client: ${rptEsc(s.client_name || '—')}</div><div>Checklist: ${rptEsc(s.template_name || '—')}</div><div>Date: ${rptFormatDate(s.report_date)}</div></div>
                 ${(() => {
                     const groups = [];
                     (s.answers || []).forEach(a => {
@@ -2852,7 +2871,7 @@
                         g.items.push(a);
                     });
                     return groups.map((g, gi) => `<h2>${gi + 1}. ${rptEsc(g.heading)}</h2><table>${g.items.map(a => `
-                        <tr><td>${rptEsc(a.question)}</td>
+                        <tr class="row-${a.answer || 'none'}"><td>${rptEsc(a.question)}</td>
                         <td class="ans ${a.answer || 'none'}">${a.answer === 'yes' ? 'Yes' : a.answer === 'no' ? 'No' : 'Not answered'}</td>
                         <td>${rptEsc(a.comment || '')}</td></tr>`).join('')}</table>`).join('');
                 })()}
