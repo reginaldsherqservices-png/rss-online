@@ -1257,24 +1257,26 @@ app.get('/api/rss-learners', async (req, res) => {
 });
 
 // ---- Certificate numbers: PREFIX + YEAR + / + 3-digit counter (e.g. CBFF2025/023) ----
-// The next number continues after the highest number already used for that training
-// and year, so numbers typed in by hand (to match older paper records) are respected.
+// The prefix depends on the type of training, but the counter is ONE running count for the
+// whole year across all trainings. The next number continues after the highest number already
+// used in that year, so numbers typed by hand (to match older records) are respected.
 async function nextCertificateNumber(trainingType, year, db) {
   db = db || pool;
   const typeResult = await db.query('SELECT prefix FROM rss_training_types WHERE name = $1', [trainingType]);
   const prefix = (typeResult.rows[0] && typeResult.rows[0].prefix) || String(trainingType || '').substring(0, 2).toUpperCase();
   const used = await db.query(
-    'SELECT certificate_number FROM rss_training_learners WHERE training_type = $1 AND certificate_number LIKE $2',
-    [trainingType, `${prefix}${year}/%`]
+    'SELECT certificate_number FROM rss_training_learners WHERE certificate_number IS NOT NULL AND certificate_number LIKE $1',
+    [`%${year}/%`]
   );
   let maxSeq = 0;
   used.rows.forEach(r => {
-    const n = parseInt(String(r.certificate_number).split('/').pop(), 10);
-    if (!isNaN(n) && n > maxSeq) maxSeq = n;
+    const m = /(\d{4})\/(\d+)\s*$/.exec(String(r.certificate_number));
+    if (m && parseInt(m[1], 10) === year) {
+      const n = parseInt(m[2], 10);
+      if (n > maxSeq) maxSeq = n;
+    }
   });
-  const counter = await db.query('SELECT last_number FROM rss_certificate_counters WHERE training_type = $1 AND year = $2', [trainingType, year]);
-  const counterSeq = counter.rows[0] ? Number(counter.rows[0].last_number) : 0;
-  const seq = Math.max(maxSeq, counterSeq) + 1;
+  const seq = maxSeq + 1;
   return { prefix, seq, number: `${prefix}${year}/${String(seq).padStart(3, '0')}` };
 }
 
