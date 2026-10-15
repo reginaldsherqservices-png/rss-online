@@ -1246,7 +1246,7 @@ app.get('/api/rss-learners', async (req, res) => {
       query += ` AND valid_until IS NOT NULL AND valid_until < CURRENT_DATE`;
     }
 
-    query += ' ORDER BY date_of_training DESC, id DESC';
+    query += ' ORDER BY date_of_training ASC NULLS LAST, certificate_number ASC NULLS LAST, id ASC';
 
     const result = await pool.query(query, params);
     res.json(result.rows);
