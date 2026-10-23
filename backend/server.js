@@ -32,7 +32,7 @@ const upload = multer({ storage });
 const memUpload = multer({ storage: multer.memoryStorage() });
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '8mb' }));
 app.use(express.static(path.join(__dirname, '../frontend')));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
@@ -2209,6 +2209,451 @@ app.delete('/api/monthly-reports/:id', async (req, res) => {
 });
 
 ensureReportTables().catch(err => console.error('Could not create report tables:', err));
+
+// ================= FINANCE: INVOICES & QUOTES =================
+async function ensureFinanceTables() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS finance_settings (
+      key VARCHAR(50) PRIMARY KEY,
+      value TEXT
+    )`);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS finance_clients (
+      id SERIAL PRIMARY KEY,
+      name VARCHAR(200) NOT NULL UNIQUE,
+      code VARCHAR(10),
+      invoice_last INTEGER DEFAULT 100,
+      quote_last INTEGER DEFAULT 100,
+      created_at TIMESTAMP DEFAULT NOW()
+    )`);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS finance_documents (
+      id SERIAL PRIMARY KEY,
+      doc_type VARCHAR(10) NOT NULL,
+      client_name VARCHAR(200) NOT NULL,
+      doc_number VARCHAR(80) NOT NULL,
+      doc_date DATE,
+      reference TEXT,
+      deliver_to TEXT,
+      items JSONB NOT NULL DEFAULT '[]'::jsonb,
+      vat_text VARCHAR(50),
+      bank_details TEXT,
+      subtotal NUMERIC(14,2) DEFAULT 0,
+      total NUMERIC(14,2) DEFAULT 0,
+      created_by VARCHAR(100),
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW(),
+      UNIQUE (doc_type, doc_number)
+    )`);
+}
+
+function financeClientCode(name) {
+  const words = String(name || '').toUpperCase().replace(/[^A-Z0-9 ]/g, ' ').split(/\s+/).filter(Boolean);
+  if (!words.length) return 'XX';
+  if (words.length === 1) return words[0].substring(0, 2);
+  return words.slice(0, 3).map(w => w[0]).join('');
+}
+
+// INV-RP101-2026: the client's letters + a running number for THAT client + the year.
+// Next number = the higher of "last number used" typed in for the client and the highest already saved, plus one.
+async function nextFinanceNumber(docType, clientName, year) {
+  const label = docType === 'quote' ? 'QUO' : 'INV';
+  const name = String(clientName || '').trim();
+  const c = await pool.query('SELECT code, invoice_last, quote_last FROM finance_clients WHERE LOWER(name) = LOWER($1)', [name]);
+  const rec = c.rows[0] || {};
+  const code = (rec.code || financeClientCode(name)).toUpperCase();
+  let max = parseInt(docType === 'quote' ? rec.quote_last : rec.invoice_last, 10);
+  if (isNaN(max)) max = 100;
+  const rows = await pool.query('SELECT doc_number FROM finance_documents WHERE doc_type = $1 AND LOWER(client_name) = LOWER($2)', [docType, name]);
+  const re = /(\d+)-\d{4}\s*$/;
+  rows.rows.forEach(r => { const m = re.exec(r.doc_number); if (m) max = Math.max(max, parseInt(m[1], 10)); });
+  return `${label}-${code}${max + 1}-${year}`;
+}
+
+function financeNumber(v) { const n = parseFloat(String(v == null ? '' : v).replace(/[^0-9.\-]/g, '')); return isNaN(n) ? 0 : n; }
+function financeTotals(items, vatText) {
+  const subtotal = (Array.isArray(items) ? items : []).reduce((s, it) => s + financeNumber(it.quantity) * financeNumber(it.unit_price), 0);
+  const vat = /\d/.test(String(vatText || '')) ? financeNumber(vatText) : 0;
+  return { subtotal: Math.round(subtotal * 100) / 100, total: Math.round((subtotal + vat) * 100) / 100 };
+}
+
+app.get('/api/finance/settings', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT key, value FROM finance_settings');
+    const out = {};
+    result.rows.forEach(r => { out[r.key] = r.value; });
+    res.json(out);
+  } catch (err) {
+    console.error('FINANCE SETTINGS FETCH ERROR:', err);
+    res.status(500).json({ error: 'Error fetching finance settings' });
+  }
+});
+
+app.put('/api/finance/settings', async (req, res) => {
+  try {
+    for (const key of ['logo', 'bank_details']) {
+      if (req.body[key] !== undefined) {
+        await pool.query(
+          `INSERT INTO finance_settings (key, value) VALUES ($1, $2)
+           ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`, [key, req.body[key]]);
+      }
+    }
+    res.json({ success: true });
+  } catch (err) {
+    console.error('FINANCE SETTINGS SAVE ERROR:', err);
+    res.status(500).json({ error: 'Error saving finance settings' });
+  }
+});
+
+app.get('/api/finance/clients', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT id, name, code, invoice_last, quote_last FROM finance_clients ORDER BY name');
+    res.json(result.rows);
+  } catch (err) {
+    console.error('FINANCE CLIENTS FETCH ERROR:', err);
+    res.status(500).json({ error: 'Error fetching clients' });
+  }
+});
+
+// Add a client, or update one if the name already exists (letters and "last number used").
+app.post('/api/finance/clients', async (req, res) => {
+  const name = String(req.body.name || '').trim();
+  if (!name) return res.status(400).json({ error: 'Client name is required' });
+  const code = (String(req.body.code || '').toUpperCase().replace(/[^A-Z0-9]/g, '') || financeClientCode(name)).substring(0, 10);
+  const num = v => { const n = parseInt(v, 10); return isNaN(n) || n < 0 ? 100 : n; };
+  try {
+    const result = await pool.query(
+      `INSERT INTO finance_clients (name, code, invoice_last, quote_last) VALUES ($1,$2,$3,$4)
+       ON CONFLICT (name) DO UPDATE SET code = EXCLUDED.code, invoice_last = EXCLUDED.invoice_last, quote_last = EXCLUDED.quote_last
+       RETURNING id, name, code, invoice_last, quote_last`,
+      [name, code, num(req.body.invoice_last), num(req.body.quote_last)]);
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error('FINANCE CLIENT SAVE ERROR:', err);
+    res.status(500).json({ error: 'Error saving client' });
+  }
+});
+
+app.delete('/api/finance/clients/:id', async (req, res) => {
+  try {
+    const c = await pool.query('SELECT name FROM finance_clients WHERE id = $1', [req.params.id]);
+    if (!c.rows.length) return res.json({ success: true });
+    const used = await pool.query('SELECT 1 FROM finance_documents WHERE LOWER(client_name) = LOWER($1) LIMIT 1', [c.rows[0].name]);
+    if (used.rows.length) return res.status(409).json({ error: 'This client already has invoices or quotes, so it cannot be removed.' });
+    await pool.query('DELETE FROM finance_clients WHERE id = $1', [req.params.id]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('FINANCE CLIENT DELETE ERROR:', err);
+    res.status(500).json({ error: 'Error removing client' });
+  }
+});
+
+app.get('/api/finance/next-number', async (req, res) => {
+  const docType = req.query.doc_type === 'quote' ? 'quote' : 'invoice';
+  const year = parseInt(String(req.query.date || '').substring(0, 4), 10) || new Date().getFullYear();
+  try {
+    res.json({ doc_number: await nextFinanceNumber(docType, req.query.client_name, year) });
+  } catch (err) {
+    console.error('FINANCE NEXT NUMBER ERROR:', err);
+    res.status(500).json({ error: 'Error generating number' });
+  }
+});
+
+app.get('/api/finance-documents', async (req, res) => {
+  const docType = req.query.doc_type === 'quote' ? 'quote' : 'invoice';
+  try {
+    const result = await pool.query(
+      `SELECT id, doc_type, client_name, doc_number, to_char(doc_date,'YYYY-MM-DD') AS doc_date, reference, deliver_to, items, vat_text, bank_details, subtotal, total, created_at
+       FROM finance_documents WHERE doc_type = $1 ORDER BY doc_date DESC NULLS LAST, id DESC`, [docType]);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('FINANCE DOCUMENTS FETCH ERROR:', err);
+    res.status(500).json({ error: 'Error fetching documents' });
+  }
+});
+
+app.post('/api/finance-documents', async (req, res) => {
+  const b = req.body;
+  const docType = b.doc_type === 'quote' ? 'quote' : 'invoice';
+  const client = String(b.client_name || '').trim();
+  if (!client) return res.status(400).json({ error: 'Please choose or type the client' });
+  const year = parseInt(String(b.doc_date || '').substring(0, 4), 10) || new Date().getFullYear();
+  try {
+    let docNumber = String(b.doc_number || '').trim();
+    if (b.auto_number || !docNumber) docNumber = await nextFinanceNumber(docType, client, year);
+    const dup = await pool.query('SELECT id FROM finance_documents WHERE doc_type = $1 AND doc_number = $2', [docType, docNumber]);
+    if (dup.rows.length) return res.status(409).json({ error: `Number ${docNumber} is already used.` });
+    const t = financeTotals(b.items, b.vat_text);
+    await pool.query('INSERT INTO finance_clients (name, code) SELECT $1::varchar, $2::varchar WHERE NOT EXISTS (SELECT 1 FROM finance_clients WHERE LOWER(name) = LOWER($1::varchar))', [client, financeClientCode(client)]);
+    const result = await pool.query(
+      `INSERT INTO finance_documents (doc_type, client_name, doc_number, doc_date, reference, deliver_to, items, vat_text, bank_details, subtotal, total, created_by)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+       RETURNING id, doc_type, client_name, doc_number, to_char(doc_date,'YYYY-MM-DD') AS doc_date, reference, deliver_to, items, vat_text, bank_details, subtotal, total`,
+      [docType, client, docNumber, b.doc_date || null, b.reference || null, b.deliver_to || null, JSON.stringify(b.items || []),
+       b.vat_text || null, b.bank_details || null, t.subtotal, t.total, b.created_by || null]);
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error('FINANCE DOCUMENT CREATE ERROR:', err);
+    res.status(500).json({ error: 'Error saving document' });
+  }
+});
+
+app.put('/api/finance-documents/:id', async (req, res) => {
+  const b = req.body;
+  const client = String(b.client_name || '').trim();
+  const docNumber = String(b.doc_number || '').trim();
+  if (!client || !docNumber) return res.status(400).json({ error: 'Client and document number are required' });
+  try {
+    const current = await pool.query('SELECT doc_type FROM finance_documents WHERE id = $1', [req.params.id]);
+    if (!current.rows.length) return res.status(404).json({ error: 'Not found' });
+    const docType = current.rows[0].doc_type;
+    const dup = await pool.query('SELECT id FROM finance_documents WHERE doc_type = $1 AND doc_number = $2 AND id <> $3', [docType, docNumber, req.params.id]);
+    if (dup.rows.length) return res.status(409).json({ error: `Number ${docNumber} is already used.` });
+    const t = financeTotals(b.items, b.vat_text);
+    await pool.query('INSERT INTO finance_clients (name, code) SELECT $1::varchar, $2::varchar WHERE NOT EXISTS (SELECT 1 FROM finance_clients WHERE LOWER(name) = LOWER($1::varchar))', [client, financeClientCode(client)]);
+    const result = await pool.query(
+      `UPDATE finance_documents SET client_name=$2, doc_number=$3, doc_date=$4, reference=$5, deliver_to=$6, items=$7, vat_text=$8, bank_details=$9, subtotal=$10, total=$11, updated_at=NOW()
+       WHERE id=$1
+       RETURNING id, doc_type, client_name, doc_number, to_char(doc_date,'YYYY-MM-DD') AS doc_date, reference, deliver_to, items, vat_text, bank_details, subtotal, total`,
+      [req.params.id, client, docNumber, b.doc_date || null, b.reference || null, b.deliver_to || null, JSON.stringify(b.items || []),
+       b.vat_text || null, b.bank_details || null, t.subtotal, t.total]);
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('FINANCE DOCUMENT UPDATE ERROR:', err);
+    res.status(500).json({ error: 'Error saving document' });
+  }
+});
+
+app.delete('/api/finance-documents/:id', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM finance_documents WHERE id = $1', [req.params.id]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('FINANCE DOCUMENT DELETE ERROR:', err);
+    res.status(500).json({ error: 'Error deleting document' });
+  }
+});
+
+ensureFinanceTables().catch(err => console.error('Could not create finance tables:', err));
+
+// ================= RSS IN-HOUSE TRAINING: "WHAT I LEARNED AT RSS" =================
+// Built automatically from each person's weekly task list, plus entries people add by hand.
+// Weekly tasks about the Yes Program, the Yes module or YouTube videos are left out.
+// Makes a short topic from a weekly task sentence: "Deployed the rss online to azure" -> "Azure Deployment".
+// It is a best guess; people can change the topic themselves.
+const TOPIC_ACRONYMS = new Set(['rss','hr','it','sherq','kpi','pdf','api','sql','css','html','vat','iso','ohs','ppe','hira','coid','sars','uif','cv','ui','ux','js','ai','erp','crm','ms','sa']);
+const TOPIC_VERB_NOUNS = {
+  deploy: 'Deployment', deployed: 'Deployment', deploying: 'Deployment',
+  develop: 'Development', developed: 'Development', developing: 'Development',
+  test: 'Testing', tested: 'Testing', testing: 'Testing',
+  design: 'Design', designed: 'Design', designing: 'Design',
+  implement: 'Implementation', implemented: 'Implementation',
+  install: 'Installation', installed: 'Installation',
+  configure: 'Configuration', configured: 'Configuration',
+  migrate: 'Migration', migrated: 'Migration',
+  integrate: 'Integration', integrated: 'Integration',
+  research: 'Research', researched: 'Research',
+  review: 'Review', reviewed: 'Review',
+  plan: 'Planning', planned: 'Planning',
+  train: 'Training', trained: 'Training',
+  present: 'Presentation', presented: 'Presentation',
+  debug: 'Debugging', debugged: 'Debugging', fixed: 'Fixes', fix: 'Fixes'
+};
+const TOPIC_LEAD_VERBS = /^(i\s+)?(worked\s+on|working\s+on|work\s+on|learned|learnt|learning|learn|did|do|done|started|start|continued|continue|completed|complete|finished|finish|created|create|built|build|made|make|updated|update|added|add|set\s?up|setup|wrote|write|written|practiced|practised|practice|studied|study|attended|attend|watched|read|reading|explored|explore|improved|improve|prepared|prepare|worked)\b[\s,:-]*/i;
+const TOPIC_FILLER = new Set(['the','a','an','my','our','their','his','her','its','this','that','these','those','how','to','about','on','of','and','some','new','with','using','in','for','at','by','from','into','up','out','over','also','then','just','online','current','whole','again','too','more','further','still','today','yesterday']);
+function shortTopic(sentence) {
+  const original = String(sentence || '').replace(/\s+/g, ' ').trim().replace(/[.!?;,]+$/, '');
+  if (!original) return '';
+  let rest = original.replace(/^(i\s+)/i, '');
+  let noun = '';
+  const first = (rest.split(/\s+/)[0] || '').toLowerCase();
+  if (TOPIC_VERB_NOUNS[first]) { noun = TOPIC_VERB_NOUNS[first]; rest = rest.split(/\s+/).slice(1).join(' '); }
+  else { rest = rest.replace(TOPIC_LEAD_VERBS, ''); rest = rest.replace(/^(how\s+to\s+|about\s+|the\s+|a\s+|an\s+)+/i, ''); }
+  let words = rest.split(/\s+/).filter(Boolean);
+  if (noun) {
+    // "the rss online to azure": the part after the last "to/on/in/using/with/for/at" is what it was about
+    const idx = words.map(w => w.toLowerCase()).reduce((acc, w, i) => (['to','on','in','using','with','for','at','into'].includes(w) ? i : acc), -1);
+    if (idx >= 0 && idx < words.length - 1) words = words.slice(idx + 1);
+  }
+  words = words.filter(w => !TOPIC_FILLER.has(w.toLowerCase())).slice(0, noun ? 2 : 4);
+  const fmt = w => TOPIC_ACRONYMS.has(w.toLowerCase().replace(/[^a-z]/g, '')) ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+  const parts = words.map(fmt);
+  if (noun) parts.push(noun);
+  const result = parts.join(' ').trim();
+  if (result) return result;
+  return original.split(/\s+/).slice(0, 5).map(fmt).join(' ');
+}
+
+async function ensureLearnedTables() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS rss_learned_entries (
+      id SERIAL PRIMARY KEY,
+      employee_id INTEGER NOT NULL,
+      topic TEXT NOT NULL,
+      learned TEXT,
+      learned_date DATE,
+      source VARCHAR(10) NOT NULL DEFAULT 'manual',
+      source_key TEXT,
+      training_id INTEGER,
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW()
+    )`);
+  await pool.query(`ALTER TABLE rss_learned_entries ADD COLUMN IF NOT EXISTS source_text TEXT`);
+  await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS rss_learned_source_uq ON rss_learned_entries (employee_id, source_key) WHERE source_key IS NOT NULL`);
+}
+
+function learnedNorm(s) { return String(s == null ? '' : s).toLowerCase().replace(/\s+/g, ' ').trim(); }
+const LEARNED_EXCLUDE = /youtube|you\s*tube|yes\s*(program|programme|module)/i;
+const LEARNED_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+
+// Copies the weekly task lists of one person into their learned list. Safe to run again and again:
+// the same task in the same week is never added twice, and nothing the person typed is ever overwritten.
+async function syncLearnedFromWeekly(employeeId) {
+  const trainings = await pool.query(
+    `SELECT id, extra_data FROM trainings WHERE category = 'RSS In-House Training' AND created_by::text = $1::text`, [String(employeeId)]);
+  const liveIds = [];
+  const wanted = [];
+  for (const t of trainings.rows) {
+    liveIds.push(t.id);
+    const weekly = t.extra_data && t.extra_data.weekly_tasks;
+    const desired = new Map();
+    if (weekly && weekly.week_start && weekly.days) {
+      const start = new Date(String(weekly.week_start).split('T')[0] + 'T12:00:00Z');
+      LEARNED_DAYS.forEach((day, idx) => {
+        const d = new Date(start); d.setUTCDate(start.getUTCDate() + idx);
+        const ymd = d.toISOString().split('T')[0];
+        (Array.isArray(weekly.days[day]) ? weekly.days[day] : []).forEach(text => {
+          const topic = String(text || '').trim();
+          if (!topic || LEARNED_EXCLUDE.test(topic)) return;
+          desired.set(`${t.id}|${day}|${learnedNorm(topic)}`, { topic, ymd, key: `${t.id}|${day}|${learnedNorm(topic)}`, trainingId: t.id });
+        });
+      });
+    }
+    // A task that was removed from the weekly list also disappears here, unless the person already wrote what they learned
+    await pool.query(
+      `DELETE FROM rss_learned_entries WHERE employee_id = $1 AND source = 'weekly' AND training_id = $2 AND COALESCE(TRIM(learned),'') = '' AND NOT (source_key = ANY($3::text[]))`,
+      [employeeId, t.id, Array.from(desired.keys())]);
+    desired.forEach(v => wanted.push(v));
+  }
+  await pool.query(
+    `DELETE FROM rss_learned_entries WHERE employee_id = $1 AND source = 'weekly' AND COALESCE(TRIM(learned),'') = '' AND NOT (training_id = ANY($2::int[]))`,
+    [employeeId, liveIds]);
+
+  // Oldest first, so when the same topic comes up again later, the first time stays and the repeat is not added
+  wanted.sort((x, y) => x.ymd.localeCompare(y.ymd) || x.key.localeCompare(y.key));
+  for (const v of wanted) {
+    const short = shortTopic(v.topic);
+    const exists = await pool.query(
+      `SELECT 1 FROM rss_learned_entries WHERE employee_id = $1 AND (source_key = $2 OR (source <> 'hidden' AND (LOWER(REGEXP_REPLACE(TRIM(topic), '\\s+', ' ', 'g')) = $3 OR LOWER(REGEXP_REPLACE(TRIM(topic), '\\s+', ' ', 'g')) = $4))) LIMIT 1`,
+      [employeeId, v.key, learnedNorm(short), learnedNorm(v.topic)]);
+    if (!exists.rows.length) {
+      await pool.query(
+        `INSERT INTO rss_learned_entries (employee_id, topic, source_text, learned_date, source, source_key, training_id) VALUES ($1,$2,$3,$4,'weekly',$5,$6)
+         ON CONFLICT DO NOTHING`, [employeeId, short, v.topic, v.ymd, v.key, v.trainingId]);
+    }
+  }
+
+  // Entries made by older versions: keep the long sentence as the source and give the topic a short name
+  // (only when the topic was never changed by the person), and drop anything about the Yes Program / Yes module / YouTube.
+  const mine = await pool.query(`SELECT id, topic, source_text, source_key FROM rss_learned_entries WHERE employee_id = $1 AND source = 'weekly'`, [employeeId]);
+  for (const r of mine.rows) {
+    if (LEARNED_EXCLUDE.test(r.source_text || r.topic)) {
+      await pool.query('DELETE FROM rss_learned_entries WHERE id = $1', [r.id]);
+    } else if (r.source_text == null) {
+      const unchanged = learnedNorm(r.topic) === learnedNorm(String(r.source_key || '').split('|').slice(2).join('|'));
+      await pool.query('UPDATE rss_learned_entries SET source_text = $2, topic = $3 WHERE id = $1', [r.id, r.topic, unchanged ? shortTopic(r.topic) : r.topic]);
+    }
+  }
+
+  // Clean up repeats that already exist: the same topic is shown once. Anything the person typed is never removed.
+  const all = await pool.query(
+    `SELECT id, topic, learned, source, to_char(learned_date,'YYYY-MM-DD') AS d FROM rss_learned_entries WHERE employee_id = $1 AND source <> 'hidden' ORDER BY learned_date ASC NULLS LAST, id ASC`, [employeeId]);
+  const groups = new Map();
+  all.rows.forEach(r => { const k = learnedNorm(r.topic); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(r); });
+  for (const rows of groups.values()) {
+    if (rows.length < 2) continue;
+    const keeper = rows.find(r => learnedNorm(r.learned)) || rows[0];
+    for (const r of rows) {
+      if (r.id !== keeper.id && r.source === 'weekly' && !learnedNorm(r.learned)) {
+        await pool.query('DELETE FROM rss_learned_entries WHERE id = $1', [r.id]);
+      }
+    }
+  }
+}
+
+const LEARNED_COLS = `id, employee_id, topic, source_text, learned, to_char(learned_date,'YYYY-MM-DD') AS learned_date, source`;
+
+app.get('/api/learned-entries', async (req, res) => {
+  const { employee_id } = req.query;
+  if (!employee_id) return res.status(400).json({ error: 'employee_id is required' });
+  try {
+    await syncLearnedFromWeekly(employee_id);
+    const result = await pool.query(
+      `SELECT ${LEARNED_COLS} FROM rss_learned_entries WHERE employee_id = $1 AND source <> 'hidden' ORDER BY learned_date DESC NULLS LAST, id DESC`, [employee_id]);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('LEARNED ENTRIES FETCH ERROR:', err);
+    res.status(500).json({ error: 'Error fetching learned entries' });
+  }
+});
+
+// The same topic is shown once per person: a second entry with the same topic is refused (click the existing one to add more).
+async function learnedIsDuplicate(employeeId, topic, learned, ignoreId) {
+  const r = await pool.query(
+    `SELECT 1 FROM rss_learned_entries WHERE employee_id = $1 AND source <> 'hidden' AND LOWER(REGEXP_REPLACE(TRIM(topic), '\\s+', ' ', 'g')) = $2 AND ($3::int IS NULL OR id <> $3) LIMIT 1`,
+    [employeeId, learnedNorm(topic), ignoreId || null]);
+  return r.rows.length > 0;
+}
+
+app.post('/api/learned-entries', async (req, res) => {
+  const { employee_id, topic, learned, learned_date } = req.body;
+  if (!employee_id || !String(topic || '').trim()) return res.status(400).json({ error: 'Topic is required' });
+  try {
+    if (await learnedIsDuplicate(employee_id, topic, learned)) {
+      return res.status(409).json({ error: 'This topic is already in your Learning Log. Click it there to add more to "What I learned".' });
+    }
+    const result = await pool.query(
+      `INSERT INTO rss_learned_entries (employee_id, topic, learned, learned_date, source) VALUES ($1,$2,$3,$4,'manual') RETURNING ${LEARNED_COLS}`,
+      [employee_id, String(topic).trim(), String(learned || '').trim() || null, learned_date || null]);
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error('LEARNED ENTRY CREATE ERROR:', err);
+    res.status(500).json({ error: 'Error saving entry' });
+  }
+});
+
+app.patch('/api/learned-entries/:id', async (req, res) => {
+  const { topic, learned, learned_date } = req.body;
+  if (!String(topic || '').trim()) return res.status(400).json({ error: 'Topic is required' });
+  try {
+    const cur = await pool.query('SELECT employee_id FROM rss_learned_entries WHERE id = $1', [req.params.id]);
+    if (!cur.rows.length) return res.status(404).json({ error: 'Not found' });
+    if (await learnedIsDuplicate(cur.rows[0].employee_id, topic, learned, req.params.id)) {
+      return res.status(409).json({ error: 'This topic is already in your Learning Log. Click it there to add more to "What I learned".' });
+    }
+    const result = await pool.query(
+      `UPDATE rss_learned_entries SET topic=$2, learned=$3, learned_date=$4, updated_at=NOW() WHERE id=$1 RETURNING ${LEARNED_COLS}`,
+      [req.params.id, String(topic).trim(), String(learned || '').trim() || null, learned_date || null]);
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('LEARNED ENTRY UPDATE ERROR:', err);
+    res.status(500).json({ error: 'Error saving entry' });
+  }
+});
+
+app.delete('/api/learned-entries/:id', async (req, res) => {
+  try {
+    // An entry that came from the weekly list is only hidden, otherwise the next sync would add it again
+    await pool.query(`UPDATE rss_learned_entries SET source = 'hidden' WHERE id = $1 AND source = 'weekly'`, [req.params.id]);
+    await pool.query(`DELETE FROM rss_learned_entries WHERE id = $1 AND source = 'manual'`, [req.params.id]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('LEARNED ENTRY DELETE ERROR:', err);
+    res.status(500).json({ error: 'Error deleting entry' });
+  }
+});
+
+ensureLearnedTables().catch(err => console.error('Could not create learned entries table:', err));
 
 // Start Server
 app.listen(PORT, () => {

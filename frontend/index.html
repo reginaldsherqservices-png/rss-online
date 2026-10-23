@@ -391,8 +391,12 @@
                     </div>
                 </div>
 
-                <div id="financeSection" class="nav-item" style="display: none; color: #fff; font-weight: bold;">
+                <div id="financeSection" class="nav-item" onclick="toggleFinanceMenu()" style="display: none; color: #fff; font-weight: bold;">
                     <i class="fas fa-wallet"></i> Finance 
+                </div>
+                <div id="financeSubmenu" style="display: none; padding-left: 14px;">
+                    <div class="nav-item" onclick="showFinanceView('invoice')" style="font-size: 13px;">Invoices</div>
+                    <div class="nav-item" onclick="showFinanceView('quote')" style="font-size: 13px;">Quotes</div>
                 </div>
 
                 <div id="rssTrainingSection" class="nav-item" onclick="toggleRssTrainingMenu()" style="display: none; color: #fff; font-weight: bold;">
@@ -615,6 +619,38 @@
                     </div>
                 </div>
 
+                <!-- FINANCE: INVOICE / QUOTE REGISTER -->
+                <div id="financeView" style="display: none;">
+                    <div class="wf-header">
+                        <div>
+                            <h1 id="financeTitle">Invoices</h1>
+                            <p id="financeSub">Register of all invoices. Filter by client, month or number</p>
+                        </div>
+                        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                            <button class="wf-btn-primary" onclick="openFinanceSettings()"><i class="fas fa-image"></i> Logo &amp; Bank Details</button>
+                            <button class="wf-btn-primary" onclick="openFinanceClient(null)"><i class="fas fa-user-plus"></i> New Client</button>
+                            <button class="wf-btn-primary" id="financeNewBtn" onclick="openFinanceDoc(null)"><i class="fas fa-plus"></i> New Invoice</button>
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px; align-items:center;">
+                        <select id="finFilterClient" onchange="renderFinanceRegister()" style="padding:9px 11px; border:1.5px solid var(--line); border-radius:8px; font-size:13.5px; min-width:200px;"></select>
+                        <input type="month" id="finFilterMonth" onchange="renderFinanceRegister()" title="Month" style="padding:8px 11px; border:1.5px solid var(--line); border-radius:8px; font-size:13.5px;">
+                        <input type="text" id="finFilterSearch" oninput="renderFinanceRegister()" placeholder="Search number or reference" style="padding:9px 11px; border:1.5px solid var(--line); border-radius:8px; font-size:13.5px; min-width:220px;">
+                        <button class="wf-btn-ghost" onclick="finClearFilters()">Clear filters</button>
+                        <button class="wf-btn-ghost" id="finEditClientBtn" style="display:none;" onclick="finEditSelectedClient()"><i class="fas fa-pen"></i> Edit this client</button>
+                    </div>
+                    <div class="wf-table-wrap">
+                        <table class="wf-table">
+                            <thead>
+                                <tr><th>Number</th><th>Client</th><th>Date</th><th>Reference</th><th style="text-align:right;">Total</th><th style="width: 150px;"></th></tr>
+                            </thead>
+                            <tbody id="financeBody"></tbody>
+                        </table>
+                        <div class="wf-empty" id="financeEmpty" style="display: none;"></div>
+                    </div>
+                    <div id="financeSummary" style="margin-top:10px; font-size:13px; color:var(--ink-soft);"></div>
+                </div>
+
                 <!-- RSS TRAINING REGISTER VIEW -->
                 <div id="rssTrainingView" style="display: none;">
                     <div class="wf-header">
@@ -801,6 +837,7 @@
                         </button>
 
                         <div id="trainingCategoriesContainer"></div>
+
                     </div>
                 </div>
 
@@ -1549,6 +1586,141 @@
         </div>
     </div>
 
+    <!-- FINANCE: INVOICE / QUOTE EDITOR -->
+    <div class="wf-modal-overlay" id="financeDocModal">
+        <div class="wf-modal" style="max-width: 860px;">
+            <div class="wf-modal-header">
+                <h2 id="financeDocHeading">New Invoice</h2>
+                <button class="wf-modal-close" onclick="closeFinanceDoc()">✕</button>
+            </div>
+            <div class="wf-modal-body">
+                <div class="wf-field">
+                    <label>Client</label>
+                    <select id="fin_client" onchange="finClientChanged()"></select>
+                </div>
+                <div class="wf-field">
+                    <label>Date</label>
+                    <input type="date" id="fin_date" onchange="finSuggestNumber()">
+                </div>
+                <div class="wf-field full-width">
+                    <label id="fin_number_label">Invoice Number</label>
+                    <div style="display:flex; gap:16px; align-items:center; margin-bottom:6px; font-size:13px;">
+                        <label style="display:flex; gap:6px; align-items:center; margin:0; font-weight:600;"><input type="radio" name="finNumMode" id="fin_num_auto" value="auto" checked onchange="finNumberModeChanged()" style="width:auto;"> Generate automatically</label>
+                        <label style="display:flex; gap:6px; align-items:center; margin:0; font-weight:600;"><input type="radio" name="finNumMode" id="fin_num_manual" value="manual" onchange="finNumberModeChanged()" style="width:auto;"> I'll type it myself (for old ones)</label>
+                    </div>
+                    <input type="text" id="fin_number" readonly style="background:#F1F5F9;">
+                </div>
+                <div class="wf-field full-width">
+                    <label>Deliver to (name, address, VAT number)</label>
+                    <textarea id="fin_deliver" rows="5"></textarea>
+                </div>
+                <div class="wf-field full-width">
+                    <label>Your Reference</label>
+                    <input type="text" id="fin_reference">
+                </div>
+                <div class="wf-field full-width">
+                    <label>Items</label>
+                    <div id="finItems"></div>
+                    <button type="button" class="wf-btn-secondary" style="margin-top:8px;" onclick="finAddItem()"><i class="fas fa-plus"></i> Add line</button>
+                </div>
+                <div class="wf-field">
+                    <label>VAT amount (leave empty for N/A)</label>
+                    <input type="text" id="fin_vat" placeholder="N/A" oninput="finRecalc()">
+                </div>
+                <div class="wf-field" style="text-align:right; font-size:14px; line-height:1.7; align-self:end;">
+                    Sub Total: <b id="fin_sub_view">R 0.00</b><br>Total: <b id="fin_total_view">R 0.00</b>
+                </div>
+                <div class="wf-field full-width">
+                    <label>Bank details &amp; note (shown at the bottom)</label>
+                    <textarea id="fin_bank" rows="5"></textarea>
+                </div>
+            </div>
+            <div class="wf-modal-footer">
+                <button class="wf-btn-secondary" onclick="closeFinanceDoc()">Cancel</button>
+                <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end;">
+                    <button class="wf-btn-secondary" onclick="finPrintForm()"><i class="fas fa-print"></i> Print</button>
+                    <button class="wf-btn-secondary" onclick="finDownloadForm()"><i class="fas fa-download"></i> Download PDF</button>
+                    <button class="wf-btn-primary" id="finSaveBtn" onclick="saveFinanceDoc()">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FINANCE: CLIENT (add / edit) -->
+    <div class="wf-modal-overlay" id="financeClientModal">
+        <div class="wf-modal" style="max-width: 480px;">
+            <div class="wf-modal-header"><h2 id="finClientHeading">New Client</h2><button class="wf-modal-close" onclick="closeFinanceClient()">✕</button></div>
+            <div class="wf-modal-body" style="grid-template-columns: 1fr;">
+                <div class="wf-field"><label>Client name</label><input type="text" id="fin_cl_name" placeholder="e.g. Claremont" oninput="finClientNameTyped()"></div>
+                <div class="wf-field"><label>Letters used in the number (you can change them)</label><input type="text" id="fin_cl_code" maxlength="10" style="text-transform:uppercase;" oninput="finClientCodeTyped()"></div>
+                <div class="wf-field"><label>Last invoice number already used (leave empty if none)</label><input type="number" id="fin_cl_inv" min="0" placeholder="e.g. 105" oninput="finClientPreview()"></div>
+                <div class="wf-field"><label>Last quote number already used (leave empty if none)</label><input type="number" id="fin_cl_quo" min="0" placeholder="e.g. 102" oninput="finClientPreview()"></div>
+                <div id="fin_cl_preview" style="font-size:13px; color:var(--ink-soft); line-height:1.6;"></div>
+            </div>
+            <div class="wf-modal-footer" style="justify-content:flex-end;">
+                <button class="wf-btn-secondary" onclick="closeFinanceClient()">Cancel</button>
+                <button class="wf-btn-primary" onclick="saveFinanceClient()">Save Client</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- FINANCE: LOGO & BANK DETAILS -->
+    <div class="wf-modal-overlay" id="financeSettingsModal">
+        <div class="wf-modal" style="max-width: 520px;">
+            <div class="wf-modal-header"><h2>Logo &amp; Bank Details</h2><button class="wf-modal-close" onclick="closeFinanceSettings()">✕</button></div>
+            <div class="wf-modal-body" style="grid-template-columns: 1fr;">
+                <div class="wf-field">
+                    <label>Your logo (shows on every invoice and quote)</label>
+                    <div style="border:1.5px dashed var(--line); border-radius:8px; padding:10px; text-align:center; margin-bottom:8px;"><img id="fin_logo_preview" style="max-width:100%; max-height:130px;" alt=""></div>
+                    <input type="file" id="fin_logo_file" accept="image/png,image/jpeg" onchange="finLogoPicked(this)">
+                </div>
+                <div class="wf-field">
+                    <label>Default bank details &amp; note (new invoices and quotes start with this)</label>
+                    <textarea id="fin_settings_bank" rows="6"></textarea>
+                </div>
+            </div>
+            <div class="wf-modal-footer" style="justify-content:flex-end;">
+                <button class="wf-btn-secondary" onclick="closeFinanceSettings()">Cancel</button>
+                <button class="wf-btn-primary" onclick="saveFinanceSettings()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- WHAT I LEARNED: ADD / EDIT ENTRY -->
+    <div class="wf-modal-overlay" id="learnedModalOverlay">
+        <div class="wf-modal" style="max-width: 560px;">
+            <div class="wf-modal-header"><h2 id="learnedModalTitle">Add Entry</h2><button class="wf-modal-close" onclick="closeLearnedModal()">✕</button></div>
+            <div class="wf-modal-body" style="grid-template-columns: 1fr;">
+                <div class="wf-field"><label>Topic</label><input type="text" id="ln_topic" placeholder="e.g. Yes module"></div>
+                <div class="wf-field"><label>Date</label><input type="date" id="ln_date"></div>
+                <div class="wf-field"><label>What I learned</label><textarea id="ln_learned" rows="5" placeholder="Write what you learned about this topic"></textarea></div>
+            </div>
+            <div class="wf-modal-footer">
+                <button class="wf-btn-secondary" id="learnedDeleteBtn" style="color:#DC2626; display:none;" onclick="deleteLearnedFromModal()">Delete</button>
+                <div style="display:flex; gap:10px; margin-left:auto;">
+                    <button class="wf-btn-secondary" onclick="closeLearnedModal()">Cancel</button>
+                    <button class="wf-btn-primary" id="learnedSaveBtn" onclick="saveLearnedEntry()">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- WHAT I LEARNED: TOPIC REPORT -->
+    <div class="wf-modal-overlay" id="learnedReportOverlay">
+        <div class="wf-modal" style="max-width: 900px;">
+            <div class="wf-modal-header"><h2>Topic Report</h2><button class="wf-modal-close" onclick="closeLearnedReport()">✕</button></div>
+            <div style="padding: 14px 24px 0; display:flex; gap:12px; flex-wrap:wrap; align-items:end;">
+                <div class="wf-field"><label>From (optional)</label><input type="date" id="lr_from" onchange="renderLearnedReport()"></div>
+                <div class="wf-field"><label>To (optional)</label><input type="date" id="lr_to" onchange="renderLearnedReport()"></div>
+            </div>
+            <div class="wf-modal-body" style="grid-template-columns: 1fr; overflow-x:auto;" id="learnedReportBody"></div>
+            <div class="wf-modal-footer" style="justify-content:flex-end;">
+                <button class="wf-btn-secondary" onclick="closeLearnedReport()">Close</button>
+                <button class="wf-btn-primary" onclick="printLearnedReport()"><i class="fas fa-print"></i> Print / Save as PDF</button>
+            </div>
+        </div>
+    </div>
+
     <!-- VIEW SUBMITTED REPORT MODAL -->
     <div class="wf-modal-overlay" id="reportViewModalOverlay">
         <div class="wf-modal" style="max-width: 820px;">
@@ -1809,6 +1981,7 @@
             document.getElementById('reportsSection').style.display = 'block';
             document.getElementById('reportsTemplatesNavItem').style.display = isManagement ? 'block' : 'none';
             document.getElementById('reportsSubmenu').style.display = 'none';
+            document.getElementById('financeSubmenu').style.display = 'none';
 
             // Reset submenus so leftover open/closed state from a previous role doesn't leak through
             document.getElementById('hrSubmenu').style.display = 'none';
@@ -1911,6 +2084,7 @@
             document.getElementById('reportsListView').style.display = 'none';
             document.getElementById('reportsMonthlyView').style.display = 'none';
             document.getElementById('reportsTemplatesView').style.display = 'none';
+            document.getElementById('financeView').style.display = 'none';
             document.getElementById('inboxListView').style.display = 'block';
             document.getElementById('inboxDetailView').style.display = 'none';
         }
@@ -2151,6 +2325,652 @@
         }
         function rptIsManagement() {
             return currentUserRole === 'admin' || currentUserRole === 'manager';
+        }
+
+        // ================= FINANCE: INVOICE & QUOTE REGISTERS =================
+        const FIN_DEFAULT_LOGO = 'data:image/jpeg;base64,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';
+        const FIN_DEFAULT_BANK = "First National Bank, South Africa\nReginald`s SHERQ Services\nAccount Number: 62592613668\nBranch Code: 255355\nPlease note: Use Invoice number as reference, when making payments.";
+        let finMode = 'invoice';
+        let finDocs = [];
+        let finClients = [];
+        let finSettings = {};
+        let finEditingId = null;
+        let finCodeTouched = false;
+        let finClientEditingId = null;
+        let finClientSelectAfter = false;
+        let finNumberTimer = null;
+
+        function toggleFinanceMenu() {
+            const submenu = document.getElementById('financeSubmenu');
+            submenu.style.display = submenu.style.display === 'block' ? 'none' : 'block';
+        }
+
+        function finLabel() { return finMode === 'quote' ? 'Quote' : 'Invoice'; }
+        function finCode(name) {
+            const words = String(name || '').toUpperCase().replace(/[^A-Z0-9 ]/g, ' ').split(/\s+/).filter(Boolean);
+            if (!words.length) return '';
+            if (words.length === 1) return words[0].substring(0, 2);
+            return words.slice(0, 3).map(w => w[0]).join('');
+        }
+        function finMoney(n) {
+            const v = (Math.round((parseFloat(n) || 0) * 100) / 100).toFixed(2).split('.');
+            return 'R ' + v[0].replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + '.' + v[1];
+        }
+        function finNum(v) { const n = parseFloat(String(v == null ? '' : v).replace(/[^0-9.\-]/g, '')); return isNaN(n) ? 0 : n; }
+        function finTotals(items, vatText) {
+            const subtotal = (items || []).reduce((s, it) => s + finNum(it.quantity) * finNum(it.unit_price), 0);
+            const vat = /\d/.test(String(vatText || '')) ? finNum(vatText) : 0;
+            return { subtotal, total: subtotal + vat };
+        }
+        function finLongDate(ymd) {
+            if (!ymd) return '';
+            return new Date(String(ymd).split('T')[0] + 'T12:00:00').toLocaleDateString('en-ZA', { day: 'numeric', month: 'long', year: 'numeric' });
+        }
+
+        async function showFinanceView(mode) {
+            finMode = mode === 'quote' ? 'quote' : 'invoice';
+            hideAllContentViews();
+            document.getElementById('financeView').style.display = 'block';
+            document.getElementById('financeTitle').innerText = finMode === 'quote' ? 'Quotes' : 'Invoices';
+            document.getElementById('financeSub').innerText = `Register of all ${finMode === 'quote' ? 'quotes' : 'invoices'}. Filter by client, month or number`;
+            document.getElementById('financeNewBtn').innerHTML = `<i class="fas fa-plus"></i> New ${finLabel()}`;
+            document.getElementById('finFilterClient').value = '';
+            document.getElementById('finFilterMonth').value = '';
+            document.getElementById('finFilterSearch').value = '';
+            await loadFinance();
+        }
+
+        async function loadFinance() {
+            try {
+                const [d, c, s] = await Promise.all([
+                    rptFetch(`${API_BASE}/api/finance-documents?doc_type=${finMode}`, { headers: API_HEADERS }),
+                    rptFetch(`${API_BASE}/api/finance/clients`, { headers: API_HEADERS }),
+                    rptFetch(`${API_BASE}/api/finance/settings`, { headers: API_HEADERS })
+                ]);
+                finDocs = d.ok ? await d.json() : [];
+                finClients = c.ok ? await c.json() : [];
+                finSettings = s.ok ? await s.json() : {};
+            } catch (err) {
+                console.error('Error loading finance data:', err);
+                rptToast('Could not load the register. Please check your connection and try again.', 'error');
+            }
+            finFillClientFilter();
+            renderFinanceRegister();
+        }
+
+        function finFillClientFilter() {
+            const sel = document.getElementById('finFilterClient');
+            const keep = sel.value;
+            sel.innerHTML = '<option value="">All clients</option>' + finClients.map(c => `<option value="${rptEsc(c.name)}">${rptEsc(c.name)}</option>`).join('');
+            sel.value = finClients.some(c => c.name === keep) ? keep : '';
+        }
+
+        function finClearFilters() {
+            document.getElementById('finFilterClient').value = '';
+            document.getElementById('finFilterMonth').value = '';
+            document.getElementById('finFilterSearch').value = '';
+            renderFinanceRegister();
+        }
+
+        function renderFinanceRegister() {
+            const client = document.getElementById('finFilterClient').value;
+            const month = document.getElementById('finFilterMonth').value;
+            const q = document.getElementById('finFilterSearch').value.trim().toLowerCase();
+            document.getElementById('finEditClientBtn').style.display = client ? 'inline-block' : 'none';
+            const list = finDocs.filter(d =>
+                (!client || d.client_name === client) &&
+                (!month || String(d.doc_date || '').startsWith(month)) &&
+                (!q || String(d.doc_number).toLowerCase().includes(q) || String(d.reference || '').toLowerCase().includes(q)));
+            const body = document.getElementById('financeBody');
+            const empty = document.getElementById('financeEmpty');
+            body.innerHTML = list.map(d => `
+                <tr onclick="openFinanceDoc(${d.id})">
+                    <td><b>${rptEsc(d.doc_number)}</b></td>
+                    <td>${rptEsc(d.client_name)}</td>
+                    <td>${rptEsc(rptFormatDate(d.doc_date))}</td>
+                    <td>${rptEsc(d.reference || '—')}</td>
+                    <td style="text-align:right;">${finMoney(d.total)}</td>
+                    <td style="white-space:nowrap;">
+                        <button class="wf-action-btn" title="Print" onclick="event.stopPropagation(); finPrintSaved(${d.id})"><i class="fas fa-print"></i></button>
+                        <button class="wf-action-btn" title="Download PDF" onclick="event.stopPropagation(); finDownloadSaved(${d.id})"><i class="fas fa-download"></i></button>
+                        <button class="wf-action-btn delete" title="Delete" onclick="event.stopPropagation(); deleteFinanceDoc(${d.id})"><i class="fas fa-trash"></i></button>
+                    </td>
+                </tr>`).join('');
+            empty.style.display = list.length ? 'none' : 'block';
+            empty.innerText = finDocs.length ? 'Nothing matches these filters.' : `No ${finMode === 'quote' ? 'quotes' : 'invoices'} yet. Click "New ${finLabel()}" to create the first one.`;
+            const sum = list.reduce((s, d) => s + (parseFloat(d.total) || 0), 0);
+            document.getElementById('financeSummary').innerText = list.length ? `${list.length} ${finMode === 'quote' ? 'quote' : 'invoice'}${list.length === 1 ? '' : 's'} shown · Total ${finMoney(sum)}` : '';
+        }
+
+        function finEditSelectedClient() {
+            const name = document.getElementById('finFilterClient').value;
+            const c = finClients.find(x => x.name === name);
+            if (c) openFinanceClient(c);
+        }
+
+        // ---------- Client (add / edit) ----------
+        function openFinanceClient(client, selectAfter) {
+            finClientEditingId = client ? client.id : null;
+            finClientSelectAfter = !!selectAfter;
+            finCodeTouched = !!client;
+            document.getElementById('finClientHeading').innerText = client ? 'Edit Client' : 'New Client';
+            document.getElementById('fin_cl_name').value = client ? client.name : '';
+            document.getElementById('fin_cl_name').readOnly = !!client;
+            document.getElementById('fin_cl_code').value = client ? (client.code || '') : '';
+            document.getElementById('fin_cl_inv').value = client && client.invoice_last > 100 ? client.invoice_last : (client ? client.invoice_last : '');
+            document.getElementById('fin_cl_quo').value = client ? client.quote_last : '';
+            document.getElementById('financeClientModal').classList.add('open');
+            finClientPreview();
+            setTimeout(() => document.getElementById('fin_cl_name').focus(), 50);
+        }
+        function closeFinanceClient() { document.getElementById('financeClientModal').classList.remove('open'); }
+        function finClientNameTyped() {
+            if (!finCodeTouched) document.getElementById('fin_cl_code').value = finCode(document.getElementById('fin_cl_name').value);
+            finClientPreview();
+        }
+        function finClientCodeTyped() { finCodeTouched = true; finClientPreview(); }
+        function finClientPreview() {
+            const code = (document.getElementById('fin_cl_code').value || '').toUpperCase().replace(/[^A-Z0-9]/g, '') || 'XX';
+            const year = new Date().getFullYear();
+            const inv = document.getElementById('fin_cl_inv').value;
+            const quo = document.getElementById('fin_cl_quo').value;
+            const ni = (inv === '' ? 100 : parseInt(inv, 10) || 0) + 1;
+            const nq = (quo === '' ? 100 : parseInt(quo, 10) || 0) + 1;
+            document.getElementById('fin_cl_preview').innerHTML = `Next invoice: <b>INV-${rptEsc(code)}${ni}-${year}</b><br>Next quote: <b>QUO-${rptEsc(code)}${nq}-${year}</b>`;
+        }
+        async function saveFinanceClient() {
+            const name = document.getElementById('fin_cl_name').value.trim();
+            if (!name) { rptToast('Please type the client name.', 'warn'); return; }
+            const payload = {
+                name,
+                code: document.getElementById('fin_cl_code').value,
+                invoice_last: document.getElementById('fin_cl_inv').value === '' ? 100 : document.getElementById('fin_cl_inv').value,
+                quote_last: document.getElementById('fin_cl_quo').value === '' ? 100 : document.getElementById('fin_cl_quo').value
+            };
+            try {
+                const res = await rptFetch(`${API_BASE}/api/finance/clients`, { method: 'POST', headers: { ...API_HEADERS, 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (!res.ok) throw new Error('save failed');
+                const saved = await res.json();
+                const cr = await rptFetch(`${API_BASE}/api/finance/clients`, { headers: API_HEADERS });
+                finClients = cr.ok ? await cr.json() : finClients;
+                closeFinanceClient();
+                finFillClientFilter();
+                renderFinanceRegister();
+                if (finClientSelectAfter) { finFillDocClients(saved.name); finSuggestNumber(); }
+                rptToast('Client saved.', 'success');
+            } catch (err) {
+                console.error(err);
+                rptToast('Could not save the client. Please try again.', 'error');
+            }
+        }
+
+        // ---------- Logo & bank details ----------
+        function openFinanceSettings() {
+            document.getElementById('fin_logo_preview').src = finSettings.logo || FIN_DEFAULT_LOGO;
+            document.getElementById('fin_settings_bank').value = finSettings.bank_details || FIN_DEFAULT_BANK;
+            document.getElementById('fin_logo_file').value = '';
+            document.getElementById('financeSettingsModal').classList.add('open');
+        }
+        function closeFinanceSettings() { document.getElementById('financeSettingsModal').classList.remove('open'); }
+        function finLogoPicked(input) {
+            const file = input.files && input.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = () => {
+                const img = new Image();
+                img.onload = () => {
+                    const scale = Math.min(1, 700 / img.width);
+                    const canvas = document.createElement('canvas');
+                    canvas.width = Math.round(img.width * scale);
+                    canvas.height = Math.round(img.height * scale);
+                    const ctx = canvas.getContext('2d');
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    document.getElementById('fin_logo_preview').src = canvas.toDataURL('image/jpeg', 0.9);
+                };
+                img.src = reader.result;
+            };
+            reader.readAsDataURL(file);
+        }
+        async function saveFinanceSettings() {
+            const logo = document.getElementById('fin_logo_preview').src;
+            const payload = { bank_details: document.getElementById('fin_settings_bank').value };
+            if (logo && logo.startsWith('data:')) payload.logo = logo;
+            try {
+                const res = await rptFetch(`${API_BASE}/api/finance/settings`, { method: 'PUT', headers: { ...API_HEADERS, 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (!res.ok) throw new Error('save failed');
+                finSettings = { ...finSettings, ...payload };
+                closeFinanceSettings();
+                rptToast('Logo and bank details saved.', 'success');
+            } catch (err) {
+                console.error(err);
+                rptToast('Could not save. Please try again.', 'error');
+            }
+        }
+
+        // ---------- Invoice / quote editor ----------
+        function finFillDocClients(selected) {
+            const sel = document.getElementById('fin_client');
+            sel.innerHTML = '<option value="">Choose a client…</option>' +
+                finClients.map(c => `<option value="${rptEsc(c.name)}">${rptEsc(c.name)}</option>`).join('') +
+                '<option value="__new__">+ Add new client…</option>';
+            sel.value = selected || '';
+            sel.dataset.prev = sel.value;
+        }
+
+        function openFinanceDoc(id) {
+            const d = id ? finDocs.find(x => x.id === id) : null;
+            finEditingId = d ? d.id : null;
+            const label = finLabel();
+            document.getElementById('financeDocHeading').innerText = d ? `${label} ${d.doc_number}` : `New ${label}`;
+            document.getElementById('fin_number_label').innerText = `${label} Number`;
+            const filterClient = document.getElementById('finFilterClient').value;
+            finFillDocClients(d ? d.client_name : filterClient);
+            document.getElementById('fin_date').value = d ? d.doc_date : rptToday();
+            document.getElementById('fin_deliver').value = d ? (d.deliver_to || '') : '';
+            document.getElementById('fin_reference').value = d ? (d.reference || '') : '';
+            document.getElementById('fin_vat').value = d ? (d.vat_text || '') : '';
+            document.getElementById('fin_bank').value = d ? (d.bank_details || '') : (finSettings.bank_details || FIN_DEFAULT_BANK);
+            document.getElementById('finItems').innerHTML = '';
+            const items = d && Array.isArray(d.items) && d.items.length ? d.items : [{}];
+            items.forEach(it => finAddItem(it));
+            document.getElementById(d ? 'fin_num_manual' : 'fin_num_auto').checked = true;
+            document.getElementById('fin_number').value = d ? d.doc_number : '';
+            finNumberModeChanged(true);
+            finRecalc();
+            document.getElementById('financeDocModal').classList.add('open');
+            if (!d) finSuggestNumber();
+        }
+        function closeFinanceDoc() { document.getElementById('financeDocModal').classList.remove('open'); }
+
+        function finClientChanged() {
+            const sel = document.getElementById('fin_client');
+            if (sel.value === '__new__') {
+                sel.value = sel.dataset.prev || '';
+                openFinanceClient(null, true);
+                return;
+            }
+            sel.dataset.prev = sel.value;
+            const c = finClients.find(x => x.name === sel.value);
+            finSuggestNumber();
+        }
+        function finIsAuto() { return document.getElementById('fin_num_auto').checked; }
+        function finNumberModeChanged(keepValue) {
+            const input = document.getElementById('fin_number');
+            input.readOnly = finIsAuto();
+            input.style.background = finIsAuto() ? '#F1F5F9' : '#fff';
+            if (finIsAuto() && keepValue !== true) finSuggestNumber();
+            else if (finIsAuto()) finSuggestNumber();
+        }
+        function finSuggestNumber() {
+            if (!finIsAuto()) return;
+            clearTimeout(finNumberTimer);
+            finNumberTimer = setTimeout(async () => {
+                const client = document.getElementById('fin_client').value;
+                const input = document.getElementById('fin_number');
+                if (!client) { input.value = ''; input.placeholder = 'Choose a client first'; return; }
+                try {
+                    const res = await rptFetch(`${API_BASE}/api/finance/next-number?doc_type=${finMode}&client_name=${encodeURIComponent(client)}&date=${document.getElementById('fin_date').value}`, { headers: API_HEADERS });
+                    if (res.ok && finIsAuto()) input.value = (await res.json()).doc_number;
+                } catch (err) { console.error(err); }
+            }, 150);
+        }
+
+        function finAddItem(it) {
+            it = it && it.target ? {} : (it || {});
+            const row = document.createElement('div');
+            row.className = 'fin-item';
+            row.style.cssText = 'display:grid; grid-template-columns: minmax(0,3fr) 80px 110px 110px 32px; gap:8px; margin-bottom:8px; align-items:start;';
+            row.innerHTML = `
+                <textarea rows="2" placeholder="Description" style="width:100%; padding:8px 10px; border:1.5px solid var(--line); border-radius:8px; font-family:inherit; font-size:13px;">${rptEsc(it.description || '')}</textarea>
+                <input type="number" step="any" placeholder="Qty" value="${rptEsc(it.quantity == null ? '' : it.quantity)}" oninput="finRecalc()" style="width:100%; padding:8px; border:1.5px solid var(--line); border-radius:8px; font-size:13px;">
+                <input type="number" step="any" placeholder="Unit price" value="${rptEsc(it.unit_price == null ? '' : it.unit_price)}" oninput="finRecalc()" style="width:100%; padding:8px; border:1.5px solid var(--line); border-radius:8px; font-size:13px;">
+                <div class="fin-nett" style="padding:9px 4px; font-size:13px; font-weight:600; text-align:right;">R 0.00</div>
+                <button type="button" class="wf-action-btn delete" title="Remove line" onclick="this.parentNode.remove(); finRecalc();"><i class="fas fa-times"></i></button>`;
+            document.getElementById('finItems').appendChild(row);
+            finRecalc();
+        }
+
+        function finReadItems() {
+            return Array.from(document.querySelectorAll('#finItems .fin-item')).map(row => ({
+                description: row.querySelector('textarea').value.trim(),
+                quantity: row.querySelectorAll('input')[0].value,
+                unit_price: row.querySelectorAll('input')[1].value
+            })).filter(it => it.description || it.quantity || it.unit_price);
+        }
+        function finRecalc() {
+            document.querySelectorAll('#finItems .fin-item').forEach(row => {
+                const q = finNum(row.querySelectorAll('input')[0].value);
+                const p = finNum(row.querySelectorAll('input')[1].value);
+                row.querySelector('.fin-nett').innerText = finMoney(q * p);
+            });
+            const t = finTotals(finReadItems(), document.getElementById('fin_vat').value);
+            document.getElementById('fin_sub_view').innerText = finMoney(t.subtotal);
+            document.getElementById('fin_total_view').innerText = finMoney(t.total);
+        }
+
+        function finReadForm() {
+            return {
+                doc_type: finMode,
+                client_name: document.getElementById('fin_client').value,
+                doc_number: document.getElementById('fin_number').value.trim(),
+                auto_number: finIsAuto() && !finEditingId,
+                doc_date: document.getElementById('fin_date').value,
+                reference: document.getElementById('fin_reference').value.trim(),
+                deliver_to: document.getElementById('fin_deliver').value,
+                items: finReadItems(),
+                vat_text: document.getElementById('fin_vat').value.trim(),
+                bank_details: document.getElementById('fin_bank').value,
+                created_by: currentUserFullName || ''
+            };
+        }
+
+        async function saveFinanceDoc() {
+            const data = finReadForm();
+            if (!data.client_name) { rptToast('Please choose a client.', 'warn'); return; }
+            if (!data.auto_number && !data.doc_number) { rptToast(`Please type the ${finLabel().toLowerCase()} number.`, 'warn'); return; }
+            const btn = document.getElementById('finSaveBtn');
+            btn.disabled = true;
+            try {
+                const url = finEditingId ? `${API_BASE}/api/finance-documents/${finEditingId}` : `${API_BASE}/api/finance-documents`;
+                const res = await rptFetch(url, { method: finEditingId ? 'PUT' : 'POST', headers: { ...API_HEADERS, 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+                const body = await res.json().catch(() => ({}));
+                if (!res.ok) { rptToast(body.error || `Could not save the ${finLabel().toLowerCase()}. Please try again.`, res.status === 409 ? 'warn' : 'error'); return; }
+                closeFinanceDoc();
+                document.getElementById('finFilterClient').value = '';
+                document.getElementById('finFilterMonth').value = '';
+                document.getElementById('finFilterSearch').value = '';
+                await loadFinance();
+                rptToast(`${finLabel()} ${body.doc_number} saved.`, 'success');
+            } catch (err) {
+                console.error(err);
+                rptToast(`Could not save the ${finLabel().toLowerCase()}. Please check your connection and try again.`, 'error');
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        async function deleteFinanceDoc(id) {
+            const d = finDocs.find(x => x.id === id);
+            if (!d || !(await rptConfirm(`Delete ${finLabel().toLowerCase()} ${d.doc_number}? This cannot be undone.`))) return;
+            try {
+                const res = await rptFetch(`${API_BASE}/api/finance-documents/${id}`, { method: 'DELETE', headers: API_HEADERS });
+                if (!res.ok) throw new Error('delete failed');
+                await loadFinance();
+                rptToast(`${finLabel()} deleted.`, 'success');
+            } catch (err) {
+                rptToast('Could not delete it. Please try again.', 'error');
+            }
+        }
+
+        // ---------- The invoice / quote page itself (same layout as Milly's template) ----------
+        function finDocHtml(d) {
+            const title = d.doc_type === 'quote' ? 'Quotation' : 'Tax Invoice';
+            const logo = finSettings.logo || FIN_DEFAULT_LOGO;
+            const t = finTotals(d.items, d.vat_text);
+            const vat = /\d/.test(String(d.vat_text || '')) ? finMoney(finNum(d.vat_text)) : 'N/A';
+            const B = 'border:1px solid #000;';
+            const G = 'background:#d9d9d9; font-weight:700;';
+            const rows = (d.items || []).map(it => `
+                <tr>
+                    <td style="${B} padding:6px 8px; vertical-align:top; white-space:pre-wrap;">${rptEsc(it.description || '')}</td>
+                    <td style="${B} padding:6px 8px; vertical-align:top; text-align:center;">${rptEsc(it.quantity == null ? '' : it.quantity)}</td>
+                    <td style="${B} padding:6px 8px; vertical-align:top; text-align:right;">${it.unit_price === '' || it.unit_price == null ? '' : finMoney(it.unit_price)}</td>
+                    <td style="${B} padding:6px 8px; vertical-align:top; text-align:right;">${(it.quantity === '' && it.unit_price === '') ? '' : finMoney(finNum(it.quantity) * finNum(it.unit_price))}</td>
+                </tr>`).join('');
+            const filler = Math.max(30, 400 - (d.items || []).length * 34);
+            return `
+            <div style="width:740px; padding:0; background:#fff; color:#000; font-family:Arial, Helvetica, sans-serif; font-size:12px; line-height:1.35;">
+                <table style="width:100%; border-collapse:collapse; ${B}">
+                    <tr>
+                        <td rowspan="4" style="${B} width:50%; padding:6px; text-align:center; vertical-align:middle;"><img src="${logo}" style="max-width:100%; max-height:150px;" alt=""></td>
+                        <td colspan="2" style="${B} ${G} text-align:center; padding:10px; font-size:14px;">${title}</td>
+                    </tr>
+                    <tr><td style="${B} ${G} padding:12px 8px; width:20%;">Date:</td><td style="${B} padding:12px 8px;">${rptEsc(finLongDate(d.doc_date))}</td></tr>
+                    <tr><td style="${B} ${G} padding:12px 8px;">Page:</td><td style="${B} padding:12px 8px;">1</td></tr>
+                    <tr><td style="${B} ${G} padding:12px 8px;">Document Number:</td><td style="${B} padding:12px 8px; text-align:center;">${rptEsc(d.doc_number)}</td></tr>
+                </table>
+                <div style="height:8px;"></div>
+                <div style="${B} padding:8px 10px; min-height:90px; white-space:pre-wrap;"><span>Deliver to:</span>\n${rptEsc(d.deliver_to || d.client_name || '')}</div>
+                <div style="height:8px;"></div>
+                <table style="width:100%; border-collapse:collapse;">
+                    <tr><td style="${B} ${G} padding:6px 8px; width:15%;">Your Reference:</td><td style="${B} padding:6px 8px;">${rptEsc(d.reference || '')}</td></tr>
+                </table>
+                <div style="height:8px;"></div>
+                <table style="width:100%; border-collapse:collapse;">
+                    <tr>
+                        <td style="${B} ${G} padding:4px 8px; text-align:center; width:40%;">Description</td>
+                        <td style="${B} ${G} padding:4px 8px; text-align:center; width:15%;">Quantity</td>
+                        <td style="${B} ${G} padding:4px 8px; text-align:center; width:20%;">Unit Price</td>
+                        <td style="${B} ${G} padding:4px 8px; text-align:center; width:25%;">Nett Price</td>
+                    </tr>
+                    ${rows}
+                    <tr><td style="${B} height:${filler}px;"></td><td style="${B}"></td><td style="${B}"></td><td style="${B}"></td></tr>
+                </table>
+                <table style="width:100%; border-collapse:collapse;">
+                    <tr>
+                        <td rowspan="3" style="${B} width:55%; padding:8px 10px; text-align:center; vertical-align:middle; white-space:pre-wrap;">${rptEsc(d.bank_details || '')}</td>
+                        <td style="${B} ${G} padding:10px 8px; width:18%;">Sub Total:</td>
+                        <td style="${B} padding:10px 8px; text-align:center;">${finMoney(t.subtotal)}</td>
+                    </tr>
+                    <tr><td style="${B} ${G} padding:10px 8px;">VAT amount:</td><td style="${B} padding:10px 8px; text-align:center;">${rptEsc(vat)}</td></tr>
+                    <tr><td style="${B} ${G} padding:10px 8px;">Total:</td><td style="${B} padding:10px 8px; text-align:center;">${finMoney(t.total)}</td></tr>
+                </table>
+            </div>`;
+        }
+
+        function finPrintDoc(d) {
+            const w = window.open('', '_blank');
+            if (!w) { rptToast('Your browser blocked the print window. Please allow pop-ups for this site.', 'warn'); return; }
+            w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${rptEsc(d.doc_number)}</title>
+                <style>@page { size: A4; margin: 12mm; } body { margin: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }</style></head>
+                <body>${finDocHtml(d)}</body></html>`);
+            w.document.close();
+            const img = w.document.querySelector('img');
+            const go = () => { w.focus(); w.print(); };
+            if (img && !img.complete) { img.onload = go; img.onerror = go; } else { setTimeout(go, 200); }
+        }
+
+        async function finDownloadDoc(d) {
+            const holder = document.createElement('div');
+            holder.style.cssText = 'position:fixed; left:-10000px; top:0; background:#fff;';
+            holder.innerHTML = finDocHtml(d);
+            document.body.appendChild(holder);
+            try {
+                await Promise.all(Array.from(holder.querySelectorAll('img')).map(img => img.complete ? null : new Promise(r => { img.onload = r; img.onerror = r; })));
+                const canvas = await html2canvas(holder.firstElementChild, { scale: 2, backgroundColor: '#ffffff' });
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF('p', 'mm', 'a4');
+                const maxW = 190, maxH = 277;
+                let w = maxW, h = (canvas.height * w) / canvas.width;
+                if (h > maxH) { h = maxH; w = (canvas.width * h) / canvas.height; }
+                pdf.addImage(canvas.toDataURL('image/png'), 'PNG', (210 - w) / 2, 10, w, h);
+                pdf.save(`${d.doc_number}.pdf`);
+            } catch (err) {
+                console.error('Error generating PDF:', err);
+                rptToast('Could not create the PDF. Please try again.', 'error');
+            } finally {
+                holder.remove();
+            }
+        }
+
+        function finFormDoc() {
+            const d = finReadForm();
+            if (!d.client_name) { rptToast('Please choose a client first.', 'warn'); return null; }
+            if (!d.doc_number) { rptToast('The number has not been generated yet. Please wait a moment or type it yourself.', 'warn'); return null; }
+            return d;
+        }
+        function finPrintForm() { const d = finFormDoc(); if (d) finPrintDoc(d); }
+        function finDownloadForm() { const d = finFormDoc(); if (d) finDownloadDoc(d); }
+        function finPrintSaved(id) { const d = finDocs.find(x => x.id === id); if (d) finPrintDoc(d); }
+        function finDownloadSaved(id) { const d = finDocs.find(x => x.id === id); if (d) finDownloadDoc(d); }
+
+        // ================= RSS IN-HOUSE TRAINING: WHAT I LEARNED AT RSS =================
+        let learnedEntries = [];
+        let learnedEditingId = null;
+
+        function learnedCanEdit() {
+            return !isTrainingReadOnly || currentUserRole === 'admin' || currentUserRole === 'manager';
+        }
+
+        async function loadLearnedEntries() {
+            if (!viewingTrainingEmployeeId) return;
+            try {
+                const res = await rptFetch(`${API_BASE}/api/learned-entries?employee_id=${viewingTrainingEmployeeId}`, { headers: API_HEADERS });
+                learnedEntries = res.ok ? await res.json() : [];
+            } catch (err) {
+                console.error('Error loading learned entries:', err);
+                learnedEntries = [];
+            }
+            renderLearnedEntries();
+        }
+
+        function showRssInHouseTab(which) {
+            const weekly = which !== 'learned';
+            document.getElementById('rssWeeklyPane').style.display = weekly ? 'block' : 'none';
+            document.getElementById('rssLearnedPane').style.display = weekly ? 'none' : 'block';
+            document.getElementById('rssTabWeekly').className = weekly ? 'wf-btn-primary' : 'wf-btn-secondary';
+            document.getElementById('rssTabLearned').className = weekly ? 'wf-btn-secondary' : 'wf-btn-primary';
+        }
+
+        function learnedPaneHtml() {
+            return `
+                <div class="wf-table-wrap">
+                    <div style="padding:12px 18px; display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; border-bottom:1px solid var(--line);">
+                        <span style="font-size:12.5px; color:var(--ink-soft);">This log fills itself from the Weekly To-Do List, and you can also add entries yourself. Click an entry to write what you learned.</span>
+                        <span style="display:flex; gap:8px;">
+                            <button class="wf-btn-secondary" style="padding:6px 12px; font-size:12.5px;" onclick="openLearnedReport()"><i class="fas fa-file-lines"></i> Topic Report</button>
+                            <button class="wf-btn-primary" id="learnedAddBtn" style="padding:6px 12px; font-size:12.5px;" onclick="openLearnedModal(null)"><i class="fas fa-plus"></i> Add Entry</button>
+                        </span>
+                    </div>
+                    <table class="wf-table">
+                        <thead><tr><th style="width:130px;">Date</th><th style="width:30%;">Topic</th><th>What I learned</th><th style="width:80px;"></th></tr></thead>
+                        <tbody id="learnedBody"></tbody>
+                    </table>
+                    <div class="wf-empty" id="learnedEmpty" style="display:none;">Nothing here yet. Entries appear when you fill in your Weekly To-Do List, or click "Add Entry".</div>
+                </div>`;
+        }
+
+        function renderLearnedEntries() {
+            if (!document.getElementById('learnedBody')) return;
+            const canEdit = learnedCanEdit();
+            document.getElementById('learnedAddBtn').style.display = canEdit ? 'inline-block' : 'none';
+            document.getElementById('learnedCount').innerText = learnedEntries.length ? `(${learnedEntries.length})` : '';
+            document.getElementById('learnedBody').innerHTML = learnedEntries.map(e => `
+                <tr ${canEdit ? `onclick="openLearnedModal(${e.id})"` : ''}>
+                    <td>${rptEsc(rptFormatDate(e.learned_date))}</td>
+                    <td><b>${rptEsc(e.topic)}</b>${e.source_text && e.source_text.trim().toLowerCase() !== String(e.topic).trim().toLowerCase() ? `<div style="font-size:11.5px; color:#94A3B8; font-weight:400; margin-top:2px;">From your weekly list: ${rptEsc(e.source_text)}</div>` : ''}</td>
+                    <td style="white-space:pre-wrap;">${e.learned ? rptEsc(e.learned) : '<span style="color:#94A3B8;">Click to write what you learned</span>'}</td>
+                    <td>${canEdit ? `<button class="wf-action-btn delete" title="Delete" onclick="event.stopPropagation(); deleteLearnedEntry(${e.id})"><i class="fas fa-trash"></i></button>` : ''}</td>
+                </tr>`).join('');
+            document.getElementById('learnedEmpty').style.display = learnedEntries.length ? 'none' : 'block';
+        }
+
+        function openLearnedModal(id) {
+            const e = id ? learnedEntries.find(x => x.id === id) : null;
+            learnedEditingId = e ? e.id : null;
+            document.getElementById('learnedModalTitle').innerText = e ? 'Edit Entry' : 'Add Entry';
+            document.getElementById('ln_topic').value = e ? e.topic : '';
+            document.getElementById('ln_date').value = e ? (e.learned_date || '') : rptToday();
+            document.getElementById('ln_learned').value = e ? (e.learned || '') : '';
+            document.getElementById('learnedDeleteBtn').style.display = e ? 'inline-block' : 'none';
+            document.getElementById('learnedModalOverlay').classList.add('open');
+            setTimeout(() => document.getElementById(e ? 'ln_learned' : 'ln_topic').focus(), 50);
+        }
+        function closeLearnedModal() { document.getElementById('learnedModalOverlay').classList.remove('open'); }
+
+        async function saveLearnedEntry() {
+            const topic = document.getElementById('ln_topic').value.trim();
+            if (!topic) { rptToast('Please type the topic.', 'warn'); return; }
+            const payload = { topic, learned: document.getElementById('ln_learned').value, learned_date: document.getElementById('ln_date').value || null };
+            if (!learnedEditingId) payload.employee_id = viewingTrainingEmployeeId;
+            try {
+                const res = await rptFetch(learnedEditingId ? `${API_BASE}/api/learned-entries/${learnedEditingId}` : `${API_BASE}/api/learned-entries`,
+                    { method: learnedEditingId ? 'PATCH' : 'POST', headers: { ...API_HEADERS, 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                const body = await res.json().catch(() => ({}));
+                if (!res.ok) { rptToast(body.error || 'Could not save the entry. Please try again.', res.status === 409 ? 'warn' : 'error'); return; }
+                closeLearnedModal();
+                await loadLearnedEntries();
+                rptToast('Entry saved.', 'success');
+            } catch (err) {
+                console.error(err);
+                rptToast('Could not save the entry. Please check your connection and try again.', 'error');
+            }
+        }
+
+        async function deleteLearnedEntry(id) {
+            if (!(await rptConfirm('Delete this entry? This cannot be undone.'))) return;
+            try {
+                const res = await rptFetch(`${API_BASE}/api/learned-entries/${id}`, { method: 'DELETE', headers: API_HEADERS });
+                if (!res.ok) throw new Error('delete failed');
+                await loadLearnedEntries();
+                rptToast('Entry deleted.', 'success');
+            } catch (err) {
+                rptToast('Could not delete the entry. Please try again.', 'error');
+            }
+        }
+        function deleteLearnedFromModal() { const id = learnedEditingId; closeLearnedModal(); if (id) deleteLearnedEntry(id); }
+
+        // ----- Topic report -----
+        function learnedPersonName() {
+            const label = document.getElementById('trainingViewingWhoLabel');
+            if (label && label.style.display !== 'none' && label.innerText.trim()) return label.innerText.replace(/^Viewing:?\s*/i, '').trim();
+            return currentUserFullName || '';
+        }
+        function learnedReportRows() {
+            const from = document.getElementById('lr_from').value;
+            const to = document.getElementById('lr_to').value;
+            return learnedEntries
+                .filter(e => (!from || (e.learned_date && e.learned_date >= from)) && (!to || (e.learned_date && e.learned_date <= to)))
+                .slice().sort((a, b) => String(a.learned_date || '').localeCompare(String(b.learned_date || '')) || a.id - b.id);
+        }
+        function learnedReportHtml() {
+            const rows = learnedReportRows();
+            const from = document.getElementById('lr_from').value;
+            const to = document.getElementById('lr_to').value;
+            const period = from || to ? `${from ? rptFormatDate(from) : 'start'} – ${to ? rptFormatDate(to) : 'today'}` : 'All dates';
+            const th = 'padding:8px 10px; background:#1a365d; color:#fff; text-align:left; border-bottom:3px solid #99CC33; font-size:12.5px;';
+            const td = 'padding:8px 10px; border-bottom:1px solid #E2E8F0; vertical-align:top; font-size:12.5px;';
+            return `
+                <div style="font-family:Arial,Helvetica,sans-serif; color:#1D2333;">
+                    <div style="display:flex; align-items:center; gap:14px; margin-bottom:14px;">
+                        <img src="${(typeof finSettings !== 'undefined' && finSettings && finSettings.logo) || FIN_DEFAULT_LOGO}" alt="" style="height:70px; width:auto;">
+                        <div>
+                            <div style="font-size:20px; font-weight:800; letter-spacing:.4px; color:#0058A6;">REGINALD<span style="color:#88C540;">SHERQ</span>SERVICES</div>
+                            <div style="font-size:11px; color:#64748B; letter-spacing:1.2px; text-transform:uppercase;">Health · Safety · Environment · Risk · Quality</div>
+                        </div>
+                    </div>
+                    <div style="font-size:20px; font-weight:700; color:#1a365d; border-bottom:3px solid #99CC33; padding-bottom:6px; margin-bottom:10px;">What ${rptEsc(learnedPersonName() || 'they have')} learned at RSS</div>
+                    <div style="font-size:12.5px; color:#64748B; margin-bottom:14px;">Topic report · ${rptEsc(period)} · ${rows.length} ${rows.length === 1 ? 'entry' : 'entries'}</div>
+                    <table style="width:100%; border-collapse:collapse;">
+                        <thead><tr><th style="${th} width:120px;">Date</th><th style="${th} width:30%;">Topic</th><th style="${th}">What was learned</th></tr></thead>
+                        <tbody>${rows.length ? rows.map((e, i) => `
+                            <tr style="${i % 2 ? 'background:#F8FAFC;' : ''}">
+                                <td style="${td}">${rptEsc(rptFormatDate(e.learned_date))}</td>
+                                <td style="${td} font-weight:700;">${rptEsc(e.topic)}</td>
+                                <td style="${td} white-space:pre-wrap;">${rptEsc(e.learned || '')}</td>
+                            </tr>`).join('') : `<tr><td colspan="3" style="${td} text-align:center; color:#64748B;">No entries for these dates.</td></tr>`}
+                        </tbody>
+                    </table>
+                </div>`;
+        }
+        function openLearnedReport() {
+            document.getElementById('lr_from').value = '';
+            document.getElementById('lr_to').value = '';
+            renderLearnedReport();
+            document.getElementById('learnedReportOverlay').classList.add('open');
+        }
+        function closeLearnedReport() { document.getElementById('learnedReportOverlay').classList.remove('open'); }
+        function renderLearnedReport() { document.getElementById('learnedReportBody').innerHTML = learnedReportHtml(); }
+        function printLearnedReport() {
+            const w = window.open('', '_blank');
+            if (!w) { rptToast('Your browser blocked the print window. Please allow pop-ups for this site.', 'warn'); return; }
+            w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Topic Report</title>
+                <style>@page { size: A4; margin: 14mm; } body { margin: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; } tr { page-break-inside: avoid; }</style></head>
+                <body>${learnedReportHtml()}</body></html>`);
+            w.document.close();
+            setTimeout(() => { w.focus(); w.print(); }, 250);
         }
 
         function toggleReportsMenu() {
@@ -4603,6 +5423,7 @@
                 allTrainings = await response.json();
                 renderTrainingCategories();
                 renderTrainingProgress();
+                loadLearnedEntries();
             } catch (err) {
                 console.error('Error fetching trainings:', err);
             }
@@ -4636,8 +5457,9 @@
                 const items = allTrainings.filter(t => t.category === cat);
                 const section = document.createElement('div');
                 section.style.marginBottom = '28px';
-                const addBtnLabel = (cat === 'Presentation Day Topics') ? 'Add Presentation Topic' : 'Add Training';
+                const addBtnLabel = (cat === 'Presentation Day Topics') ? 'Add Presentation Topic' : (cat === 'RSS In-House Training' ? 'Add Weekly Task List' : 'Add Training');
                 const unitWord = (cat === 'Presentation Day Topics') ? 'presentation' : 'training';
+                const isRssInHouse = (cat === 'RSS In-House Training');
                 section.innerHTML = `
                     <div class="lv-section-title clickable collapsed" id="${safeId}-toggle" onclick="toggleTrainingCategory('${cat.replace(/'/g, "\\'")}')">
                         <i class="fas fa-chevron-down"></i> ${cat}
@@ -4651,6 +5473,12 @@
                         ` : ''}
                     </div>
                     <div id="${safeId}-body" style="display:none;">
+                        ${isRssInHouse ? `
+                        <div style="display:flex; gap:8px; margin: 4px 0 14px; flex-wrap:wrap;">
+                            <button type="button" class="wf-btn-primary" id="rssTabWeekly" onclick="showRssInHouseTab('weekly')"><i class="fas fa-list-check"></i> Weekly To-Do List</button>
+                            <button type="button" class="wf-btn-secondary" id="rssTabLearned" onclick="showRssInHouseTab('learned')"><i class="fas fa-lightbulb"></i> Learning Log <span id="learnedCount" style="font-weight:400; opacity:.8;"></span></button>
+                        </div>
+                        <div id="rssWeeklyPane">` : ''}
                         <div class="wf-table-wrap" style="margin-bottom: 10px;">
                             <table class="wf-table">
                                 <thead>
@@ -4666,11 +5494,14 @@
                         <button class="wf-add-btn" onclick="openAddTrainingModal('${cat.replace(/'/g, "\\'")}')">
                             <i class="fas fa-plus"></i> ${addBtnLabel}
                         </button>
+                        ${isRssInHouse ? `</div>
+                        <div id="rssLearnedPane" style="display:none;">${learnedPaneHtml()}</div>` : ''}
                     </div>
                 `;
                 container.appendChild(section);
                 renderCategoryTable(cat);
             });
+            renderLearnedEntries();
         }
 
         function toggleTopicMenu(safeId) {
@@ -5966,7 +6797,7 @@
             const row = document.createElement('div');
             row.style.cssText = 'display:flex; gap:6px; align-items:center;';
             row.innerHTML = `
-                <input type="text" class="wt-task-input" value="${(value || '').replace(/"/g, '&quot;')}" placeholder="e.g. Worked on the frontend of the RSS training" style="flex:1;">
+                <input type="text" class="wt-task-input" value="${(value || '').replace(/"/g, '&quot;')}" placeholder="Topic, e.g. Yes module" style="flex:1;">
                 <button class="lv-col-remove" type="button" onclick="this.parentElement.remove()" title="Remove task">&times;</button>
             `;
             wrap.appendChild(row);
