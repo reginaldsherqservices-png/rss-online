@@ -397,6 +397,7 @@
                 <div id="financeSubmenu" style="display: none; padding-left: 14px;">
                     <div class="nav-item" onclick="showFinanceView('invoice')" style="font-size: 13px;">Invoices</div>
                     <div class="nav-item" onclick="showFinanceView('quote')" style="font-size: 13px;">Quotes</div>
+                    <div class="nav-item" onclick="showFinanceStatementView()" style="font-size: 13px;">Statements</div>
                 </div>
 
                 <div id="rssTrainingSection" class="nav-item" onclick="toggleRssTrainingMenu()" style="display: none; color: #fff; font-weight: bold;">
@@ -420,6 +421,9 @@
 
                 <div id="inboxNavItem" class="nav-item" onclick="showInboxView()" style="display: none; color: #fff; font-weight: bold;">
                     <i class="fas fa-inbox"></i> Inbox
+                </div>
+                <div id="recycleNavItem" class="nav-item" onclick="showRecycleBinView()" style="display: none; color: #fff; font-weight: bold;">
+                    <i class="fas fa-trash-alt"></i> Recycle Bin
                 </div>
                 <div class="nav-item" onclick="handleLogout()" style="margin-top: 50px; color: #94A3B8; border-bottom: none;">Logout</div>
             </div>
@@ -619,6 +623,71 @@
                     </div>
                 </div>
 
+                <!-- RECYCLE BIN -->
+                <div id="recycleView" style="display: none;">
+                    <div class="wf-header">
+                        <div>
+                            <h1>Recycle Bin</h1>
+                            <p>Everything deleted in the system comes here. Items stay for 90 days and are then removed for good. You can restore them before that</p>
+                        </div>
+                        <button class="wf-btn-secondary" id="recycleDeleteAllBtn" style="color:#DC2626; border-color:#DC2626; display:none;" onclick="recycleDeleteAll()"><i class="fas fa-trash"></i> Delete all</button>
+                    </div>
+                    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px; align-items:center;">
+                        <select id="recycleFilterType" onchange="renderRecycleBin()" style="padding:9px 11px; border:1.5px solid var(--line); border-radius:8px; font-size:13.5px; min-width:200px;"></select>
+                        <input type="text" id="recycleFilterSearch" oninput="renderRecycleBin()" placeholder="Search deleted items" style="padding:9px 11px; border:1.5px solid var(--line); border-radius:8px; font-size:13.5px; min-width:220px;">
+                        <button class="wf-btn-ghost" onclick="document.getElementById('recycleFilterType').value='';document.getElementById('recycleFilterSearch').value='';renderRecycleBin();">Clear filters</button>
+                    </div>
+                    <div class="wf-table-wrap">
+                        <table class="wf-table">
+                            <thead>
+                                <tr><th>Item</th><th>Type</th><th>Deleted by</th><th>Deleted on</th><th>Days left</th><th style="width: 210px;"></th></tr>
+                            </thead>
+                            <tbody id="recycleBody"></tbody>
+                        </table>
+                        <div class="wf-empty" id="recycleEmpty" style="display: none;">The Recycle Bin is empty.</div>
+                    </div>
+                    <div id="recycleSummary" style="margin-top:10px; font-size:13px; color:var(--ink-soft);"></div>
+                </div>
+
+                <!-- FINANCE: CLIENT STATEMENTS -->
+                <div id="financeStatementView" style="display: none;">
+                    <div class="wf-header">
+                        <div>
+                            <h1>Statements</h1>
+                            <p>Choose a client and the dates. You get one statement with all that client's invoices for that time</p>
+                        </div>
+                        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                            <button class="wf-btn-primary" onclick="finStmtEditClient()"><i class="fas fa-user-edit"></i> Client details</button>
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:14px; align-items:flex-end;">
+                        <div><div style="font-size:12px; font-weight:700; margin-bottom:4px;">Client</div>
+                            <select id="finStmtClient" onchange="finStmtClear()" style="padding:9px 11px; border:1.5px solid var(--line); border-radius:8px; font-size:13.5px; min-width:220px;"></select></div>
+                        <div><div style="font-size:12px; font-weight:700; margin-bottom:4px;">From</div>
+                            <input type="date" id="finStmtFrom" onchange="finStmtClear()" style="padding:8px 11px; border:1.5px solid var(--line); border-radius:8px; font-size:13.5px;"></div>
+                        <div><div style="font-size:12px; font-weight:700; margin-bottom:4px;">To</div>
+                            <input type="date" id="finStmtTo" onchange="finStmtClear()" style="padding:8px 11px; border:1.5px solid var(--line); border-radius:8px; font-size:13.5px;"></div>
+                        <label style="display:flex; align-items:center; gap:6px; font-size:13px; padding-bottom:9px;"><input type="checkbox" id="finStmtUnpaid" onchange="finStmtClear()" style="width:auto; margin:0;"> Only invoices not fully paid</label>
+                        <button class="wf-btn-primary" onclick="finStmtCreate()"><i class="fas fa-file-invoice"></i> Create statement</button>
+                    </div>
+                    <div id="finStmtMsg" style="font-size:13.5px; color:var(--ink-soft); margin-bottom:10px;"></div>
+
+                    <h3 style="margin:22px 0 10px 0; font-size:16px;">Statements created</h3>
+                    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px; align-items:center;">
+                        <select id="finStmtFilterClient" onchange="renderFinStmtList()" style="padding:9px 11px; border:1.5px solid var(--line); border-radius:8px; font-size:13.5px; min-width:200px;"></select>
+                        <button class="wf-btn-ghost" onclick="document.getElementById('finStmtFilterClient').value=''; renderFinStmtList();">Clear filter</button>
+                    </div>
+                    <div class="wf-table-wrap">
+                        <table class="wf-table">
+                            <thead>
+                                <tr><th>Statement date</th><th>Client</th><th>Period</th><th style="text-align:right;">Invoices</th><th style="text-align:right;">Balance due</th><th>Created by</th><th style="width: 160px;"></th></tr>
+                            </thead>
+                            <tbody id="finStmtListBody"></tbody>
+                        </table>
+                        <div class="wf-empty" id="finStmtListEmpty" style="display: none;"></div>
+                    </div>
+                </div>
+
                 <!-- FINANCE: INVOICE / QUOTE REGISTER -->
                 <div id="financeView" style="display: none;">
                     <div class="wf-header">
@@ -635,6 +704,9 @@
                     <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px; align-items:center;">
                         <select id="finFilterClient" onchange="renderFinanceRegister()" style="padding:9px 11px; border:1.5px solid var(--line); border-radius:8px; font-size:13.5px; min-width:200px;"></select>
                         <input type="month" id="finFilterMonth" onchange="renderFinanceRegister()" title="Month" style="padding:8px 11px; border:1.5px solid var(--line); border-radius:8px; font-size:13.5px;">
+                        <select id="finFilterStatus" onchange="renderFinanceRegister()" style="padding:9px 11px; border:1.5px solid var(--line); border-radius:8px; font-size:13.5px;">
+                            <option value="">All payment statuses</option><option value="unpaid">Unpaid</option><option value="partial">Partly paid</option><option value="paid">Paid</option>
+                        </select>
                         <input type="text" id="finFilterSearch" oninput="renderFinanceRegister()" placeholder="Search number or reference" style="padding:9px 11px; border:1.5px solid var(--line); border-radius:8px; font-size:13.5px; min-width:220px;">
                         <button class="wf-btn-ghost" onclick="finClearFilters()">Clear filters</button>
                         <button class="wf-btn-ghost" id="finEditClientBtn" style="display:none;" onclick="finEditSelectedClient()"><i class="fas fa-pen"></i> Edit this client</button>
@@ -642,7 +714,7 @@
                     <div class="wf-table-wrap">
                         <table class="wf-table">
                             <thead>
-                                <tr><th>Number</th><th>Client</th><th>Date</th><th>Reference</th><th style="text-align:right;">Total</th><th style="width: 150px;"></th></tr>
+                                <tr><th>Number</th><th>Client</th><th>Date</th><th>Reference</th><th style="text-align:right;">Total</th><th id="finPayTh">Payment</th><th style="width: 190px;"></th></tr>
                             </thead>
                             <tbody id="financeBody"></tbody>
                         </table>
@@ -1618,6 +1690,10 @@
                     <label>Your Reference</label>
                     <input type="text" id="fin_reference">
                 </div>
+                <div class="wf-field full-width" id="fin_expiry_wrap" style="display:none;">
+                    <label>Expiry date (shown on the quotation)</label>
+                    <input type="date" id="fin_expiry">
+                </div>
                 <div class="wf-field full-width">
                     <label>Items</label>
                     <div id="finItems"></div>
@@ -1646,6 +1722,55 @@
         </div>
     </div>
 
+    <!-- FINANCE: CLIENT STATEMENT PREVIEW -->
+    <div class="wf-modal-overlay" id="financeStmtModal">
+        <div class="wf-modal" style="max-width: 820px;">
+            <div class="wf-modal-header"><h2 id="finStmtModalHeading">Statement</h2><button class="wf-modal-close" onclick="closeFinStmtModal()">✕</button></div>
+            <div class="wf-modal-body" style="grid-template-columns: 1fr; background:#F1F5F9; overflow:auto;">
+                <div style="overflow:auto;"><div id="finStmtPreview" style="width:740px; margin:0 auto; background:#fff; box-shadow:0 1px 6px rgba(0,0,0,0.15);"></div></div>
+            </div>
+            <div class="wf-modal-footer">
+                <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
+                    <button class="wf-btn-secondary" onclick="closeFinStmtModal()">Close</button>
+                    <label style="display:flex; align-items:center; gap:7px; font-size:13px; font-weight:600; cursor:pointer;" title="Turn this off before you print or download if the client must not see the totals">
+                        <input type="checkbox" id="finStmtShowPay" checked onchange="finStmtToggleDetails()" style="width:auto; margin:0;"> Show totals (Total invoiced, Total paid, Balance due)
+                    </label>
+                </div>
+                <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end;">
+                    <button class="wf-btn-secondary" onclick="finStmtPrint()"><i class="fas fa-print"></i> Print</button>
+                    <button class="wf-btn-primary" onclick="finStmtDownload()"><i class="fas fa-download"></i> Download PDF</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FINANCE: RECORD PAYMENT + STATEMENT -->
+    <div class="wf-modal-overlay" id="financePayModal">
+        <div class="wf-modal" style="max-width: 640px;">
+            <div class="wf-modal-header"><h2 id="finPayHeading">Payment</h2><button class="wf-modal-close" onclick="closeFinancePay()">✕</button></div>
+            <div class="wf-modal-body" style="grid-template-columns: 1fr;">
+                <div id="finPayInfo" style="font-size:13.5px; color:var(--ink-soft);"></div>
+                <div class="wf-field">
+                    <label style="display:flex; justify-content:space-between; align-items:center;">
+                        <span>Tick the lines that have been paid and set the date each was paid</span>
+                        <span><button type="button" class="wf-btn-ghost" style="padding:2px 8px;" onclick="finPayTickAll(true)">Tick all</button><button type="button" class="wf-btn-ghost" style="padding:2px 8px;" onclick="finPayTickAll(false)">Untick all</button></span>
+                    </label>
+                    <div id="finPayLines" style="max-height:300px; overflow:auto;"></div>
+                </div>
+                <div class="wf-field"><label>Note on the statement (optional)</label><input type="text" id="fin_pay_note" maxlength="500" placeholder="e.g. EFT received for 3 of the 5 learners"></div>
+                <div id="finPaySummary" style="font-size:14px; line-height:1.8; background:#F8FAFC; border:1px solid var(--line); border-radius:8px; padding:10px 14px;"></div>
+            </div>
+            <div class="wf-modal-footer">
+                <button class="wf-btn-secondary" onclick="closeFinancePay()">Cancel</button>
+                <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end;">
+                    <button class="wf-btn-secondary" onclick="finPayStatement('print')"><i class="fas fa-print"></i> Print statement</button>
+                    <button class="wf-btn-secondary" onclick="finPayStatement('pdf')"><i class="fas fa-download"></i> Statement PDF</button>
+                    <button class="wf-btn-primary" id="finPaySaveBtn" onclick="finPaySave(true)">Save payment</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- FINANCE: CLIENT (add / edit) -->
     <div class="wf-modal-overlay" id="financeClientModal">
         <div class="wf-modal" style="max-width: 480px;">
@@ -1653,8 +1778,12 @@
             <div class="wf-modal-body" style="grid-template-columns: 1fr;">
                 <div class="wf-field"><label>Client name</label><input type="text" id="fin_cl_name" placeholder="e.g. Claremont" oninput="finClientNameTyped()"></div>
                 <div class="wf-field"><label>Letters used in the number (you can change them)</label><input type="text" id="fin_cl_code" maxlength="10" style="text-transform:uppercase;" oninput="finClientCodeTyped()"></div>
-                <div class="wf-field"><label>Last invoice number already used (leave empty if none)</label><input type="number" id="fin_cl_inv" min="0" placeholder="e.g. 105" oninput="finClientPreview()"></div>
-                <div class="wf-field"><label>Last quote number already used (leave empty if none)</label><input type="number" id="fin_cl_quo" min="0" placeholder="e.g. 102" oninput="finClientPreview()"></div>
+                <div class="wf-field"><label>Address (shown on the client's statement)</label><textarea id="fin_cl_address" rows="3" placeholder="e.g. 4 Nebula Street&#10;Laboré, Brakpan, 1540"></textarea></div>
+                <div class="wf-field"><label>VAT number</label><input type="text" id="fin_cl_vat" maxlength="50"></div>
+                <div class="wf-field"><label>Telephone</label><input type="text" id="fin_cl_phone" maxlength="50"></div>
+                <div class="wf-field"><label>Email address</label><input type="text" id="fin_cl_email" maxlength="150"></div>
+                <div class="wf-field" id="fin_cl_inv_wrap"><label>Last invoice number already used (leave empty if none)</label><input type="number" id="fin_cl_inv" min="0" placeholder="e.g. 105" oninput="finClientPreview()"></div>
+                <div class="wf-field" id="fin_cl_quo_wrap"><label>Last quote number already used (leave empty if none)</label><input type="number" id="fin_cl_quo" min="0" placeholder="e.g. 102" oninput="finClientPreview()"></div>
                 <div id="fin_cl_preview" style="font-size:13px; color:var(--ink-soft); line-height:1.6;"></div>
             </div>
             <div class="wf-modal-footer" style="justify-content:flex-end;">
@@ -1927,7 +2056,8 @@
         const API_BASE = IS_LOCAL
             ? 'http://localhost:5000'
             : 'https://rss-online-backend-c0hzaseze2gad6aa.southafricanorth-01.azurewebsites.net';
-        const API_HEADERS = { 'ngrok-skip-browser-warning': 'true' };
+        const API_HEADERS = { 'ngrok-skip-browser-warning': 'true', get 'x-user-name'() { return encodeURIComponent(currentUserDisplay || currentUserFullName || currentUserRole || ''); } };
+        let currentUserDisplay = '';
 
         let pendingConfirmCallback = null;
 
@@ -1972,12 +2102,14 @@
         function applyRoleVisibility(role, displayName) {
             const isManagement = (role === 'admin' || role === 'manager');
             const isAdmin = role === 'admin';
+            currentUserDisplay = displayName || '';
 
             document.getElementById('welcomeUser').innerText = `Hello, ${displayName} (${role})`;
             document.getElementById('hrSection').style.display = 'block';
             document.getElementById('financeSection').style.display = isManagement ? 'block' : 'none';
             document.getElementById('rssTrainingSection').style.display = isAdmin ? 'block' : 'none';
             document.getElementById('inboxNavItem').style.display = isAdmin ? 'block' : 'none';
+            document.getElementById('recycleNavItem').style.display = isAdmin ? 'block' : 'none';
             document.getElementById('reportsSection').style.display = 'block';
             document.getElementById('reportsTemplatesNavItem').style.display = isManagement ? 'block' : 'none';
             document.getElementById('reportsSubmenu').style.display = 'none';
@@ -2085,6 +2217,8 @@
             document.getElementById('reportsMonthlyView').style.display = 'none';
             document.getElementById('reportsTemplatesView').style.display = 'none';
             document.getElementById('financeView').style.display = 'none';
+            document.getElementById('financeStatementView').style.display = 'none';
+            document.getElementById('recycleView').style.display = 'none';
             document.getElementById('inboxListView').style.display = 'block';
             document.getElementById('inboxDetailView').style.display = 'none';
         }
@@ -2340,6 +2474,110 @@
         let finClientSelectAfter = false;
         let finNumberTimer = null;
 
+        // ---------- Recycle Bin ----------
+        let recycleItems = [];
+        const RECYCLE_TYPES = {
+            employee: 'Employee', training_topic: 'Training topic', training: 'Training', training_column: 'Training column',
+            overtime: 'Overtime entry', overtime_taking: 'Overtime taken', rss_training_type: 'RSS training type',
+            rss_learner: 'RSS learner', rss_manual: 'Training manual', timesheet_entry: 'Timesheet entry',
+            report_template: 'Checklist', report_submission: 'Weekly report', monthly_report: 'Monthly report',
+            finance_client: 'Finance client', finance_document: 'Invoice / Quote', finance_statement: 'Client statement', learned_entry: 'Learning Log entry'
+        };
+        function recycleTypeName(t) { return RECYCLE_TYPES[t] || t; }
+
+        async function showRecycleBinView() {
+            hideAllContentViews();
+            document.getElementById('recycleView').style.display = 'block';
+            await loadRecycleBin();
+        }
+        async function loadRecycleBin() {
+            try {
+                const res = await rptFetch(`${API_BASE}/api/recycle-bin`, { headers: API_HEADERS });
+                if (!res.ok) throw new Error('load failed');
+                recycleItems = await res.json();
+            } catch (err) {
+                console.error(err);
+                recycleItems = [];
+                rptToast('Could not load the Recycle Bin. Please try again.', 'error');
+            }
+            const sel = document.getElementById('recycleFilterType');
+            const keep = sel.value;
+            const types = [...new Set(recycleItems.map(i => i.item_type))].sort((a, b) => recycleTypeName(a).localeCompare(recycleTypeName(b)));
+            sel.innerHTML = '<option value="">All types</option>' + types.map(t => `<option value="${rptEsc(t)}">${rptEsc(recycleTypeName(t))}</option>`).join('');
+            sel.value = types.includes(keep) ? keep : '';
+            renderRecycleBin();
+        }
+        function renderRecycleBin() {
+            const type = document.getElementById('recycleFilterType').value;
+            const q = document.getElementById('recycleFilterSearch').value.trim().toLowerCase();
+            const list = recycleItems.filter(i => (!type || i.item_type === type) &&
+                (!q || `${i.label} ${i.detail || ''} ${i.deleted_by || ''} ${recycleTypeName(i.item_type)}`.toLowerCase().includes(q)));
+            document.getElementById('recycleBody').innerHTML = list.map(i => `
+                <tr>
+                    <td><strong>${rptEsc(i.label)}</strong>${i.detail ? `<div style="font-size:12.5px; color:var(--ink-soft);">${rptEsc(i.detail)}</div>` : ''}</td>
+                    <td>${rptEsc(recycleTypeName(i.item_type))}</td>
+                    <td>${rptEsc(i.deleted_by || '—')}</td>
+                    <td>${rptEsc(new Date(i.deleted_at).toLocaleString('en-ZA', { dateStyle: 'medium', timeStyle: 'short' }))}</td>
+                    <td><span style="font-weight:700; color:${i.days_left <= 7 ? '#DC2626' : 'inherit'};">${i.days_left}</span></td>
+                    <td style="white-space:nowrap;">
+                        <button class="wf-btn-primary" style="padding:7px 12px;" onclick="recycleRestore(${i.id})"><i class="fas fa-undo"></i> Restore</button>
+                        <button class="wf-btn-ghost" style="padding:7px 10px; color:#DC2626;" onclick="recycleForever(${i.id})" title="Delete forever"><i class="fas fa-times"></i> Delete forever</button>
+                    </td>
+                </tr>`).join('');
+            const empty = document.getElementById('recycleEmpty');
+            empty.style.display = list.length ? 'none' : 'block';
+            empty.innerText = recycleItems.length ? 'Nothing matches these filters.' : 'The Recycle Bin is empty.';
+            document.getElementById('recycleSummary').innerText = list.length ? `${list.length} item${list.length === 1 ? '' : 's'} shown` : '';
+            const allBtn = document.getElementById('recycleDeleteAllBtn');
+            allBtn.style.display = list.length ? '' : 'none';
+            allBtn.innerHTML = `<i class="fas fa-trash"></i> Delete all (${list.length})`;
+        }
+        async function recycleRestore(id) {
+            try {
+                const res = await rptFetch(`${API_BASE}/api/recycle-bin/${id}/restore`, { method: 'POST', headers: API_HEADERS });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) { rptToast(data.error || 'Could not restore this item.', 'error'); if (res.status === 404) loadRecycleBin(); return; }
+                rptToast(`Restored: ${data.label || 'item'}`, 'success');
+                await loadRecycleBin();
+            } catch (err) {
+                console.error(err);
+                rptToast('Could not restore this item. Please try again.', 'error');
+            }
+        }
+        // Deletes everything that is shown (so with a filter on, only the items that match it)
+        async function recycleDeleteAll() {
+            const type = document.getElementById('recycleFilterType').value;
+            const q = document.getElementById('recycleFilterSearch').value.trim().toLowerCase();
+            const list = recycleItems.filter(i => (!type || i.item_type === type) &&
+                (!q || `${i.label} ${i.detail || ''} ${i.deleted_by || ''} ${recycleTypeName(i.item_type)}`.toLowerCase().includes(q)));
+            if (!list.length) return;
+            const filtered = !!(type || q);
+            const what = list.length === 1 ? '1 item' : `${list.length} items`;
+            if (!(await rptConfirm(`Delete ${filtered ? 'the ' + what + ' shown' : 'all ' + what} forever? ${list.length === 1 ? 'It' : 'They'} will be gone for good and cannot be restored.`))) return;
+            try {
+                const res = await rptFetch(`${API_BASE}/api/recycle-bin/delete-many`, { method: 'POST', headers: { ...API_HEADERS, 'Content-Type': 'application/json' }, body: JSON.stringify({ ids: list.map(i => i.id) }) });
+                if (!res.ok) throw new Error('delete failed');
+                rptToast(`Deleted forever: ${what}.`, 'success');
+                await loadRecycleBin();
+            } catch (err) {
+                console.error(err);
+                rptToast('Could not delete these items. Please try again.', 'error');
+            }
+        }
+        async function recycleForever(id) {
+            const it = recycleItems.find(x => x.id === id);
+            if (!(await rptConfirm(`Delete "${it ? it.label : 'this item'}" forever? It will be gone for good and cannot be restored.`))) return;
+            try {
+                const res = await rptFetch(`${API_BASE}/api/recycle-bin/${id}`, { method: 'DELETE', headers: API_HEADERS });
+                if (!res.ok) throw new Error('delete failed');
+                rptToast('Deleted forever.', 'success');
+                await loadRecycleBin();
+            } catch (err) {
+                console.error(err);
+                rptToast('Could not delete this item. Please try again.', 'error');
+            }
+        }
+
         function toggleFinanceMenu() {
             const submenu = document.getElementById('financeSubmenu');
             submenu.style.display = submenu.style.display === 'block' ? 'none' : 'block';
@@ -2377,6 +2615,9 @@
             document.getElementById('finFilterClient').value = '';
             document.getElementById('finFilterMonth').value = '';
             document.getElementById('finFilterSearch').value = '';
+            document.getElementById('finFilterStatus').value = '';
+            document.getElementById('finFilterStatus').style.display = finMode === 'quote' ? 'none' : '';
+            document.getElementById('finPayTh').style.display = finMode === 'quote' ? 'none' : '';
             await loadFinance();
         }
 
@@ -2409,6 +2650,7 @@
             document.getElementById('finFilterClient').value = '';
             document.getElementById('finFilterMonth').value = '';
             document.getElementById('finFilterSearch').value = '';
+            document.getElementById('finFilterStatus').value = '';
             renderFinanceRegister();
         }
 
@@ -2420,6 +2662,7 @@
             const list = finDocs.filter(d =>
                 (!client || d.client_name === client) &&
                 (!month || String(d.doc_date || '').startsWith(month)) &&
+                (finMode === 'quote' || !document.getElementById('finFilterStatus').value || (d.payment_status || 'unpaid') === document.getElementById('finFilterStatus').value) &&
                 (!q || String(d.doc_number).toLowerCase().includes(q) || String(d.reference || '').toLowerCase().includes(q)));
             const body = document.getElementById('financeBody');
             const empty = document.getElementById('financeEmpty');
@@ -2430,7 +2673,9 @@
                     <td>${rptEsc(rptFormatDate(d.doc_date))}</td>
                     <td>${rptEsc(d.reference || '—')}</td>
                     <td style="text-align:right;">${finMoney(d.total)}</td>
+                    ${finMode === 'quote' ? '' : `<td onclick="event.stopPropagation(); openFinancePay(${d.id})" style="cursor:pointer;">${finPayBadge(d)}</td>`}
                     <td style="white-space:nowrap;">
+                        ${finMode === 'quote' ? '' : `<button class="wf-action-btn" title="Record payment / Statement" style="color:#0058A6;" onclick="event.stopPropagation(); openFinancePay(${d.id})"><i class="fas fa-money-bill-wave"></i></button>`}
                         <button class="wf-action-btn" title="Print" onclick="event.stopPropagation(); finPrintSaved(${d.id})"><i class="fas fa-print"></i></button>
                         <button class="wf-action-btn" title="Download PDF" onclick="event.stopPropagation(); finDownloadSaved(${d.id})"><i class="fas fa-download"></i></button>
                         <button class="wf-action-btn delete" title="Delete" onclick="event.stopPropagation(); deleteFinanceDoc(${d.id})"><i class="fas fa-trash"></i></button>
@@ -2459,6 +2704,12 @@
             document.getElementById('fin_cl_code').value = client ? (client.code || '') : '';
             document.getElementById('fin_cl_inv').value = client && client.invoice_last > 100 ? client.invoice_last : (client ? client.invoice_last : '');
             document.getElementById('fin_cl_quo').value = client ? client.quote_last : '';
+            document.getElementById('fin_cl_address').value = client ? (client.address || '') : '';
+            document.getElementById('fin_cl_vat').value = client ? (client.vat_number || '') : '';
+            document.getElementById('fin_cl_phone').value = client ? (client.phone || '') : '';
+            document.getElementById('fin_cl_email').value = client ? (client.email || '') : '';
+            document.getElementById('fin_cl_inv_wrap').style.display = finMode === 'quote' ? 'none' : '';
+            document.getElementById('fin_cl_quo_wrap').style.display = finMode === 'quote' ? '' : 'none';
             document.getElementById('financeClientModal').classList.add('open');
             finClientPreview();
             setTimeout(() => document.getElementById('fin_cl_name').focus(), 50);
@@ -2476,16 +2727,26 @@
             const quo = document.getElementById('fin_cl_quo').value;
             const ni = (inv === '' ? 100 : parseInt(inv, 10) || 0) + 1;
             const nq = (quo === '' ? 100 : parseInt(quo, 10) || 0) + 1;
-            document.getElementById('fin_cl_preview').innerHTML = `Next invoice: <b>INV-${rptEsc(code)}${ni}-${year}</b><br>Next quote: <b>QUO-${rptEsc(code)}${nq}-${year}</b>`;
+            document.getElementById('fin_cl_preview').innerHTML = finMode === 'quote'
+                ? `Next quote: <b>QUO-${rptEsc(code)}${nq}-${year}</b>`
+                : `Next invoice: <b>INV-${rptEsc(code)}${ni}-${year}</b>`;
         }
         async function saveFinanceClient() {
             const name = document.getElementById('fin_cl_name').value.trim();
             if (!name) { rptToast('Please type the client name.', 'warn'); return; }
+            // Only the counter for the current menu is changed; the other one is kept as it is.
+            const existing = finClients.find(x => x.name.toLowerCase() === name.toLowerCase());
+            const invVal = document.getElementById('fin_cl_inv').value;
+            const quoVal = document.getElementById('fin_cl_quo').value;
             const payload = {
                 name,
                 code: document.getElementById('fin_cl_code').value,
-                invoice_last: document.getElementById('fin_cl_inv').value === '' ? 100 : document.getElementById('fin_cl_inv').value,
-                quote_last: document.getElementById('fin_cl_quo').value === '' ? 100 : document.getElementById('fin_cl_quo').value
+                address: document.getElementById('fin_cl_address').value,
+                vat_number: document.getElementById('fin_cl_vat').value,
+                phone: document.getElementById('fin_cl_phone').value,
+                email: document.getElementById('fin_cl_email').value,
+                invoice_last: finMode === 'quote' ? (existing ? existing.invoice_last : 100) : (invVal === '' ? 100 : invVal),
+                quote_last: finMode === 'quote' ? (quoVal === '' ? 100 : quoVal) : (existing ? existing.quote_last : 100)
             };
             try {
                 const res = await rptFetch(`${API_BASE}/api/finance/clients`, { method: 'POST', headers: { ...API_HEADERS, 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
@@ -2496,6 +2757,7 @@
                 closeFinanceClient();
                 finFillClientFilter();
                 renderFinanceRegister();
+                if (document.getElementById('financeStatementView').style.display === 'block') finStmtFillClients(saved.name);
                 if (finClientSelectAfter) { finFillDocClients(saved.name); finSuggestNumber(); }
                 rptToast('Client saved.', 'success');
             } catch (err) {
@@ -2570,6 +2832,8 @@
             document.getElementById('fin_date').value = d ? d.doc_date : rptToday();
             document.getElementById('fin_deliver').value = d ? (d.deliver_to || '') : '';
             document.getElementById('fin_reference').value = d ? (d.reference || '') : '';
+            document.getElementById('fin_expiry_wrap').style.display = finMode === 'quote' ? '' : 'none';
+            document.getElementById('fin_expiry').value = d && d.expiry_date ? d.expiry_date : '';
             document.getElementById('fin_vat').value = d ? (d.vat_text || '') : '';
             document.getElementById('fin_bank').value = d ? (d.bank_details || '') : (finSettings.bank_details || FIN_DEFAULT_BANK);
             document.getElementById('finItems').innerHTML = '';
@@ -2621,6 +2885,8 @@
             it = it && it.target ? {} : (it || {});
             const row = document.createElement('div');
             row.className = 'fin-item';
+            row.dataset.paid = it.paid ? '1' : '';
+            row.dataset.paidDate = it.paid_date || '';
             row.style.cssText = 'display:grid; grid-template-columns: minmax(0,3fr) 80px 110px 110px 32px; gap:8px; margin-bottom:8px; align-items:start;';
             row.innerHTML = `
                 <textarea rows="2" placeholder="Description" style="width:100%; padding:8px 10px; border:1.5px solid var(--line); border-radius:8px; font-family:inherit; font-size:13px;">${rptEsc(it.description || '')}</textarea>
@@ -2636,7 +2902,8 @@
             return Array.from(document.querySelectorAll('#finItems .fin-item')).map(row => ({
                 description: row.querySelector('textarea').value.trim(),
                 quantity: row.querySelectorAll('input')[0].value,
-                unit_price: row.querySelectorAll('input')[1].value
+                unit_price: row.querySelectorAll('input')[1].value,
+                ...(row.dataset.paid === '1' ? { paid: true, paid_date: row.dataset.paidDate || '' } : {})
             })).filter(it => it.description || it.quantity || it.unit_price);
         }
         function finRecalc() {
@@ -2658,6 +2925,7 @@
                 auto_number: finIsAuto() && !finEditingId,
                 doc_date: document.getElementById('fin_date').value,
                 reference: document.getElementById('fin_reference').value.trim(),
+                expiry_date: finMode === 'quote' ? (document.getElementById('fin_expiry').value || null) : null,
                 deliver_to: document.getElementById('fin_deliver').value,
                 items: finReadItems(),
                 vat_text: document.getElementById('fin_vat').value.trim(),
@@ -2693,7 +2961,7 @@
 
         async function deleteFinanceDoc(id) {
             const d = finDocs.find(x => x.id === id);
-            if (!d || !(await rptConfirm(`Delete ${finLabel().toLowerCase()} ${d.doc_number}? This cannot be undone.`))) return;
+            if (!d || !(await rptConfirm(`Delete ${finLabel().toLowerCase()} ${d.doc_number}? It stays in the Recycle Bin for 90 days.`))) return;
             try {
                 const res = await rptFetch(`${API_BASE}/api/finance-documents/${id}`, { method: 'DELETE', headers: API_HEADERS });
                 if (!res.ok) throw new Error('delete failed');
@@ -2714,7 +2982,7 @@
             const G = 'background:#d9d9d9; font-weight:700;';
             const rows = (d.items || []).map(it => `
                 <tr>
-                    <td style="${B} padding:6px 8px; vertical-align:top; white-space:pre-wrap;">${rptEsc(it.description || '')}</td>
+                    <td style="${B} padding:6px 8px; vertical-align:top; white-space:pre-wrap;">${rptEsc(it.description || '')}${d.doc_type !== 'quote' && it.paid ? `<div style="font-size:10.5px; font-style:italic; font-weight:700; margin-top:2px;">PAID${(it.paid_date || d.paid_date) ? ' on ' + rptEsc(finShortDate(it.paid_date || d.paid_date)) : ''}</div>` : ''}</td>
                     <td style="${B} padding:6px 8px; vertical-align:top; text-align:center;">${rptEsc(it.quantity == null ? '' : it.quantity)}</td>
                     <td style="${B} padding:6px 8px; vertical-align:top; text-align:right;">${it.unit_price === '' || it.unit_price == null ? '' : finMoney(it.unit_price)}</td>
                     <td style="${B} padding:6px 8px; vertical-align:top; text-align:right;">${(it.quantity === '' && it.unit_price === '') ? '' : finMoney(finNum(it.quantity) * finNum(it.unit_price))}</td>
@@ -2735,7 +3003,9 @@
                 <div style="${B} padding:8px 10px; min-height:90px; white-space:pre-wrap;"><span>Deliver to:</span>\n${rptEsc(d.deliver_to || d.client_name || '')}</div>
                 <div style="height:8px;"></div>
                 <table style="width:100%; border-collapse:collapse;">
-                    <tr><td style="${B} ${G} padding:6px 8px; width:15%;">Your Reference:</td><td style="${B} padding:6px 8px;">${rptEsc(d.reference || '')}</td></tr>
+                    ${d.doc_type === 'quote'
+                        ? `<tr><td style="${B} ${G} padding:10px 8px; width:15%;">Your Reference:</td><td style="${B} padding:10px 8px; width:35%;">${rptEsc(d.reference || '')}</td><td style="${B} ${G} padding:10px 8px; width:15%;">Expiry date:</td><td style="${B} padding:10px 8px;">${rptEsc(finLongDate(d.expiry_date))}</td></tr>`
+                        : `<tr><td style="${B} ${G} padding:6px 8px; width:15%;">Your Reference:</td><td style="${B} padding:6px 8px;">${rptEsc(d.reference || '')}</td></tr>`}
                 </table>
                 <div style="height:8px;"></div>
                 <table style="width:100%; border-collapse:collapse;">
@@ -2760,22 +3030,24 @@
             </div>`;
         }
 
-        function finPrintDoc(d) {
+        function finPrintDoc(d, htmlFn, titleText) {
+            htmlFn = htmlFn || finDocHtml;
             const w = window.open('', '_blank');
             if (!w) { rptToast('Your browser blocked the print window. Please allow pop-ups for this site.', 'warn'); return; }
-            w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${rptEsc(d.doc_number)}</title>
+            w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${rptEsc(titleText || d.doc_number)}</title>
                 <style>@page { size: A4; margin: 12mm; } body { margin: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }</style></head>
-                <body>${finDocHtml(d)}</body></html>`);
+                <body>${htmlFn(d)}</body></html>`);
             w.document.close();
             const img = w.document.querySelector('img');
             const go = () => { w.focus(); w.print(); };
             if (img && !img.complete) { img.onload = go; img.onerror = go; } else { setTimeout(go, 200); }
         }
 
-        async function finDownloadDoc(d) {
+        async function finDownloadDoc(d, htmlFn, fileName, paginate) {
+            htmlFn = htmlFn || finDocHtml;
             const holder = document.createElement('div');
             holder.style.cssText = 'position:fixed; left:-10000px; top:0; background:#fff;';
-            holder.innerHTML = finDocHtml(d);
+            holder.innerHTML = htmlFn(d);
             document.body.appendChild(holder);
             try {
                 await Promise.all(Array.from(holder.querySelectorAll('img')).map(img => img.complete ? null : new Promise(r => { img.onload = r; img.onerror = r; })));
@@ -2784,9 +3056,22 @@
                 const pdf = new jsPDF('p', 'mm', 'a4');
                 const maxW = 190, maxH = 277;
                 let w = maxW, h = (canvas.height * w) / canvas.width;
-                if (h > maxH) { h = maxH; w = (canvas.width * h) / canvas.height; }
-                pdf.addImage(canvas.toDataURL('image/png'), 'PNG', (210 - w) / 2, 10, w, h);
-                pdf.save(`${d.doc_number}.pdf`);
+                if (paginate && h > maxH) {
+                    // long statement: cut the picture into A4 pages
+                    const pagePx = Math.floor(canvas.width * (maxH / maxW));
+                    for (let y = 0, page = 0; y < canvas.height; y += pagePx, page++) {
+                        const sliceH = Math.min(pagePx, canvas.height - y);
+                        const part = document.createElement('canvas');
+                        part.width = canvas.width; part.height = sliceH;
+                        part.getContext('2d').drawImage(canvas, 0, y, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
+                        if (page > 0) pdf.addPage();
+                        pdf.addImage(part.toDataURL('image/png'), 'PNG', 10, 10, maxW, (sliceH * maxW) / canvas.width);
+                    }
+                } else {
+                    if (h > maxH) { h = maxH; w = (canvas.width * h) / canvas.height; }
+                    pdf.addImage(canvas.toDataURL('image/png'), 'PNG', (210 - w) / 2, 10, w, h);
+                }
+                pdf.save(`${fileName || d.doc_number}.pdf`);
             } catch (err) {
                 console.error('Error generating PDF:', err);
                 rptToast('Could not create the PDF. Please try again.', 'error');
@@ -2803,6 +3088,471 @@
         }
         function finPrintForm() { const d = finFormDoc(); if (d) finPrintDoc(d); }
         function finDownloadForm() { const d = finFormDoc(); if (d) finDownloadDoc(d); }
+        // ---------- Client statements (all of a client's invoices for a date range) ----------
+        const FIN_STMT_BANK = [
+            ['Account Name:', "Reginald's SHERQ Services"], ['Bank:', 'First National Bank, South Africa'],
+            ['Branch:', '255355'], ['Account Number:', '62592613668'],
+            ['Reference:', 'Use invoice number as reference, when making payments.']
+        ];
+        let finStmtCurrent = null;
+        function finShortDate(ymd) {
+            if (!ymd) return '';
+            const p = String(ymd).split('T')[0].split('-');
+            return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : '';
+        }
+        async function showFinanceStatementView() {
+            finMode = 'invoice';
+            hideAllContentViews();
+            document.getElementById('financeStatementView').style.display = 'block';
+            try {
+                const [c, s] = await Promise.all([
+                    rptFetch(`${API_BASE}/api/finance/clients`, { headers: API_HEADERS }),
+                    rptFetch(`${API_BASE}/api/finance/settings`, { headers: API_HEADERS })
+                ]);
+                finClients = c.ok ? await c.json() : [];
+                finSettings = s.ok ? await s.json() : {};
+            } catch (err) { console.error(err); rptToast('Could not load the clients. Please try again.', 'error'); }
+            finStmtFillClients();
+            const today = rptToday();
+            document.getElementById('finStmtFrom').value = today.slice(0, 4) + '-01-01';
+            document.getElementById('finStmtTo').value = today;
+            document.getElementById('finStmtUnpaid').checked = false;
+            finStmtClear();
+            await loadFinStmtList();
+        }
+        function finStmtFillClients(select) {
+            const sel = document.getElementById('finStmtClient');
+            const keep = select || sel.value;
+            sel.innerHTML = '<option value="">Choose a client…</option>' + finClients.map(c => `<option value="${rptEsc(c.name)}">${rptEsc(c.name)}</option>`).join('');
+            sel.value = finClients.some(c => c.name === keep) ? keep : '';
+        }
+        function finStmtClear() {
+            document.getElementById('finStmtMsg').innerText = '';
+        }
+        function closeFinStmtModal() { document.getElementById('financeStmtModal').classList.remove('open'); }
+        let finStmtHidePay = false;   // remembered while the page stays open
+        function finStmtToggleDetails() {
+            finStmtHidePay = !document.getElementById('finStmtShowPay').checked;
+            if (finStmtCurrent) {
+                finStmtCurrent.hidePay = finStmtHidePay;
+                document.getElementById('finStmtPreview').innerHTML = finClientStatementHtml(finStmtCurrent);
+            }
+        }
+        function openFinStmtModal(s) {
+            s.hidePay = finStmtHidePay;
+            document.getElementById('finStmtShowPay').checked = !finStmtHidePay;
+            finStmtCurrent = s;
+            document.getElementById('finStmtModalHeading').innerText = `Statement: ${s.client.name}`;
+            document.getElementById('finStmtPreview').innerHTML = finClientStatementHtml(s);
+            document.getElementById('financeStmtModal').classList.add('open');
+        }
+
+        // ---- list of statements that were created ----
+        let finStmtList = [];
+        async function loadFinStmtList() {
+            try {
+                const res = await rptFetch(`${API_BASE}/api/finance-statements`, { headers: API_HEADERS });
+                finStmtList = res.ok ? await res.json() : [];
+            } catch (err) {
+                console.error(err);
+                finStmtList = [];
+                rptToast('Could not load the statements. Please try again.', 'error');
+            }
+            const sel = document.getElementById('finStmtFilterClient');
+            const keep = sel.value;
+            const names = [...new Set(finStmtList.map(s => s.client_name))].sort((a, b) => a.localeCompare(b));
+            sel.innerHTML = '<option value="">All clients</option>' + names.map(n => `<option value="${rptEsc(n)}">${rptEsc(n)}</option>`).join('');
+            sel.value = names.includes(keep) ? keep : '';
+            renderFinStmtList();
+        }
+        function renderFinStmtList() {
+            const client = document.getElementById('finStmtFilterClient').value;
+            const list = finStmtList.filter(s => !client || s.client_name === client);
+            document.getElementById('finStmtListBody').innerHTML = list.map(s => `
+                <tr onclick="finStmtView(${s.id})" style="cursor:pointer;">
+                    <td>${rptEsc(finShortDate(s.statement_date))}</td>
+                    <td><b>${rptEsc(s.client_name)}</b>${s.unpaid_only ? '<div style="font-size:11.5px; color:var(--ink-soft);">Not fully paid invoices only</div>' : ''}</td>
+                    <td>${rptEsc(finShortDate(s.date_from))} to ${rptEsc(finShortDate(s.date_to))}</td>
+                    <td style="text-align:right;">${s.invoice_count}</td>
+                    <td style="text-align:right; font-weight:700;">${finMoney(s.balance)}</td>
+                    <td>${rptEsc(s.created_by || '—')}</td>
+                    <td style="white-space:nowrap;">
+                        <button class="wf-action-btn" title="View" onclick="event.stopPropagation(); finStmtView(${s.id})"><i class="fas fa-eye"></i></button>
+                        <button class="wf-action-btn" title="Print" onclick="event.stopPropagation(); finStmtView(${s.id}, 'print')"><i class="fas fa-print"></i></button>
+                        <button class="wf-action-btn" title="Download PDF" onclick="event.stopPropagation(); finStmtView(${s.id}, 'pdf')"><i class="fas fa-download"></i></button>
+                        <button class="wf-action-btn delete" title="Delete" onclick="event.stopPropagation(); finStmtDelete(${s.id})"><i class="fas fa-trash"></i></button>
+                    </td>
+                </tr>`).join('');
+            const empty = document.getElementById('finStmtListEmpty');
+            empty.style.display = list.length ? 'none' : 'block';
+            empty.innerText = finStmtList.length ? 'Nothing matches this filter.' : 'No statements yet. Choose a client and dates above and click "Create statement".';
+        }
+        // Opens a statement that was created earlier (exactly as it was when created)
+        async function finStmtView(id, then) {
+            try {
+                const res = await rptFetch(`${API_BASE}/api/finance-statements/${id}`, { headers: API_HEADERS });
+                if (!res.ok) throw new Error('load failed');
+                const row = await res.json();
+                const s = { ...row.data, date: row.statement_date || row.data.date };
+                s.hidePay = finStmtHidePay;
+                if (then === 'print') { finStmtCurrent = s; finStmtPrint(); return; }
+                if (then === 'pdf') { finStmtCurrent = s; finStmtDownload(); return; }
+                openFinStmtModal(s);
+            } catch (err) {
+                console.error(err);
+                rptToast('Could not open the statement. Please try again.', 'error');
+            }
+        }
+        async function finStmtDelete(id) {
+            const s = finStmtList.find(x => x.id === id);
+            if (!(await rptConfirm(`Delete the statement for ${s ? s.client_name : 'this client'}? It stays in the Recycle Bin for 90 days.`))) return;
+            try {
+                const res = await rptFetch(`${API_BASE}/api/finance-statements/${id}`, { method: 'DELETE', headers: API_HEADERS });
+                if (!res.ok) throw new Error('delete failed');
+                rptToast('Statement deleted.', 'success');
+                await loadFinStmtList();
+            } catch (err) {
+                console.error(err);
+                rptToast('Could not delete the statement. Please try again.', 'error');
+            }
+        }
+        function finStmtEditClient() {
+            const c = finClients.find(x => x.name === document.getElementById('finStmtClient').value);
+            if (!c) { rptToast('Choose a client first.', 'warn'); return; }
+            openFinanceClient(c);
+        }
+        async function finStmtCreate() {
+            const name = document.getElementById('finStmtClient').value;
+            const from = document.getElementById('finStmtFrom').value;
+            const to = document.getElementById('finStmtTo').value;
+            const unpaidOnly = document.getElementById('finStmtUnpaid').checked;
+            if (!name) { rptToast('Please choose a client.', 'warn'); return; }
+            if (!from || !to) { rptToast('Please choose both dates.', 'warn'); return; }
+            if (from > to) { rptToast('The "From" date must be before the "To" date.', 'warn'); return; }
+            let docs = [];
+            try {
+                const res = await rptFetch(`${API_BASE}/api/finance-documents?doc_type=invoice`, { headers: API_HEADERS });
+                if (!res.ok) throw new Error('load failed');
+                docs = await res.json();
+            } catch (err) {
+                console.error(err);
+                rptToast('Could not load the invoices. Please try again.', 'error');
+                return;
+            }
+            const list = docs
+                .filter(d => String(d.client_name).toLowerCase() === name.toLowerCase() && d.doc_date && d.doc_date >= from && d.doc_date <= to && (!unpaidOnly || (d.payment_status || 'unpaid') !== 'paid'))
+                .sort((a, b) => String(a.doc_date).localeCompare(String(b.doc_date)) || a.id - b.id);
+            const client = finClients.find(c => c.name === name) || { name };
+            let running = 0, invoiced = 0, paidTotal = 0;
+            const rows = [];
+            list.forEach(d => {
+                const total = parseFloat(d.total) || 0;
+                const paid = Math.min(parseFloat(d.paid_amount) || 0, total);
+                const lines = Array.isArray(d.items) ? d.items : [];
+                const vat = /\d/.test(String(d.vat_text || '')) ? finNum(d.vat_text) : 0;
+                const subtotal = lines.reduce((s, it) => s + finNum(it.quantity) * finNum(it.unit_price), 0);
+                // every payment on its own date (lines paid on the same day are added together; VAT is shared out by line)
+                const byDate = {};
+                lines.filter(it => it.paid).forEach(it => {
+                    const amt = finNum(it.quantity) * finNum(it.unit_price);
+                    const dt = it.paid_date || d.paid_date || '';
+                    byDate[dt] = (byDate[dt] || 0) + amt + (subtotal > 0 ? vat * (amt / subtotal) : 0);
+                });
+                let payments = Object.keys(byDate).sort().map(dt => ({ date: dt, amount: Math.round(byDate[dt] * 100) / 100 }));
+                if (payments.length) {
+                    const diff = Math.round((paid - payments.reduce((s, p) => s + p.amount, 0)) * 100) / 100;
+                    payments[payments.length - 1].amount = Math.round((payments[payments.length - 1].amount + diff) * 100) / 100;
+                } else if (paid > 0) {
+                    payments = [{ date: d.paid_date || '', amount: paid }];
+                }
+                running += total - paid; invoiced += total; paidTotal += paid;
+                rows.push({ inv_date: d.doc_date, desc: `Invoice ${d.doc_number}`, sub: d.reference || '', amount: total, payments, balance: total - paid,
+                    items: lines.map(it => ({ description: it.description || '', quantity: it.quantity, amount: finNum(it.quantity) * finNum(it.unit_price), paid_date: it.paid ? (it.paid_date || d.paid_date || '') : '' })),
+                    vat });
+            });
+            const stmt = { client, from, to, rows, invoiced, paid: paidTotal, balance: running, count: list.length, date: rptToday(), unpaid_only: unpaidOnly };
+            if (!list.length) {
+                document.getElementById('finStmtMsg').innerText = 'There are no invoices for this client in these dates, so no statement was created.';
+                return;
+            }
+            document.getElementById('finStmtMsg').innerText = '';
+            try {
+                const res = await rptFetch(`${API_BASE}/api/finance-statements`, {
+                    method: 'POST', headers: { ...API_HEADERS, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ client_name: name, date_from: from, date_to: to, statement_date: stmt.date, unpaid_only: unpaidOnly, invoice_count: stmt.count,
+                        invoiced: stmt.invoiced, paid: stmt.paid, balance: stmt.balance, data: stmt, created_by: currentUserDisplay || currentUserFullName || '' })
+                });
+                if (!res.ok) throw new Error('save failed');
+                await loadFinStmtList();
+                rptToast('Statement created. You can find it in the list below.', 'success');
+            } catch (err) {
+                console.error(err);
+                rptToast('The statement was made but could not be saved to the list. You can still print it.', 'warn');
+            }
+            openFinStmtModal(stmt);
+        }
+        function finStmtTitle(s) { return `Statement ${s.client.name} ${s.from} to ${s.to}`; }
+        function finStmtPrint() { if (finStmtCurrent) finPrintDoc(finStmtCurrent, finClientStatementHtml, finStmtTitle(finStmtCurrent)); }
+        function finStmtDownload() { if (finStmtCurrent) finDownloadDoc(finStmtCurrent, finClientStatementHtml, finStmtTitle(finStmtCurrent), true); }
+
+        // The lines of an invoice with what each one cost (so the client can see what the price is for)
+        function finStmtItemsHtml(r) {
+            const items = Array.isArray(r.items) ? r.items : [];
+            if (!items.length) return '';
+            const line = (text, amount) => `<div style="display:flex; justify-content:space-between; gap:12px; font-size:11.5px; color:#333; padding:1px 0 1px 10px;"><span style="white-space:pre-wrap;">${rptEsc(text)}</span><span style="white-space:nowrap;">${amount}</span></div>`;
+            return `<div style="margin-top:4px; border-top:1px dotted #999; padding-top:3px;">`
+                + items.map(it => line(`${it.description || ''}${finNum(it.quantity) > 1 ? ' × ' + it.quantity : ''}${it.paid_date ? ' (paid ' + finShortDate(it.paid_date) + ')' : ''}`, finMoney(it.amount))).join('')
+                + (r.vat ? line('VAT', finMoney(r.vat)) : '') + `</div>`;
+        }
+
+        function finClientStatementHtml(s) {
+            const logo = finSettings.logo || FIN_DEFAULT_LOGO;
+            const c = s.client || {};
+            const BLUE = '#1B8CE6', DARK = '#0B5AA8', HEAD = '#CAD5E2', LINE = '#444';
+            const bd = `border:1px solid ${LINE};`;
+            const addr = rptEsc(c.address || '').replace(/\n/g, '<br>');
+            const info = (label, val) => `<tr><td style="${bd} background:${HEAD}; padding:10px 10px;">${label}</td><td style="${bd} padding:10px 10px; text-align:right;">${rptEsc(val || '')}</td></tr>`;
+            // The Balance on a row is what is still owing on THAT invoice (R 0.00 once it is paid).
+            // The total owed on all the invoices is in "Balance due" at the bottom.
+            // One row per invoice: the payment (if any) and its date are shown on the same row.
+            const shown = [];
+            s.rows.forEach(r => {
+                if (r.amount != null) {
+                    shown.push({ ...r, payments: Array.isArray(r.payments) ? r.payments.slice() : [] });
+                } else if (shown.length) {
+                    // statements saved earlier have the payment on its own row: move it onto the invoice row
+                    shown[shown.length - 1].payments.push({ date: r.paid_date || '', amount: parseFloat(r.payment) || 0 });
+                }
+            });
+            shown.forEach(r => {
+                r.paidSum = r.payments.reduce((t, p) => t + (parseFloat(p.amount) || 0), 0);
+                r.shownBalance = Math.max(0, (parseFloat(r.amount) || 0) - r.paidSum);
+            });
+            // "Show totals" off: only the totals box (Total invoiced, Total paid, Balance due) is left out
+            const showTotals = !s.hidePay;
+            const cols = 5;
+            const rows = shown.map(r => `
+                <tr style="page-break-inside:avoid;">
+                    <td style="${bd} padding:7px 8px; vertical-align:top; white-space:nowrap;">${rptEsc(finShortDate(r.inv_date))}</td>
+                    <td style="${bd} padding:7px 8px; vertical-align:top; white-space:nowrap;">${r.payments.map(p => `<div>${rptEsc(finShortDate(p.date)) || '&nbsp;'}</div>`).join('')}</td>
+                    <td style="${bd} padding:7px 8px; vertical-align:top;">${rptEsc(r.desc)}${r.amount != null ? ` <span style="float:right; margin-left:10px;">${finMoney(r.amount)}</span>` : ''}${r.sub ? `<div style="font-size:11px; color:#555;">Ref: ${rptEsc(r.sub)}</div>` : ''}${finStmtItemsHtml(r)}</td>
+                    <td style="${bd} padding:7px 8px; vertical-align:top; text-align:right; white-space:nowrap;">${r.payments.map(p => `<div>${finMoney(p.amount)}</div>`).join('')}</td>
+                    <td style="${bd} padding:7px 8px; vertical-align:top; text-align:right; white-space:nowrap;">${finMoney(r.shownBalance)}</td>
+                </tr>`).join('') || `<tr><td colspan="${cols}" style="${bd} padding:16px; text-align:center; color:#555;">No invoices in this period.</td></tr>`;
+            return `
+            <div style="width:740px; padding:0; background:#fff; color:#000; font-family:Arial, Helvetica, sans-serif; font-size:13px; line-height:1.35;">
+                <div style="display:flex; align-items:center; padding:6px 0 14px 0;">
+                    <div style="width:55%; text-align:left;"><img src="${logo}" style="max-height:105px; max-width:100%;" alt=""></div>
+                    <div style="width:3px; align-self:stretch; background:${DARK}; margin:8px 22px 8px 0;"></div>
+                    <div style="font-size:34px; font-weight:800; color:${DARK}; letter-spacing:0.5px;">STATEMENT</div>
+                </div>
+                <div style="height:4px; background:${BLUE}; margin-bottom:16px;"></div>
+                <table style="width:100%; border-collapse:collapse; margin-bottom:16px;">
+                    <tr>
+                        <td rowspan="4" style="${bd} width:52%; padding:10px 12px; vertical-align:top; line-height:1.75;">
+                            <div>To:</div>
+                            <div style="font-weight:700; font-size:14px;">${rptEsc(c.name || '')}</div>
+                            <div>${addr}</div>
+                        </td>
+                        <td style="${bd} background:${HEAD}; padding:10px 10px; width:20%;">Statement Date:</td>
+                        <td style="${bd} padding:10px 10px; text-align:right;">${rptEsc(finShortDate(s.date))}</td>
+                    </tr>
+                    ${info('Customer VAT No:', c.vat_number)}
+                    ${info('Customer Tel:', c.phone)}
+                    ${info('Email Address:', c.email)}
+                </table>
+                <div style="font-size:12px; margin-bottom:6px;">Period: ${rptEsc(finShortDate(s.from))} to ${rptEsc(finShortDate(s.to))}</div>
+                <table style="width:100%; border-collapse:collapse; margin-bottom:16px;">
+                    <tr><td colspan="${cols}" style="${bd} background:${HEAD}; padding:10px; text-align:center; font-weight:700; font-size:15px;">Statement</td></tr>
+                    <tr style="font-weight:700; text-align:center;">
+                        <td style="${bd} background:${HEAD}; padding:7px 8px; width:12%;">Inv. Date</td>
+                        <td style="${bd} background:${HEAD}; padding:7px 8px; width:12%;">Date Paid</td>
+                        <td style="${bd} background:${HEAD}; padding:7px 8px;">Description</td>
+                        <td style="${bd} background:${HEAD}; padding:7px 8px; width:15%;">Payment</td>
+                        <td style="${bd} background:${HEAD}; padding:7px 8px; width:15%;">Balance</td>
+                    </tr>
+                    ${rows}
+                </table>
+                ${showTotals ? `<table style="width:46%; margin-left:auto; border-collapse:collapse; margin-bottom:16px; page-break-inside:avoid;">
+                    <tr><td style="${bd} background:${HEAD}; padding:8px 10px;">Total invoiced</td><td style="${bd} padding:8px 10px; text-align:right;">${finMoney(s.invoiced)}</td></tr>
+                    <tr><td style="${bd} background:${HEAD}; padding:8px 10px;">Total paid</td><td style="${bd} padding:8px 10px; text-align:right;">${finMoney(s.paid)}</td></tr>
+                    <tr><td style="${bd} background:${HEAD}; padding:8px 10px; font-weight:700;">Balance due</td><td style="${bd} padding:8px 10px; text-align:right; font-weight:700;">${finMoney(s.balance)}</td></tr>
+                </table>` : `<div style="height:4px;"></div>`}
+                <div style="${bd} page-break-inside:avoid;">
+                    <div style="background:${HEAD}; padding:9px 12px; font-weight:700; font-size:15px; border-bottom:1px solid ${LINE};">Banking Details</div>
+                    <table style="width:100%; border-collapse:collapse; margin:6px 0;">
+                        ${FIN_STMT_BANK.map(b => `<tr><td style="padding:3px 12px; width:24%;">${b[0]}</td><td style="padding:3px 12px;">${rptEsc(b[1])}</td></tr>`).join('')}
+                    </table>
+                </div>
+                <div style="height:4px; background:${BLUE}; margin-top:16px;"></div>
+            </div>`;
+        }
+
+        // ---------- Payments and statement ----------
+        let finPayId = null;
+        function finPayBadge(d) {
+            const st = d.payment_status || 'unpaid';
+            const style = st === 'paid' ? 'background:rgba(153,204,51,0.18); color:#4F6B18;' : st === 'partial' ? 'background:#FEF3C7; color:#B45309;' : 'background:#E8EDF3; color:#475569;';
+            const text = st === 'paid' ? 'Paid' : st === 'partial' ? 'Partly paid' : 'Unpaid';
+            const extra = st === 'partial' ? `<div style="font-size:11.5px; color:var(--ink-soft); margin-top:3px;">${finMoney(d.paid_amount)} of ${finMoney(d.total)}</div>` : '';
+            const issued = d.statement_issued_at ? `<div style="font-size:11px; color:var(--ink-soft); margin-top:3px;">Statement issued ${rptEsc(new Date(d.statement_issued_at).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short' }))}</div>` : '';
+            return `<span class="wf-badge" style="${style}">${text}</span>${extra}${issued}`;
+        }
+        function openFinancePay(id) {
+            const d = finDocs.find(x => x.id === id);
+            if (!d) return;
+            finPayId = id;
+            document.getElementById('finPayHeading').innerText = `Payment: ${d.doc_number}`;
+            document.getElementById('finPayInfo').innerText = `${d.client_name} · ${rptFormatDate(d.doc_date)} · Total ${finMoney(d.total)}`;
+            const items = Array.isArray(d.items) ? d.items : [];
+            document.getElementById('finPayLines').innerHTML = items.map((it, i) => `
+                <div onclick="if (event.target.tagName !== 'INPUT') { const c = this.querySelector('input'); c.checked = !c.checked; finPayRecalc(); }" style="display:flex; gap:12px; align-items:center; padding:9px 12px; border:1.5px solid var(--line); border-radius:8px; margin-bottom:6px; cursor:pointer;">
+                    <input type="checkbox" data-i="${i}" ${it.paid ? 'checked' : ''} onchange="finPayRecalc()" style="width:18px; height:18px; padding:0; margin:0; flex:none; cursor:pointer;">
+                    <span style="flex:1; white-space:pre-wrap; font-size:13.5px; font-weight:400;">${rptEsc(it.description || '(no description)')}${finNum(it.quantity) > 1 ? ` <span style="color:var(--ink-soft);">× ${rptEsc(it.quantity)}</span>` : ''}</span>
+                    <input type="date" data-d="${i}" value="${rptEsc(it.paid ? (it.paid_date || d.paid_date || rptToday()) : rptToday())}" title="Date paid" style="width:150px; padding:6px 8px; margin:0; flex:none; display:${it.paid ? '' : 'none'};">
+                    <b style="font-size:13.5px; white-space:nowrap; min-width:90px; text-align:right;">${finMoney(finNum(it.quantity) * finNum(it.unit_price))}</b>
+                </div>`).join('') || '<div style="color:var(--ink-soft); font-size:13px;">This invoice has no lines.</div>';
+            document.getElementById('fin_pay_note').value = d.payment_note || '';
+            finPayRecalc();
+            document.getElementById('financePayModal').classList.add('open');
+        }
+        function closeFinancePay() { document.getElementById('financePayModal').classList.remove('open'); }
+        function finPayTickAll(on) {
+            document.querySelectorAll('#finPayLines input[type=checkbox]').forEach(c => { c.checked = on; });
+            finPayRecalc();
+        }
+        function finPayLinesData() {
+            return Array.from(document.querySelectorAll('#finPayLines input[type=checkbox]')).filter(c => c.checked).map(c => {
+                const dateInput = document.querySelector(`#finPayLines input[data-d="${c.dataset.i}"]`);
+                return { index: parseInt(c.dataset.i, 10), date: dateInput && dateInput.value ? dateInput.value : rptToday() };
+            });
+        }
+        function finPayChecked() { return Array.from(document.querySelectorAll('#finPayLines input[type=checkbox]')).filter(c => c.checked).map(c => parseInt(c.dataset.i, 10)); }
+        function finPayCalc(d, paidIdx) {
+            const items = (d.items || []).map((it, i) => ({ ...it, paid: paidIdx.includes(i) }));
+            const t = finTotals(items, d.vat_text);
+            const paidSub = items.filter(i => i.paid).reduce((s, it) => s + finNum(it.quantity) * finNum(it.unit_price), 0);
+            const n = items.filter(i => i.paid).length;
+            const status = !items.length || !n ? 'unpaid' : n === items.length ? 'paid' : 'partial';
+            const paid = status === 'paid' ? t.total : (t.subtotal > 0 ? paidSub + (t.total - t.subtotal) * (paidSub / t.subtotal) : 0);
+            return { status, paid, balance: t.total - paid, n, count: items.length, total: t.total };
+        }
+        function finPayRecalc() {
+            const d = finDocs.find(x => x.id === finPayId);
+            if (!d) return;
+            document.querySelectorAll('#finPayLines input[type=checkbox]').forEach(c => {
+                const dateInput = document.querySelector(`#finPayLines input[data-d="${c.dataset.i}"]`);
+                if (dateInput) dateInput.style.display = c.checked ? '' : 'none';
+            });
+            const c = finPayCalc(d, finPayChecked());
+            const label = c.status === 'paid' ? 'Paid in full' : c.status === 'partial' ? `Partly paid (${c.n} of ${c.count} lines)` : 'Unpaid';
+            document.getElementById('finPaySummary').innerHTML = `Status: <b>${label}</b><br>Paid: <b>${finMoney(c.paid)}</b> &nbsp;·&nbsp; Still owing: <b>${finMoney(c.balance)}</b>`;
+        }
+        async function finPaySave(close) {
+            const d = finDocs.find(x => x.id === finPayId);
+            if (!d) return null;
+            const btn = document.getElementById('finPaySaveBtn');
+            btn.disabled = true;
+            try {
+                const res = await rptFetch(`${API_BASE}/api/finance-documents/${d.id}/payment`, {
+                    method: 'PUT', headers: { ...API_HEADERS, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ paid_lines: finPayLinesData(), payment_note: document.getElementById('fin_pay_note').value })
+                });
+                const body = await res.json().catch(() => ({}));
+                if (!res.ok) { rptToast(body.error || 'Could not save the payment. Please try again.', 'error'); return null; }
+                const i = finDocs.findIndex(x => x.id === d.id);
+                finDocs[i] = { ...finDocs[i], ...body };
+                renderFinanceRegister();
+                if (close) { closeFinancePay(); rptToast('Payment saved.', 'success'); }
+                return finDocs[i];
+            } catch (err) {
+                console.error(err);
+                rptToast('Could not save the payment. Please check your connection and try again.', 'error');
+                return null;
+            } finally {
+                btn.disabled = false;
+            }
+        }
+        // Saves the payment first so the statement always matches what is on screen, then prints / downloads it
+        async function finPayStatement(kind) {
+            const d = await finPaySave(false);
+            if (!d) return;
+            if (kind === 'pdf') await finDownloadDoc(d, finStatementHtml, `Statement ${d.doc_number}`);
+            else finPrintDoc(d, finStatementHtml, `Statement ${d.doc_number}`);
+            try {
+                const res = await rptFetch(`${API_BASE}/api/finance-documents/${d.id}/statement-issued`, { method: 'POST', headers: API_HEADERS });
+                if (res.ok) {
+                    const body = await res.json();
+                    const i = finDocs.findIndex(x => x.id === d.id);
+                    finDocs[i] = { ...finDocs[i], ...body };
+                    renderFinanceRegister();
+                }
+            } catch (err) { console.error(err); }
+        }
+        function finStatementHtml(d) {
+            const logo = finSettings.logo || FIN_DEFAULT_LOGO;
+            const items = Array.isArray(d.items) ? d.items : [];
+            const paidIdx = items.map((it, i) => it.paid ? i : -1).filter(i => i >= 0);
+            const c = finPayCalc(d, paidIdx);
+            const B = 'border:1px solid #000;';
+            const G = 'background:#d9d9d9; font-weight:700;';
+            const rows = items.map(it => `
+                <tr>
+                    <td style="${B} padding:6px 8px; vertical-align:top; white-space:pre-wrap;">${rptEsc(it.description || '')}</td>
+                    <td style="${B} padding:6px 8px; vertical-align:top; text-align:center;">${rptEsc(it.quantity == null ? '' : it.quantity)}</td>
+                    <td style="${B} padding:6px 8px; vertical-align:top; text-align:right;">${finMoney(finNum(it.quantity) * finNum(it.unit_price))}</td>
+                    <td style="${B} padding:6px 8px; vertical-align:top; text-align:center; font-weight:700; ${it.paid ? '' : 'background:#f2f2f2;'}">${it.paid ? 'PAID' : 'NOT PAID'}${it.paid && (it.paid_date || d.paid_date) ? `<div style="font-weight:400; font-size:11px;">${rptEsc(finShortDate(it.paid_date || d.paid_date))}</div>` : ''}</td>
+                </tr>`).join('');
+            const paidOn = d.paid_date ? finLongDate(d.paid_date) : '';
+            const statusText = c.status === 'paid'
+                ? `This invoice has been paid in full${paidOn ? ' on ' + paidOn : ''}.`
+                : c.status === 'partial'
+                    ? `Payment has been received for ${c.n} of ${c.count} items${paidOn ? ' (paid on ' + paidOn + ')' : ''}. The items marked NOT PAID are still outstanding.`
+                    : 'No payment has been received for this invoice yet.';
+            const banner = c.status === 'paid' ? 'PAID IN FULL' : c.status === 'partial' ? 'PARTLY PAID' : 'NOT PAID';
+            return `
+            <div style="width:740px; padding:0; background:#fff; color:#000; font-family:Arial, Helvetica, sans-serif; font-size:12px; line-height:1.35;">
+                <table style="width:100%; border-collapse:collapse; ${B}">
+                    <tr>
+                        <td rowspan="4" style="${B} width:50%; padding:6px; text-align:center; vertical-align:middle;"><img src="${logo}" style="max-width:100%; max-height:150px;" alt=""></td>
+                        <td colspan="2" style="${B} ${G} text-align:center; padding:10px; font-size:14px;">Statement of Account</td>
+                    </tr>
+                    <tr><td style="${B} ${G} padding:12px 8px; width:25%;">Statement date:</td><td style="${B} padding:12px 8px;">${rptEsc(finLongDate(rptToday()))}</td></tr>
+                    <tr><td style="${B} ${G} padding:12px 8px;">Invoice number:</td><td style="${B} padding:12px 8px;">${rptEsc(d.doc_number)}</td></tr>
+                    <tr><td style="${B} ${G} padding:12px 8px;">Invoice date:</td><td style="${B} padding:12px 8px;">${rptEsc(finLongDate(d.doc_date))}</td></tr>
+                </table>
+                <div style="height:8px;"></div>
+                <div style="${B} padding:8px 10px; min-height:70px; white-space:pre-wrap;"><span>Client:</span>\n${rptEsc(d.deliver_to || d.client_name || '')}</div>
+                <div style="height:8px;"></div>
+                <table style="width:100%; border-collapse:collapse;">
+                    <tr><td style="${B} ${G} padding:6px 8px; width:15%;">Your Reference:</td><td style="${B} padding:6px 8px;">${rptEsc(d.reference || '')}</td></tr>
+                </table>
+                <div style="height:8px;"></div>
+                <div style="${B} ${G} padding:10px; text-align:center; font-size:14px; letter-spacing:1px;">${banner}</div>
+                <div style="${B} border-top:none; padding:8px 10px;">${rptEsc(statusText)}${d.payment_note ? `<div style="margin-top:4px;">Note: ${rptEsc(d.payment_note)}</div>` : ''}</div>
+                <div style="height:8px;"></div>
+                <table style="width:100%; border-collapse:collapse;">
+                    <tr>
+                        <td style="${B} ${G} padding:4px 8px; text-align:center; width:45%;">Description</td>
+                        <td style="${B} ${G} padding:4px 8px; text-align:center; width:12%;">Quantity</td>
+                        <td style="${B} ${G} padding:4px 8px; text-align:center; width:20%;">Nett Price</td>
+                        <td style="${B} ${G} padding:4px 8px; text-align:center; width:23%;">Payment</td>
+                    </tr>
+                    ${rows}
+                </table>
+                <div style="height:8px;"></div>
+                <table style="width:100%; border-collapse:collapse;">
+                    <tr>
+                        <td rowspan="3" style="${B} width:55%; padding:8px 10px; text-align:center; vertical-align:middle; white-space:pre-wrap;">${c.status === 'paid' ? 'Thank you for your payment.' : rptEsc(d.bank_details || '')}</td>
+                        <td style="${B} ${G} padding:10px 8px; width:22%;">Invoice total:</td>
+                        <td style="${B} padding:10px 8px; text-align:center;">${finMoney(c.total)}</td>
+                    </tr>
+                    <tr><td style="${B} ${G} padding:10px 8px;">Amount paid:</td><td style="${B} padding:10px 8px; text-align:center;">${finMoney(c.paid)}</td></tr>
+                    <tr><td style="${B} ${G} padding:10px 8px;">Balance due:</td><td style="${B} padding:10px 8px; text-align:center; font-weight:700;">${finMoney(c.balance)}</td></tr>
+                </table>
+            </div>`;
+        }
+
         function finPrintSaved(id) { const d = finDocs.find(x => x.id === id); if (d) finPrintDoc(d); }
         function finDownloadSaved(id) { const d = finDocs.find(x => x.id === id); if (d) finDownloadDoc(d); }
 
@@ -2900,7 +3650,7 @@
         }
 
         async function deleteLearnedEntry(id) {
-            if (!(await rptConfirm('Delete this entry? This cannot be undone.'))) return;
+            if (!(await rptConfirm('Delete this entry? It stays in the Recycle Bin for 90 days.'))) return;
             try {
                 const res = await rptFetch(`${API_BASE}/api/learned-entries/${id}`, { method: 'DELETE', headers: API_HEADERS });
                 if (!res.ok) throw new Error('delete failed');
@@ -3549,7 +4299,7 @@
         async function deleteSavedMonthly(id) {
             const m = monthlyReportsList.find(x => x.id === id);
             const label = m ? `the monthly report for ${m.client_name || m.employee_name || 'this client'} (${m.month})` : 'this monthly report';
-            if (!(await rptConfirm(`Delete ${label} permanently? The weekly reports stay in Weekly Reports.`))) return false;
+            if (!(await rptConfirm(`Delete ${label}? It stays in the Recycle Bin for 90 days. The weekly reports stay in Weekly Reports.`))) return false;
             try {
                 const response = await rptFetch(`${API_BASE}/api/monthly-reports/${id}`, { method: 'DELETE', headers: API_HEADERS });
                 if (!response.ok) { rptToast('Could not delete the monthly report. Please try again.'); return false; }
@@ -3648,7 +4398,7 @@
         async function deleteReportById(id) {
             const s = reportSubmissions.find(x => x.id === id);
             const who = s ? `${s.employee_name || 'this person'}'s report of ${rptFormatDate(s.report_date)}` : 'this report';
-            if (!(await rptConfirm(`Delete ${who} permanently?`))) return false;
+            if (!(await rptConfirm(`Delete ${who}? It stays in the Recycle Bin for 90 days.`))) return false;
             try {
                 const response = await rptFetch(`${API_BASE}/api/report-submissions/${id}`, { method: 'DELETE', headers: API_HEADERS });
                 if (!response.ok) { rptToast('Could not delete the report. Please try again.'); return false; }
@@ -4538,7 +5288,7 @@
         function deleteRssLearner() {
             if (!editingRssLearnerId) return;
             const id = editingRssLearnerId;
-            showAppConfirm('Remove this learner record? This cannot be undone.', async () => {
+            showAppConfirm('Remove this learner record? It stays in the Recycle Bin for 90 days.', async () => {
                 try {
                     await fetch(`${API_BASE}/api/rss-learners/${id}`, { method: 'DELETE', headers: API_HEADERS });
                     closeRssLearnerModal();
@@ -7266,12 +8016,12 @@
         }
 
         function deleteEmployee(id) {
-            showAppConfirm('Permanently delete this employee? This cannot be undone.', async () => {
+            showAppConfirm('Delete this employee? They stay in the Recycle Bin for 90 days and can be restored.', async () => {
                 try {
                     const response = await fetch(`${API_BASE}/api/employees/${id}`, { method: 'DELETE', headers: API_HEADERS });
                     const data = await response.json().catch(() => ({}));
                     if (response.status === 409) {
-                        showAppConfirm('This employee has related records (leave requests, trainings, overtime, login account, etc). Deleting them will PERMANENTLY WIPE all of that history too, with no way to recover it. Are you absolutely sure you want to force-delete everything?', async () => {
+                        showAppConfirm('This employee has related records (leave requests, trainings, overtime, login account, etc). Deleting will remove all of that history too. Everything is kept together in the Recycle Bin for 90 days and can be restored. Do you want to delete everything?', async () => {
                             try {
                                 const forceResp = await fetch(`${API_BASE}/api/employees/${id}?force=true`, { method: 'DELETE', headers: API_HEADERS });
                                 const forceData = await forceResp.json().catch(() => ({}));
@@ -7508,12 +8258,12 @@
         }
 
         function deleteFromProfile() {
-            showAppConfirm('Permanently delete this employee? This cannot be undone.', async () => {
+            showAppConfirm('Delete this employee? They stay in the Recycle Bin for 90 days and can be restored.', async () => {
                 try {
                     const response = await fetch(`${API_BASE}/api/employees/${currentProfileId}`, { method: 'DELETE', headers: API_HEADERS });
                     const data = await response.json().catch(() => ({}));
                     if (response.status === 409) {
-                        showAppConfirm('This employee has related records (leave requests, trainings, overtime, login account, etc). Deleting them will PERMANENTLY WIPE all of that history too, with no way to recover it. Are you absolutely sure you want to force-delete everything?', async () => {
+                        showAppConfirm('This employee has related records (leave requests, trainings, overtime, login account, etc). Deleting will remove all of that history too. Everything is kept together in the Recycle Bin for 90 days and can be restored. Do you want to delete everything?', async () => {
                             try {
                                 const forceResp = await fetch(`${API_BASE}/api/employees/${currentProfileId}?force=true`, { method: 'DELETE', headers: API_HEADERS });
                                 const forceData = await forceResp.json().catch(() => ({}));

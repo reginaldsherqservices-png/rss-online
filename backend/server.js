@@ -36,6 +36,143 @@ app.use(express.json({ limit: '8mb' }));
 app.use(express.static(path.join(__dirname, '../frontend')));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// ================= RECYCLE BIN =================
+// Whatever is deleted anywhere in the system is first copied into this table (as a snapshot),
+// kept for 90 days, and can be restored. After 90 days it is removed for good.
+const RECYCLE_DAYS = 90;
+
+const recycleReady = (async () => {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS recycle_bin (
+      id SERIAL PRIMARY KEY,
+      item_type VARCHAR(50) NOT NULL,
+      label TEXT NOT NULL,
+      detail TEXT,
+      deleted_by TEXT,
+      deleted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      parts JSONB NOT NULL
+    )`);
+  await recyclePurge();
+})().catch(err => console.error('Could not set up the recycle bin:', err));
+
+async function recyclePurge() {
+  try {
+    const r = await pool.query(`DELETE FROM recycle_bin WHERE deleted_at < NOW() - ($1::text || ' days')::interval`, [String(RECYCLE_DAYS)]);
+    if (r.rowCount) console.log(`Recycle bin: permanently removed ${r.rowCount} item(s) older than ${RECYCLE_DAYS} days.`);
+  } catch (err) { console.error('RECYCLE PURGE ERROR:', err); }
+}
+setInterval(recyclePurge, 6 * 60 * 60 * 1000).unref();
+
+// Runs fn inside one database transaction
+async function recycleTx(fn) {
+  await recycleReady;
+  const db = await pool.connect();
+  try {
+    await db.query('BEGIN');
+    const out = await fn(db);
+    await db.query('COMMIT');
+    return out;
+  } catch (err) {
+    await db.query('ROLLBACK').catch(() => {});
+    throw err;
+  } finally {
+    db.release();
+  }
+}
+
+function recycleWho(req) {
+  try { return decodeURIComponent(String(req.headers['x-user-name'] || '')).slice(0, 120) || null; } catch (e) { return null; }
+}
+
+// Copies rows into the bin BEFORE they are deleted. `parts` lists the tables to copy, parents first
+// (that is the order they are put back in). Returns how many rows the first part found.
+// table names come only from code, never from the user.
+async function recycleCapture(db, req, type, makeLabel, parts) {
+  const saved = [];
+  for (const p of parts) {
+    const r = await db.query(`SELECT row_to_json(t) AS r FROM ${p.table} t WHERE ${p.where}`, p.params || []);
+    saved.push({ table: p.table, rows: r.rows.map(x => x.r) });
+  }
+  const main = saved[0].rows;
+  if (!main.length) return 0;
+  const { label, detail } = await makeLabel(main[0], db, main.length);
+  await db.query(
+    `INSERT INTO recycle_bin (item_type, label, detail, deleted_by, parts) VALUES ($1,$2,$3,$4,$5::jsonb)`,
+    [type, String(label || 'Item').slice(0, 300), detail ? String(detail).slice(0, 400) : null, recycleWho(req), JSON.stringify(saved.filter(s => s.rows.length))]
+  );
+  return main.length;
+}
+
+const rbName = (a, b) => [a, b].filter(Boolean).join(' ').trim();
+async function rbEmployeeName(db, id) {
+  if (!id) return '';
+  const r = await db.query('SELECT first_name, last_name FROM employees WHERE id = $1', [id]);
+  return r.rows.length ? rbName(r.rows[0].first_name, r.rows[0].last_name) : '';
+}
+
+app.get('/api/recycle-bin', async (req, res) => {
+  try {
+    await recycleReady;
+    await recyclePurge();
+    const r = await pool.query(
+      `SELECT id, item_type, label, detail, deleted_by, deleted_at,
+              GREATEST(0, CEIL(EXTRACT(EPOCH FROM (deleted_at + ($1::text || ' days')::interval - NOW())) / 86400))::int AS days_left
+       FROM recycle_bin ORDER BY deleted_at DESC`, [String(RECYCLE_DAYS)]);
+    res.json(r.rows);
+  } catch (err) {
+    console.error('RECYCLE LIST ERROR:', err);
+    res.status(500).json({ error: 'Error loading the recycle bin' });
+  }
+});
+
+app.post('/api/recycle-bin/:id/restore', async (req, res) => {
+  try {
+    const out = await recycleTx(async (db) => {
+      const r = await db.query('SELECT * FROM recycle_bin WHERE id = $1 FOR UPDATE', [req.params.id]);
+      if (!r.rows.length) return { status: 404, body: { error: 'This item is no longer in the recycle bin.' } };
+      const item = r.rows[0];
+      for (const part of item.parts) {
+        for (const row of part.rows) {
+          await db.query(`INSERT INTO ${part.table} SELECT * FROM json_populate_record(NULL::${part.table}, $1::json)`, [JSON.stringify(row)]);
+        }
+      }
+      await db.query('DELETE FROM recycle_bin WHERE id = $1', [item.id]);
+      return { status: 200, body: { success: true, item_type: item.item_type, label: item.label } };
+    });
+    res.status(out.status).json(out.body);
+  } catch (err) {
+    console.error('RECYCLE RESTORE ERROR:', err);
+    if (err.code === '23505') return res.status(409).json({ error: 'Cannot restore this yet: something with the same name or number already exists now. Rename or remove that one first.' });
+    if (err.code === '23503') return res.status(409).json({ error: 'Cannot restore this yet: it belongs to something that was deleted too (for example an employee). Restore that first.' });
+    res.status(500).json({ error: 'Error restoring this item' });
+  }
+});
+
+// Delete several (or all shown) items forever in one go: body { ids: [1, 2, 3] }
+app.post('/api/recycle-bin/delete-many', async (req, res) => {
+  try {
+    await recycleReady;
+    const ids = (Array.isArray(req.body.ids) ? req.body.ids : []).map(n => parseInt(n, 10)).filter(n => !isNaN(n));
+    if (!ids.length) return res.json({ success: true, deleted: 0 });
+    const r = await pool.query('DELETE FROM recycle_bin WHERE id = ANY($1::int[])', [ids]);
+    res.json({ success: true, deleted: r.rowCount });
+  } catch (err) {
+    console.error('RECYCLE DELETE MANY ERROR:', err);
+    res.status(500).json({ error: 'Error deleting these items permanently' });
+  }
+});
+
+app.delete('/api/recycle-bin/:id', async (req, res) => {
+  try {
+    await recycleReady;
+    await pool.query('DELETE FROM recycle_bin WHERE id = $1', [req.params.id]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('RECYCLE DELETE FOREVER ERROR:', err);
+    res.status(500).json({ error: 'Error deleting this item permanently' });
+  }
+});
+
 // 1. Login Endpoint
 app.post('/api/login', async (req, res) => {
   const { username, password } = req.body;
@@ -219,6 +356,20 @@ app.delete('/api/employees/:id', async (req, res) => {
       );
       const hasColumn = (table, column) => colCheck.rows.some(r => r.table_name === table && r.column_name === column);
 
+      // Save a copy of the employee and everything tied to them in the recycle bin first (parents first)
+      const rbParts = [{ table: 'employees', where: 'id = $1', params: [id] }];
+      if (hasColumn('users', 'employee_id')) rbParts.push({ table: 'users', where: 'employee_id = $1', params: [id] });
+      if (hasColumn('report_templates', 'employee_id')) rbParts.push({ table: 'report_templates', where: 'employee_id = $1', params: [id] });
+      if (hasColumn('overtime_entries', 'employee_id')) {
+        rbParts.push({ table: 'overtime_entries', where: 'employee_id = $1', params: [id] });
+        rbParts.push({ table: 'overtime_takings', where: 'overtime_entry_id IN (SELECT id FROM overtime_entries WHERE employee_id = $1)', params: [id] });
+      }
+      for (const t of ['leave_requests', 'leave_table_customizations', 'report_submissions', 'monthly_reports', 'training_completions', 'training_progress', 'timesheet_entries']) {
+        if (hasColumn(t, 'employee_id')) rbParts.push({ table: t, where: 'employee_id = $1', params: [id] });
+      }
+      await recycleReady;
+      await recycleCapture(client, req, 'employee', (e) => ({ label: rbName(e.first_name, e.last_name) || 'Employee', detail: [e.job_title, e.department, 'with all their records'].filter(Boolean).join(' · ') }), rbParts);
+
       if (hasColumn('overtime_entries', 'employee_id')) {
         await client.query('DELETE FROM overtime_takings WHERE overtime_entry_id IN (SELECT id FROM overtime_entries WHERE employee_id = $1)', [id]);
         await client.query('DELETE FROM overtime_entries WHERE employee_id = $1', [id]);
@@ -277,10 +428,11 @@ app.delete('/api/employees/:id', async (req, res) => {
   }
 
   try {
-    const result = await pool.query(
-      'DELETE FROM employees WHERE id = $1 RETURNING *',
-      [id]
-    );
+    const result = await recycleTx(async (db) => {
+      await recycleCapture(db, req, 'employee', (e) => ({ label: rbName(e.first_name, e.last_name) || 'Employee', detail: [e.job_title, e.department].filter(Boolean).join(' · ') }),
+        [{ table: 'employees', where: 'id = $1', params: [id] }]);
+      return db.query('DELETE FROM employees WHERE id = $1 RETURNING *', [id]);
+    });
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Employee not found' });
     }
@@ -702,9 +854,20 @@ app.delete('/api/training-categories/:id', async (req, res) => {
     }
     const name = catResult.rows[0].name;
 
-    await pool.query('DELETE FROM training_category_columns WHERE category = $1', [name]);
-    await pool.query('DELETE FROM trainings WHERE category = $1', [name]);
-    await pool.query('DELETE FROM training_categories WHERE id = $1', [id]);
+    await recycleTx(async (db) => {
+      await recycleCapture(db, req, 'training_topic', async (c, d, n) => {
+        const t = await d.query('SELECT COUNT(*)::int AS n FROM trainings WHERE category = $1', [name]);
+        return { label: c.name, detail: `Training topic with ${t.rows[0].n} training${t.rows[0].n === 1 ? '' : 's'}` };
+      }, [
+        { table: 'training_categories', where: 'id = $1', params: [id] },
+        { table: 'training_category_columns', where: 'category = $1', params: [name] },
+        { table: 'trainings', where: 'category = $1', params: [name] },
+        { table: 'training_completions', where: 'training_id IN (SELECT id FROM trainings WHERE category = $1)', params: [name] }
+      ]);
+      await db.query('DELETE FROM training_category_columns WHERE category = $1', [name]);
+      await db.query('DELETE FROM trainings WHERE category = $1', [name]);
+      await db.query('DELETE FROM training_categories WHERE id = $1', [id]);
+    });
 
     res.json({ success: true });
   } catch (err) {
@@ -749,7 +912,13 @@ app.patch('/api/trainings/:id', async (req, res) => {
 app.delete('/api/trainings/:id', async (req, res) => {
   const { id } = req.params;
   try {
-    await pool.query('DELETE FROM trainings WHERE id = $1', [id]);
+    await recycleTx(async (db) => {
+      await recycleCapture(db, req, 'training', (t) => ({ label: t.title || 'Training', detail: [t.category, t.training_date ? String(t.training_date).slice(0, 10) : ''].filter(Boolean).join(' · ') }), [
+        { table: 'trainings', where: 'id = $1', params: [id] },
+        { table: 'training_completions', where: 'training_id = $1', params: [id] }
+      ]);
+      await db.query('DELETE FROM trainings WHERE id = $1', [id]);
+    });
     res.json({ success: true });
   } catch (err) {
     console.error("EXACT TRAINING DELETE ERROR:", err);
@@ -842,7 +1011,11 @@ app.patch('/api/training-columns/:id', async (req, res) => {
 app.delete('/api/training-columns/:id', async (req, res) => {
   const { id } = req.params;
   try {
-    await pool.query('DELETE FROM training_category_columns WHERE id = $1', [id]);
+    await recycleTx(async (db) => {
+      await recycleCapture(db, req, 'training_column', (c) => ({ label: c.column_name || 'Column', detail: c.category ? `Column in ${c.category}` : null }),
+        [{ table: 'training_category_columns', where: 'id = $1', params: [id] }]);
+      await db.query('DELETE FROM training_category_columns WHERE id = $1', [id]);
+    });
     res.json({ success: true });
   } catch (err) {
     console.error("EXACT TRAINING COLUMN DELETE ERROR:", err);
@@ -1090,7 +1263,17 @@ app.patch('/api/overtime/:entryId', async (req, res) => {
 app.delete('/api/overtime/:entryId', async (req, res) => {
   const { entryId } = req.params;
   try {
-    await pool.query('DELETE FROM overtime_entries WHERE id = $1', [entryId]);
+    await recycleTx(async (db) => {
+      await recycleCapture(db, req, 'overtime', async (o, d) => ({
+        label: `Overtime: ${(await rbEmployeeName(d, o.employee_id)) || 'employee'}`,
+        detail: `${o.minutes_worked} minutes worked on ${String(o.date_worked).slice(0, 10)}`
+      }), [
+        { table: 'overtime_entries', where: 'id = $1', params: [entryId] },
+        { table: 'overtime_takings', where: 'overtime_entry_id = $1', params: [entryId] }
+      ]);
+      await db.query('DELETE FROM overtime_takings WHERE overtime_entry_id = $1', [entryId]);
+      await db.query('DELETE FROM overtime_entries WHERE id = $1', [entryId]);
+    });
     res.json({ success: true });
   } catch (err) {
     console.error("EXACT OVERTIME DELETE ERROR:", err);
@@ -1151,7 +1334,13 @@ app.post('/api/overtime/:entryId/takings', async (req, res) => {
 app.delete('/api/overtime-takings/:takingId', async (req, res) => {
   const { takingId } = req.params;
   try {
-    await pool.query('DELETE FROM overtime_takings WHERE id = $1', [takingId]);
+    await recycleTx(async (db) => {
+      await recycleCapture(db, req, 'overtime_taking', async (t, d) => {
+        const e = await d.query('SELECT employee_id FROM overtime_entries WHERE id = $1', [t.overtime_entry_id]);
+        return { label: `Overtime taken: ${(await rbEmployeeName(d, e.rows[0] && e.rows[0].employee_id)) || 'employee'}`, detail: `${t.minutes_taken} minutes on ${String(t.date_taken).slice(0, 10)}${t.note ? ' · ' + t.note : ''}` };
+      }, [{ table: 'overtime_takings', where: 'id = $1', params: [takingId] }]);
+      await db.query('DELETE FROM overtime_takings WHERE id = $1', [takingId]);
+    });
     res.json({ success: true });
   } catch (err) {
     console.error("EXACT OVERTIME TAKING DELETE ERROR:", err);
@@ -1207,7 +1396,11 @@ app.patch('/api/rss-training-types/:id', async (req, res) => {
 app.delete('/api/rss-training-types/:id', async (req, res) => {
   const { id } = req.params;
   try {
-    await pool.query('DELETE FROM rss_training_types WHERE id = $1', [id]);
+    await recycleTx(async (db) => {
+      await recycleCapture(db, req, 'rss_training_type', (t) => ({ label: t.name || 'Training type', detail: [t.prefix, t.unit_standard].filter(Boolean).join(' · ') }),
+        [{ table: 'rss_training_types', where: 'id = $1', params: [id] }]);
+      await db.query('DELETE FROM rss_training_types WHERE id = $1', [id]);
+    });
     res.json({ success: true });
   } catch (err) {
     console.error("EXACT RSS TRAINING TYPE DELETE ERROR:", err);
@@ -1461,7 +1654,11 @@ app.post('/api/rss-learners/:id/documents', upload.fields([
 app.delete('/api/rss-learners/:id', async (req, res) => {
   const { id } = req.params;
   try {
-    await pool.query('DELETE FROM rss_training_learners WHERE id = $1', [id]);
+    await recycleTx(async (db) => {
+      await recycleCapture(db, req, 'rss_learner', (l) => ({ label: rbName(l.first_name, l.last_name) || 'Learner', detail: [l.training_type, l.client, l.certificate_number].filter(Boolean).join(' · ') }),
+        [{ table: 'rss_training_learners', where: 'id = $1', params: [id] }]);
+      await db.query('DELETE FROM rss_training_learners WHERE id = $1', [id]);
+    });
     res.json({ success: true });
   } catch (err) {
     console.error("EXACT RSS LEARNER DELETE ERROR:", err);
@@ -1526,7 +1723,11 @@ app.post('/api/rss-manuals', upload.single('manual'), async (req, res) => {
 app.delete('/api/rss-manuals/:id', async (req, res) => {
   const { id } = req.params;
   try {
-    await pool.query('DELETE FROM rss_training_manuals WHERE id = $1', [id]);
+    await recycleTx(async (db) => {
+      await recycleCapture(db, req, 'rss_manual', (m) => ({ label: m.file_name || 'Manual', detail: m.training_type || null }),
+        [{ table: 'rss_training_manuals', where: 'id = $1', params: [id] }]);
+      await db.query('DELETE FROM rss_training_manuals WHERE id = $1', [id]);
+    });
     res.json({ success: true });
   } catch (err) {
     console.error("EXACT RSS MANUAL DELETE ERROR:", err);
@@ -1940,7 +2141,13 @@ app.patch('/api/timesheets/:id', async (req, res) => {
 app.delete('/api/timesheets/:id', async (req, res) => {
   const { id } = req.params;
   try {
-    await pool.query('DELETE FROM timesheet_entries WHERE id = $1', [id]);
+    await recycleTx(async (db) => {
+      await recycleCapture(db, req, 'timesheet_entry', async (t, d) => ({
+        label: `Timesheet: ${(await rbEmployeeName(d, t.employee_id)) || 'employee'}`,
+        detail: `${String(t.entry_date).slice(0, 10)}${t.time_in ? ' · in ' + String(t.time_in).slice(0, 5) : ''}${t.time_out ? ' · out ' + String(t.time_out).slice(0, 5) : ''}`
+      }), [{ table: 'timesheet_entries', where: 'id = $1', params: [id] }]);
+      await db.query('DELETE FROM timesheet_entries WHERE id = $1', [id]);
+    });
     res.json({ success: true });
   } catch (err) {
     console.error('EXACT TIMESHEET ENTRY DELETE ERROR:', err);
@@ -2096,7 +2303,11 @@ app.put('/api/report-templates/:id', async (req, res) => {
 app.delete('/api/report-templates/:id', async (req, res) => {
   const { id } = req.params;
   try {
-    await pool.query('DELETE FROM report_templates WHERE id = $1', [id]);
+    await recycleTx(async (db) => {
+      await recycleCapture(db, req, 'report_template', (t) => ({ label: t.name || 'Checklist', detail: 'Report checklist' }),
+        [{ table: 'report_templates', where: 'id = $1', params: [id] }]);
+      await db.query('DELETE FROM report_templates WHERE id = $1', [id]);
+    });
     res.json({ success: true });
   } catch (err) {
     console.error("EXACT REPORT TEMPLATE DELETE ERROR:", err);
@@ -2154,7 +2365,11 @@ app.post('/api/report-submissions', async (req, res) => {
 app.delete('/api/report-submissions/:id', async (req, res) => {
   const { id } = req.params;
   try {
-    await pool.query('DELETE FROM report_submissions WHERE id = $1', [id]);
+    await recycleTx(async (db) => {
+      await recycleCapture(db, req, 'report_submission', (r) => ({ label: `${r.template_name || 'Weekly report'} · ${r.employee_name || ''}`.trim(), detail: [r.client_name, r.report_date ? String(r.report_date).slice(0, 10) : ''].filter(Boolean).join(' · ') }),
+        [{ table: 'report_submissions', where: 'id = $1', params: [id] }]);
+      await db.query('DELETE FROM report_submissions WHERE id = $1', [id]);
+    });
     res.json({ success: true });
   } catch (err) {
     console.error("EXACT REPORT SUBMISSION DELETE ERROR:", err);
@@ -2200,7 +2415,11 @@ app.post('/api/monthly-reports', async (req, res) => {
 
 app.delete('/api/monthly-reports/:id', async (req, res) => {
   try {
-    await pool.query('DELETE FROM monthly_reports WHERE id = $1', [req.params.id]);
+    await recycleTx(async (db) => {
+      await recycleCapture(db, req, 'monthly_report', (m) => ({ label: `Monthly report ${m.month || ''} · ${m.employee_name || ''}`.trim(), detail: [m.client_name, m.checklist_name].filter(Boolean).join(' · ') }),
+        [{ table: 'monthly_reports', where: 'id = $1', params: [req.params.id] }]);
+      await db.query('DELETE FROM monthly_reports WHERE id = $1', [req.params.id]);
+    });
     res.json({ success: true });
   } catch (err) {
     console.error("EXACT MONTHLY REPORT DELETE ERROR:", err);
@@ -2245,6 +2464,35 @@ async function ensureFinanceTables() {
       updated_at TIMESTAMP DEFAULT NOW(),
       UNIQUE (doc_type, doc_number)
     )`);
+  // Payment tracking (which lines were paid is kept on each line as "paid": true)
+  await pool.query(`ALTER TABLE finance_documents ADD COLUMN IF NOT EXISTS payment_status VARCHAR(10) DEFAULT 'unpaid'`);
+  await pool.query(`ALTER TABLE finance_documents ADD COLUMN IF NOT EXISTS paid_amount NUMERIC(14,2) DEFAULT 0`);
+  await pool.query(`ALTER TABLE finance_documents ADD COLUMN IF NOT EXISTS paid_date DATE`);
+  await pool.query(`ALTER TABLE finance_documents ADD COLUMN IF NOT EXISTS payment_note TEXT`);
+  await pool.query(`ALTER TABLE finance_documents ADD COLUMN IF NOT EXISTS statement_issued_at TIMESTAMP`);
+  // Client details printed on the client statement
+  await pool.query(`ALTER TABLE finance_clients ADD COLUMN IF NOT EXISTS address TEXT`);
+  await pool.query(`ALTER TABLE finance_clients ADD COLUMN IF NOT EXISTS vat_number VARCHAR(50)`);
+  await pool.query(`ALTER TABLE finance_clients ADD COLUMN IF NOT EXISTS phone VARCHAR(50)`);
+  await pool.query(`ALTER TABLE finance_clients ADD COLUMN IF NOT EXISTS email VARCHAR(150)`);
+  await pool.query(`ALTER TABLE finance_documents ADD COLUMN IF NOT EXISTS expiry_date DATE`);
+  // Client statements that were created (a saved copy of exactly what was on the statement)
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS finance_statements (
+      id SERIAL PRIMARY KEY,
+      client_name VARCHAR(200) NOT NULL,
+      date_from DATE,
+      date_to DATE,
+      statement_date DATE,
+      unpaid_only BOOLEAN DEFAULT FALSE,
+      invoice_count INTEGER DEFAULT 0,
+      invoiced NUMERIC(14,2) DEFAULT 0,
+      paid NUMERIC(14,2) DEFAULT 0,
+      balance NUMERIC(14,2) DEFAULT 0,
+      data JSONB NOT NULL,
+      created_by VARCHAR(100),
+      created_at TIMESTAMP DEFAULT NOW()
+    )`);
 }
 
 function financeClientCode(name) {
@@ -2262,11 +2510,16 @@ async function nextFinanceNumber(docType, clientName, year) {
   const c = await pool.query('SELECT code, invoice_last, quote_last FROM finance_clients WHERE LOWER(name) = LOWER($1)', [name]);
   const rec = c.rows[0] || {};
   const code = (rec.code || financeClientCode(name)).toUpperCase();
-  let max = parseInt(docType === 'quote' ? rec.quote_last : rec.invoice_last, 10);
-  if (isNaN(max)) max = 100;
+  // Every new year starts again at 101 for each client (INV-CL101-2027, INV-CL101-2028 ...).
+  // The "last number already used" typed on the client only counts for the current year.
+  let max = 100;
+  if (year === new Date().getFullYear()) {
+    const typed = parseInt(docType === 'quote' ? rec.quote_last : rec.invoice_last, 10);
+    if (!isNaN(typed)) max = typed;
+  }
   const rows = await pool.query('SELECT doc_number FROM finance_documents WHERE doc_type = $1 AND LOWER(client_name) = LOWER($2)', [docType, name]);
-  const re = /(\d+)-\d{4}\s*$/;
-  rows.rows.forEach(r => { const m = re.exec(r.doc_number); if (m) max = Math.max(max, parseInt(m[1], 10)); });
+  const re = /(\d+)-(\d{4})\s*$/;
+  rows.rows.forEach(r => { const m = re.exec(r.doc_number); if (m && parseInt(m[2], 10) === year) max = Math.max(max, parseInt(m[1], 10)); });
   return `${label}-${code}${max + 1}-${year}`;
 }
 
@@ -2276,6 +2529,25 @@ function financeTotals(items, vatText) {
   const vat = /\d/.test(String(vatText || '')) ? financeNumber(vatText) : 0;
   return { subtotal: Math.round(subtotal * 100) / 100, total: Math.round((subtotal + vat) * 100) / 100 };
 }
+
+// Works out Unpaid / Partly paid / Paid from the lines that are ticked as paid.
+// VAT is shared out in the same proportion as the lines that were paid.
+function financePaymentSummary(items, vatText) {
+  const arr = Array.isArray(items) ? items : [];
+  const t = financeTotals(arr, vatText);
+  const lineAmount = it => financeNumber(it.quantity) * financeNumber(it.unit_price);
+  const paidLines = arr.filter(it => it && it.paid);
+  const paidSub = paidLines.reduce((s, it) => s + lineAmount(it), 0);
+  let status = 'unpaid';
+  if (arr.length && paidLines.length === arr.length) status = 'paid';
+  else if (paidLines.length) status = 'partial';
+  let paid = 0;
+  if (status === 'paid') paid = t.total;
+  else if (t.subtotal > 0) paid = paidSub + (t.total - t.subtotal) * (paidSub / t.subtotal);
+  return { status, paid_amount: Math.round(paid * 100) / 100 };
+}
+const FINANCE_DOC_COLS = `id, doc_type, client_name, doc_number, to_char(doc_date,'YYYY-MM-DD') AS doc_date, reference, deliver_to, items, vat_text, bank_details, subtotal, total,
+  COALESCE(payment_status, 'unpaid') AS payment_status, COALESCE(paid_amount, 0) AS paid_amount, to_char(paid_date,'YYYY-MM-DD') AS paid_date, payment_note, statement_issued_at, to_char(expiry_date,'YYYY-MM-DD') AS expiry_date`;
 
 app.get('/api/finance/settings', async (req, res) => {
   try {
@@ -2307,7 +2579,7 @@ app.put('/api/finance/settings', async (req, res) => {
 
 app.get('/api/finance/clients', async (req, res) => {
   try {
-    const result = await pool.query('SELECT id, name, code, invoice_last, quote_last FROM finance_clients ORDER BY name');
+    const result = await pool.query('SELECT id, name, code, invoice_last, quote_last, address, vat_number, phone, email FROM finance_clients ORDER BY name');
     res.json(result.rows);
   } catch (err) {
     console.error('FINANCE CLIENTS FETCH ERROR:', err);
@@ -2322,11 +2594,15 @@ app.post('/api/finance/clients', async (req, res) => {
   const code = (String(req.body.code || '').toUpperCase().replace(/[^A-Z0-9]/g, '') || financeClientCode(name)).substring(0, 10);
   const num = v => { const n = parseInt(v, 10); return isNaN(n) || n < 0 ? 100 : n; };
   try {
+    // Contact details are only changed when they are sent (so saving the numbers alone never wipes them)
+    const txt = (v, max) => (v === undefined || v === null) ? null : String(v).trim().slice(0, max);
     const result = await pool.query(
-      `INSERT INTO finance_clients (name, code, invoice_last, quote_last) VALUES ($1,$2,$3,$4)
-       ON CONFLICT (name) DO UPDATE SET code = EXCLUDED.code, invoice_last = EXCLUDED.invoice_last, quote_last = EXCLUDED.quote_last
-       RETURNING id, name, code, invoice_last, quote_last`,
-      [name, code, num(req.body.invoice_last), num(req.body.quote_last)]);
+      `INSERT INTO finance_clients (name, code, invoice_last, quote_last, address, vat_number, phone, email) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+       ON CONFLICT (name) DO UPDATE SET code = EXCLUDED.code, invoice_last = EXCLUDED.invoice_last, quote_last = EXCLUDED.quote_last,
+         address = COALESCE($5, finance_clients.address), vat_number = COALESCE($6, finance_clients.vat_number),
+         phone = COALESCE($7, finance_clients.phone), email = COALESCE($8, finance_clients.email)
+       RETURNING id, name, code, invoice_last, quote_last, address, vat_number, phone, email`,
+      [name, code, num(req.body.invoice_last), num(req.body.quote_last), txt(req.body.address, 500), txt(req.body.vat_number, 50), txt(req.body.phone, 50), txt(req.body.email, 150)]);
     res.status(201).json(result.rows[0]);
   } catch (err) {
     console.error('FINANCE CLIENT SAVE ERROR:', err);
@@ -2340,7 +2616,11 @@ app.delete('/api/finance/clients/:id', async (req, res) => {
     if (!c.rows.length) return res.json({ success: true });
     const used = await pool.query('SELECT 1 FROM finance_documents WHERE LOWER(client_name) = LOWER($1) LIMIT 1', [c.rows[0].name]);
     if (used.rows.length) return res.status(409).json({ error: 'This client already has invoices or quotes, so it cannot be removed.' });
-    await pool.query('DELETE FROM finance_clients WHERE id = $1', [req.params.id]);
+    await recycleTx(async (db) => {
+      await recycleCapture(db, req, 'finance_client', (f) => ({ label: f.name, detail: 'Finance client' }),
+        [{ table: 'finance_clients', where: 'id = $1', params: [req.params.id] }]);
+      await db.query('DELETE FROM finance_clients WHERE id = $1', [req.params.id]);
+    });
     res.json({ success: true });
   } catch (err) {
     console.error('FINANCE CLIENT DELETE ERROR:', err);
@@ -2363,7 +2643,7 @@ app.get('/api/finance-documents', async (req, res) => {
   const docType = req.query.doc_type === 'quote' ? 'quote' : 'invoice';
   try {
     const result = await pool.query(
-      `SELECT id, doc_type, client_name, doc_number, to_char(doc_date,'YYYY-MM-DD') AS doc_date, reference, deliver_to, items, vat_text, bank_details, subtotal, total, created_at
+      `SELECT ${FINANCE_DOC_COLS}, created_at
        FROM finance_documents WHERE doc_type = $1 ORDER BY doc_date DESC NULLS LAST, id DESC`, [docType]);
     res.json(result.rows);
   } catch (err) {
@@ -2385,12 +2665,13 @@ app.post('/api/finance-documents', async (req, res) => {
     if (dup.rows.length) return res.status(409).json({ error: `Number ${docNumber} is already used.` });
     const t = financeTotals(b.items, b.vat_text);
     await pool.query('INSERT INTO finance_clients (name, code) SELECT $1::varchar, $2::varchar WHERE NOT EXISTS (SELECT 1 FROM finance_clients WHERE LOWER(name) = LOWER($1::varchar))', [client, financeClientCode(client)]);
+    const pay = financePaymentSummary(b.items, b.vat_text);
     const result = await pool.query(
-      `INSERT INTO finance_documents (doc_type, client_name, doc_number, doc_date, reference, deliver_to, items, vat_text, bank_details, subtotal, total, created_by)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
-       RETURNING id, doc_type, client_name, doc_number, to_char(doc_date,'YYYY-MM-DD') AS doc_date, reference, deliver_to, items, vat_text, bank_details, subtotal, total`,
+      `INSERT INTO finance_documents (doc_type, client_name, doc_number, doc_date, reference, deliver_to, items, vat_text, bank_details, subtotal, total, created_by, payment_status, paid_amount, expiry_date)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
+       RETURNING ${FINANCE_DOC_COLS}`,
       [docType, client, docNumber, b.doc_date || null, b.reference || null, b.deliver_to || null, JSON.stringify(b.items || []),
-       b.vat_text || null, b.bank_details || null, t.subtotal, t.total, b.created_by || null]);
+       b.vat_text || null, b.bank_details || null, t.subtotal, t.total, b.created_by || null, pay.status, pay.paid_amount, b.expiry_date || null]);
     res.status(201).json(result.rows[0]);
   } catch (err) {
     console.error('FINANCE DOCUMENT CREATE ERROR:', err);
@@ -2411,12 +2692,13 @@ app.put('/api/finance-documents/:id', async (req, res) => {
     if (dup.rows.length) return res.status(409).json({ error: `Number ${docNumber} is already used.` });
     const t = financeTotals(b.items, b.vat_text);
     await pool.query('INSERT INTO finance_clients (name, code) SELECT $1::varchar, $2::varchar WHERE NOT EXISTS (SELECT 1 FROM finance_clients WHERE LOWER(name) = LOWER($1::varchar))', [client, financeClientCode(client)]);
+    const pay = financePaymentSummary(b.items, b.vat_text);
     const result = await pool.query(
-      `UPDATE finance_documents SET client_name=$2, doc_number=$3, doc_date=$4, reference=$5, deliver_to=$6, items=$7, vat_text=$8, bank_details=$9, subtotal=$10, total=$11, updated_at=NOW()
+      `UPDATE finance_documents SET client_name=$2, doc_number=$3, doc_date=$4, reference=$5, deliver_to=$6, items=$7, vat_text=$8, bank_details=$9, subtotal=$10, total=$11, payment_status=$12, paid_amount=$13, expiry_date=$14, updated_at=NOW()
        WHERE id=$1
-       RETURNING id, doc_type, client_name, doc_number, to_char(doc_date,'YYYY-MM-DD') AS doc_date, reference, deliver_to, items, vat_text, bank_details, subtotal, total`,
+       RETURNING ${FINANCE_DOC_COLS}`,
       [req.params.id, client, docNumber, b.doc_date || null, b.reference || null, b.deliver_to || null, JSON.stringify(b.items || []),
-       b.vat_text || null, b.bank_details || null, t.subtotal, t.total]);
+       b.vat_text || null, b.bank_details || null, t.subtotal, t.total, pay.status, pay.paid_amount, b.expiry_date || null]);
     res.json(result.rows[0]);
   } catch (err) {
     console.error('FINANCE DOCUMENT UPDATE ERROR:', err);
@@ -2424,13 +2706,127 @@ app.put('/api/finance-documents/:id', async (req, res) => {
   }
 });
 
+// Record which lines have been paid, each with the date it was paid
+// body: { paid_lines: [ { index: 0, date: '2026-10-24' }, { index: 2, date: '2026-10-29' } ], payment_note }
+app.put('/api/finance-documents/:id/payment', async (req, res) => {
+  try {
+    const cur = await pool.query(`SELECT items, vat_text, to_char(paid_date,'YYYY-MM-DD') AS paid_date FROM finance_documents WHERE id = $1`, [req.params.id]);
+    if (!cur.rows.length) return res.status(404).json({ error: 'Not found' });
+    const today = new Date().toISOString().slice(0, 10);
+    const isDay = v => /^\d{4}-\d{2}-\d{2}$/.test(String(v || ''));
+    const paidMap = new Map();
+    (Array.isArray(req.body.paid_lines) ? req.body.paid_lines : []).forEach(l => {
+      const obj = l !== null && typeof l === 'object';
+      const idx = parseInt(obj ? l.index : l, 10);
+      if (!isNaN(idx)) paidMap.set(idx, obj && isDay(l.date) ? l.date : (isDay(req.body.paid_date) ? req.body.paid_date : null));
+    });
+    const items = (cur.rows[0].items || []).map((it, i) => {
+      const copy = { ...it };
+      if (paidMap.has(i)) {
+        copy.paid = true;
+        // keep the date a line was already paid on unless a new one was given
+        copy.paid_date = paidMap.get(i) || copy.paid_date || cur.rows[0].paid_date || today;
+      } else {
+        delete copy.paid;
+        delete copy.paid_date;
+      }
+      return copy;
+    });
+    const pay = financePaymentSummary(items, cur.rows[0].vat_text);
+    const dates = items.filter(it => it.paid && it.paid_date).map(it => it.paid_date).sort();
+    const paidDate = pay.status === 'unpaid' ? null : (dates.length ? dates[dates.length - 1] : today);   // the latest payment
+    const result = await pool.query(
+      `UPDATE finance_documents SET items=$2, payment_status=$3, paid_amount=$4, paid_date=$5, payment_note=$6, updated_at=NOW()
+       WHERE id=$1 RETURNING ${FINANCE_DOC_COLS}`,
+      [req.params.id, JSON.stringify(items), pay.status, pay.paid_amount, paidDate, String(req.body.payment_note || '').trim().slice(0, 500) || null]);
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('FINANCE PAYMENT SAVE ERROR:', err);
+    res.status(500).json({ error: 'Error saving the payment' });
+  }
+});
+
+// Remember that a statement was issued for this invoice
+app.post('/api/finance-documents/:id/statement-issued', async (req, res) => {
+  try {
+    const result = await pool.query(`UPDATE finance_documents SET statement_issued_at = NOW() WHERE id = $1 RETURNING ${FINANCE_DOC_COLS}`, [req.params.id]);
+    if (!result.rows.length) return res.status(404).json({ error: 'Not found' });
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('FINANCE STATEMENT ISSUED ERROR:', err);
+    res.status(500).json({ error: 'Error saving' });
+  }
+});
+
 app.delete('/api/finance-documents/:id', async (req, res) => {
   try {
-    await pool.query('DELETE FROM finance_documents WHERE id = $1', [req.params.id]);
+    await recycleTx(async (db) => {
+      await recycleCapture(db, req, 'finance_document', (f) => ({ label: f.doc_number, detail: `${f.doc_type === 'quote' ? 'Quote' : 'Invoice'} · ${f.client_name || ''} · R ${Number(f.total || 0).toFixed(2)}` }),
+        [{ table: 'finance_documents', where: 'id = $1', params: [req.params.id] }]);
+      await db.query('DELETE FROM finance_documents WHERE id = $1', [req.params.id]);
+    });
     res.json({ success: true });
   } catch (err) {
     console.error('FINANCE DOCUMENT DELETE ERROR:', err);
     res.status(500).json({ error: 'Error deleting document' });
+  }
+});
+
+// ---- Saved client statements ----
+const FIN_STMT_LIST_COLS = `id, client_name, to_char(date_from,'YYYY-MM-DD') AS date_from, to_char(date_to,'YYYY-MM-DD') AS date_to,
+  to_char(statement_date,'YYYY-MM-DD') AS statement_date, unpaid_only, invoice_count, invoiced, paid, balance, created_by, created_at`;
+
+app.get('/api/finance-statements', async (req, res) => {
+  try {
+    const result = await pool.query(`SELECT ${FIN_STMT_LIST_COLS} FROM finance_statements ORDER BY created_at DESC, id DESC`);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('FINANCE STATEMENTS FETCH ERROR:', err);
+    res.status(500).json({ error: 'Error fetching statements' });
+  }
+});
+
+app.get('/api/finance-statements/:id', async (req, res) => {
+  try {
+    const result = await pool.query(`SELECT ${FIN_STMT_LIST_COLS}, data FROM finance_statements WHERE id = $1`, [req.params.id]);
+    if (!result.rows.length) return res.status(404).json({ error: 'Not found' });
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('FINANCE STATEMENT FETCH ERROR:', err);
+    res.status(500).json({ error: 'Error fetching the statement' });
+  }
+});
+
+app.post('/api/finance-statements', async (req, res) => {
+  const b = req.body || {};
+  const client = String(b.client_name || '').trim();
+  if (!client || !b.data || typeof b.data !== 'object') return res.status(400).json({ error: 'Client and statement are required' });
+  const num = v => { const n = parseFloat(v); return isNaN(n) ? 0 : Math.round(n * 100) / 100; };
+  const day = v => /^\d{4}-\d{2}-\d{2}$/.test(String(v || '')) ? v : null;
+  try {
+    const result = await pool.query(
+      `INSERT INTO finance_statements (client_name, date_from, date_to, statement_date, unpaid_only, invoice_count, invoiced, paid, balance, data, created_by)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING ${FIN_STMT_LIST_COLS}`,
+      [client, day(b.date_from), day(b.date_to), day(b.statement_date) || new Date().toISOString().slice(0, 10), !!b.unpaid_only,
+       parseInt(b.invoice_count, 10) || 0, num(b.invoiced), num(b.paid), num(b.balance), JSON.stringify(b.data), String(b.created_by || '').slice(0, 100) || recycleWho(req)]);
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error('FINANCE STATEMENT SAVE ERROR:', err);
+    res.status(500).json({ error: 'Error saving the statement' });
+  }
+});
+
+app.delete('/api/finance-statements/:id', async (req, res) => {
+  try {
+    await recycleTx(async (db) => {
+      await recycleCapture(db, req, 'finance_statement', (s) => ({ label: `Statement: ${s.client_name}`, detail: `${s.date_from ? String(s.date_from).slice(0, 10) : ''} to ${s.date_to ? String(s.date_to).slice(0, 10) : ''}` }),
+        [{ table: 'finance_statements', where: 'id = $1', params: [req.params.id] }]);
+      await db.query('DELETE FROM finance_statements WHERE id = $1', [req.params.id]);
+    });
+    res.json({ success: true });
+  } catch (err) {
+    console.error('FINANCE STATEMENT DELETE ERROR:', err);
+    res.status(500).json({ error: 'Error deleting the statement' });
   }
 });
 
@@ -2645,7 +3041,11 @@ app.delete('/api/learned-entries/:id', async (req, res) => {
   try {
     // An entry that came from the weekly list is only hidden, otherwise the next sync would add it again
     await pool.query(`UPDATE rss_learned_entries SET source = 'hidden' WHERE id = $1 AND source = 'weekly'`, [req.params.id]);
-    await pool.query(`DELETE FROM rss_learned_entries WHERE id = $1 AND source = 'manual'`, [req.params.id]);
+    await recycleTx(async (db) => {
+      await recycleCapture(db, req, 'learned_entry', (l) => ({ label: l.topic || 'Learning entry', detail: l.learned ? String(l.learned).slice(0, 150) : null }),
+        [{ table: 'rss_learned_entries', where: `id = $1 AND source = 'manual'`, params: [req.params.id] }]);
+      await db.query(`DELETE FROM rss_learned_entries WHERE id = $1 AND source = 'manual'`, [req.params.id]);
+    });
     res.json({ success: true });
   } catch (err) {
     console.error('LEARNED ENTRY DELETE ERROR:', err);
