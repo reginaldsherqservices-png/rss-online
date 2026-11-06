@@ -2056,7 +2056,7 @@
         const API_BASE = IS_LOCAL
             ? 'http://localhost:5000'
             : 'https://rss-online-backend-c0hzaseze2gad6aa.southafricanorth-01.azurewebsites.net';
-        const API_HEADERS = { 'ngrok-skip-browser-warning': 'true', get 'x-user-name'() { return encodeURIComponent(currentUserDisplay || currentUserFullName || currentUserRole || ''); } };
+        const API_HEADERS = { 'ngrok-skip-browser-warning': 'true', get 'x-user-name'() { return encodeURIComponent(currentUserDisplay || currentUserFullName || currentUserRole || ''); }, get 'x-user-role'() { return currentUserRole || ''; } };
         let currentUserDisplay = '';
 
         let pendingConfirmCallback = null;
@@ -2109,7 +2109,7 @@
             document.getElementById('financeSection').style.display = isManagement ? 'block' : 'none';
             document.getElementById('rssTrainingSection').style.display = isAdmin ? 'block' : 'none';
             document.getElementById('inboxNavItem').style.display = isAdmin ? 'block' : 'none';
-            document.getElementById('recycleNavItem').style.display = isAdmin ? 'block' : 'none';
+            document.getElementById('recycleNavItem').style.display = 'block';
             document.getElementById('reportsSection').style.display = 'block';
             document.getElementById('reportsTemplatesNavItem').style.display = isManagement ? 'block' : 'none';
             document.getElementById('reportsSubmenu').style.display = 'none';

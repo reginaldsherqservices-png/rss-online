@@ -84,6 +84,14 @@ function recycleWho(req) {
   try { return decodeURIComponent(String(req.headers['x-user-name'] || '')).slice(0, 120) || null; } catch (e) { return null; }
 }
 
+// Who may see what in the bin: the admin sees everything; everyone else (managers, interns/employees)
+// only sees the items they deleted themselves. Returns an SQL condition and its parameter.
+function recycleScope(req, nextParam) {
+  const role = String(req.headers['x-user-role'] || '').toLowerCase();
+  if (role === 'admin') return { sql: 'TRUE', params: [] };
+  return { sql: `deleted_by = $${nextParam}`, params: [recycleWho(req) || '__nobody__'] };
+}
+
 // Copies rows into the bin BEFORE they are deleted. `parts` lists the tables to copy, parents first
 // (that is the order they are put back in). Returns how many rows the first part found.
 // table names come only from code, never from the user.
@@ -114,10 +122,11 @@ app.get('/api/recycle-bin', async (req, res) => {
   try {
     await recycleReady;
     await recyclePurge();
+    const scope = recycleScope(req, 2);
     const r = await pool.query(
       `SELECT id, item_type, label, detail, deleted_by, deleted_at,
               GREATEST(0, CEIL(EXTRACT(EPOCH FROM (deleted_at + ($1::text || ' days')::interval - NOW())) / 86400))::int AS days_left
-       FROM recycle_bin ORDER BY deleted_at DESC`, [String(RECYCLE_DAYS)]);
+       FROM recycle_bin WHERE ${scope.sql} ORDER BY deleted_at DESC`, [String(RECYCLE_DAYS), ...scope.params]);
     res.json(r.rows);
   } catch (err) {
     console.error('RECYCLE LIST ERROR:', err);
@@ -128,7 +137,8 @@ app.get('/api/recycle-bin', async (req, res) => {
 app.post('/api/recycle-bin/:id/restore', async (req, res) => {
   try {
     const out = await recycleTx(async (db) => {
-      const r = await db.query('SELECT * FROM recycle_bin WHERE id = $1 FOR UPDATE', [req.params.id]);
+      const scope = recycleScope(req, 2);
+      const r = await db.query(`SELECT * FROM recycle_bin WHERE id = $1 AND ${scope.sql} FOR UPDATE`, [req.params.id, ...scope.params]);
       if (!r.rows.length) return { status: 404, body: { error: 'This item is no longer in the recycle bin.' } };
       const item = r.rows[0];
       for (const part of item.parts) {
@@ -154,7 +164,8 @@ app.post('/api/recycle-bin/delete-many', async (req, res) => {
     await recycleReady;
     const ids = (Array.isArray(req.body.ids) ? req.body.ids : []).map(n => parseInt(n, 10)).filter(n => !isNaN(n));
     if (!ids.length) return res.json({ success: true, deleted: 0 });
-    const r = await pool.query('DELETE FROM recycle_bin WHERE id = ANY($1::int[])', [ids]);
+    const scope = recycleScope(req, 2);
+    const r = await pool.query(`DELETE FROM recycle_bin WHERE id = ANY($1::int[]) AND ${scope.sql}`, [ids, ...scope.params]);
     res.json({ success: true, deleted: r.rowCount });
   } catch (err) {
     console.error('RECYCLE DELETE MANY ERROR:', err);
@@ -165,7 +176,8 @@ app.post('/api/recycle-bin/delete-many', async (req, res) => {
 app.delete('/api/recycle-bin/:id', async (req, res) => {
   try {
     await recycleReady;
-    await pool.query('DELETE FROM recycle_bin WHERE id = $1', [req.params.id]);
+    const scope = recycleScope(req, 2);
+    await pool.query(`DELETE FROM recycle_bin WHERE id = $1 AND ${scope.sql}`, [req.params.id, ...scope.params]);
     res.json({ success: true });
   } catch (err) {
     console.error('RECYCLE DELETE FOREVER ERROR:', err);
