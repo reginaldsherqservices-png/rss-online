@@ -124,6 +124,41 @@
         .wf-btn-primary:hover { background: var(--sherq-blue-mid); }
         .wf-btn-ghost { padding: 10px 16px; border-radius: 8px; border: none; background: none; color: var(--ink-soft); font-weight: 600; font-size: 13.5px; cursor: pointer; }
         .wf-btn-ghost:hover { text-decoration: underline; }
+        /* Calendar & reminders */
+        .cal-wrap { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 18px; align-items: start; }
+        .cal-card { background: #fff; border: 1px solid var(--line); border-radius: 14px; }
+        .cal-bar { display: flex; align-items: center; gap: 8px; padding: 14px 16px; border-bottom: 1px solid var(--line); }
+        .cal-bar h2 { margin: 0 auto 0 6px; font-size: 18px; color: var(--sherq-blue); }
+        .cal-nav { width: 34px; height: 34px; border-radius: 8px; border: 1.5px solid var(--line); background: #fff; cursor: pointer; color: var(--sherq-blue); font-size: 14px; }
+        .cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+        .cal-dow { padding: 8px 6px; font-size: 11.5px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: var(--ink-soft); text-align: center; border-bottom: 1px solid var(--line); }
+        .cal-day { min-height: 92px; padding: 6px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); cursor: pointer; overflow: hidden; }
+        .cal-day:nth-child(7n) { border-right: none; }
+        .cal-day:hover { background: #F8FAFC; }
+        .cal-day.other { background: #FAFBFC; color: #A0A7B4; }
+        .cal-day.sel { outline: 2px solid var(--sherq-blue-mid); outline-offset: -2px; background: #F1F5FF; }
+        .cal-num { font-size: 12.5px; font-weight: 700; display: inline-flex; width: 24px; height: 24px; align-items: center; justify-content: center; border-radius: 50%; }
+        .cal-day.today .cal-num { background: var(--sherq-blue); color: #fff; }
+        .cal-chip { display: block; margin-top: 3px; padding: 2px 6px; border-radius: 5px; font-size: 11.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: #E0E9FF; color: #1E3A8A; }
+        .cal-chip.late { background: #FEE2E2; color: #991B1B; }
+        .cal-chip.done { background: #EEF0F3; color: #8A92A0; text-decoration: line-through; }
+        .cal-more { margin-top: 3px; font-size: 11px; color: var(--ink-soft); }
+        .rem-row { display: flex; gap: 10px; align-items: flex-start; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+        .rem-row:last-child { border-bottom: none; }
+        .rem-row input[type=checkbox] { margin-top: 3px; width: 17px; height: 17px; cursor: pointer; accent-color: #16A34A; }
+        .rem-title { font-size: 13.5px; font-weight: 600; color: #1D2333; }
+        .rem-row.done .rem-title { text-decoration: line-through; color: #8A92A0; }
+        .rem-meta { font-size: 12px; color: var(--ink-soft); margin-top: 2px; }
+        .rem-meta.late { color: #DC2626; font-weight: 600; }
+        .rem-icon { background: none; border: none; cursor: pointer; color: var(--ink-soft); font-size: 13px; padding: 4px 6px; }
+        .rem-icon:hover { color: var(--sherq-blue); }
+        .rem-icon.del:hover { color: #DC2626; }
+        .dash-rem { margin-top: 18px; }
+        .dash-rem-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid var(--line); }
+        .dash-rem-head h3 { margin: 0; font-size: 15px; color: var(--sherq-blue); }
+        .dash-rem-group { padding: 8px 14px 2px; font-size: 11.5px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: var(--ink-soft); }
+        .dash-rem-group.late { color: #DC2626; }
+        @media (max-width: 900px) { .cal-wrap { grid-template-columns: 1fr; } .cal-day { min-height: 64px; } }
         /* Reports: checklist rows (question | Yes/No | comment) */
         .rpt-q { display: grid; grid-template-columns: minmax(0, 1.4fr) auto minmax(0, 1fr); gap: 12px; align-items: center; padding: 12px 18px; border-bottom: 1px solid var(--line); }
         .rpt-q:last-child { border-bottom: none; }
@@ -422,6 +457,9 @@
                 <div id="inboxNavItem" class="nav-item" onclick="showInboxView()" style="display: none; color: #fff; font-weight: bold;">
                     <i class="fas fa-inbox"></i> Inbox
                 </div>
+                <div id="calendarNavItem" class="nav-item" onclick="showCalendarView()" style="color: #fff; font-weight: bold;">
+                    <i class="fas fa-calendar-alt"></i> Calendar
+                </div>
                 <div id="recycleNavItem" class="nav-item" onclick="showRecycleBinView()" style="display: none; color: #fff; font-weight: bold;">
                     <i class="fas fa-trash-alt"></i> Recycle Bin
                 </div>
@@ -444,6 +482,16 @@
                         </div>
                     </div>
                     <div class="wf-stats" id="dashStatsGrid" style="grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));"></div>
+                    <div class="cal-card dash-rem" id="dashRemindersCard">
+                        <div class="dash-rem-head">
+                            <h3><i class="fas fa-bell" style="color:#D97706;"></i> My reminders</h3>
+                            <div>
+                                <button class="wf-btn-ghost" style="padding:6px 10px; color:var(--sherq-blue-mid);" onclick="remOpenModal()"><i class="fas fa-plus"></i> Add</button>
+                                <button class="wf-btn-secondary" style="padding:6px 12px;" onclick="showCalendarView()">Open calendar</button>
+                            </div>
+                        </div>
+                        <div id="dashRemindersBody"></div>
+                    </div>
                     <p id="pageDescription" style="display:none;"></p>
                 </div>
 
@@ -624,6 +672,34 @@
                 </div>
 
                 <!-- RECYCLE BIN -->
+                <div id="calendarView" style="display: none;">
+                    <div class="wf-header">
+                        <div>
+                            <h1>Calendar</h1>
+                            <p>Your own reminders. Add a task with its date and it will show here and on your dashboard. Only you can see your reminders</p>
+                        </div>
+                        <button class="wf-btn-primary" onclick="remOpenModal()"><i class="fas fa-plus"></i> Add reminder</button>
+                    </div>
+                    <div class="cal-wrap">
+                        <div class="cal-card">
+                            <div class="cal-bar">
+                                <button class="cal-nav" onclick="calMove(-1)" title="Previous month"><i class="fas fa-chevron-left"></i></button>
+                                <button class="cal-nav" onclick="calMove(1)" title="Next month"><i class="fas fa-chevron-right"></i></button>
+                                <h2 id="calTitle">—</h2>
+                                <button class="wf-btn-secondary" style="padding:7px 14px;" onclick="calToday()">Today</button>
+                            </div>
+                            <div class="cal-grid" id="calGrid"></div>
+                        </div>
+                        <div class="cal-card">
+                            <div class="dash-rem-head">
+                                <h3 id="calDayTitle">—</h3>
+                                <button class="wf-btn-ghost" style="padding:6px 10px; color:var(--sherq-blue-mid);" onclick="remOpenModal()"><i class="fas fa-plus"></i> Add</button>
+                            </div>
+                            <div id="calDayList"></div>
+                        </div>
+                    </div>
+                </div>
+
                 <div id="recycleView" style="display: none;">
                     <div class="wf-header">
                         <div>
@@ -1209,6 +1285,26 @@
                     <button class="wf-btn-ghost" id="wfSkipBtn" style="display:none;" onclick="goToStep(currentStep + 1)">Skip →</button>
                     <button class="wf-btn-primary" id="wfModalSaveBtn" onclick="handleModalPrimaryAction()">Next →</button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="wf-modal-overlay" id="remModalOverlay">
+        <div class="wf-modal" style="max-width: 460px;">
+            <div class="wf-modal-header">
+                <h2 id="remModalTitle">Add reminder</h2>
+                <button class="wf-modal-close" onclick="remCloseModal()">✕</button>
+            </div>
+            <div class="wf-modal-body" style="grid-template-columns: 1fr 1fr;">
+                <div class="wf-field full-width"><label>What do you need to remember?</label><input type="text" id="rem_title" maxlength="200" placeholder="e.g. Submit the weekly report"></div>
+                <div class="wf-field"><label>Date</label><input type="date" id="rem_date"></div>
+                <div class="wf-field"><label>Time (optional)</label><input type="time" id="rem_time"></div>
+                <div class="wf-field full-width"><label>Note (optional)</label><textarea id="rem_note" rows="3" maxlength="1000" placeholder="Any extra details"></textarea></div>
+                <div id="remError" class="full-width" style="display:none; color:#DC2626; font-size:13px;"></div>
+            </div>
+            <div class="wf-modal-footer">
+                <button class="wf-btn-secondary" onclick="remCloseModal()">Cancel</button>
+                <button class="wf-btn-primary" id="remSaveBtn" onclick="remSave()">Save reminder</button>
             </div>
         </div>
     </div>
@@ -2219,6 +2315,7 @@
             document.getElementById('financeView').style.display = 'none';
             document.getElementById('financeStatementView').style.display = 'none';
             document.getElementById('recycleView').style.display = 'none';
+            document.getElementById('calendarView').style.display = 'none';
             document.getElementById('inboxListView').style.display = 'block';
             document.getElementById('inboxDetailView').style.display = 'none';
         }
@@ -2328,6 +2425,7 @@
             hideAllContentViews();
             document.getElementById('dashboardHomeView').style.display = 'block';
             populateDashboardHero();
+            loadDashReminders();
         }
 
         async function showWorkforce() {
@@ -2476,7 +2574,206 @@
 
         // ---------- Recycle Bin ----------
         let recycleItems = [];
+        // ===== Calendar & reminders (each person sees only their own) =====
+        let remList = [];
+        let remEditId = null;
+        let calYear = new Date().getFullYear();
+        let calMonth = new Date().getMonth();
+        let calSelected = null;
+        let remAnnounced = false;
+
+        function remPad(n) { return String(n).padStart(2, '0'); }
+        function remYmd(d) { return `${d.getFullYear()}-${remPad(d.getMonth() + 1)}-${remPad(d.getDate())}`; }
+        function remToday() { return remYmd(new Date()); }
+        function remAddDays(ymd, n) { const [y, m, d] = ymd.split('-').map(Number); return remYmd(new Date(y, m - 1, d + n)); }
+        function remNiceDate(ymd, withYear) {
+            const [y, m, d] = ymd.split('-').map(Number);
+            return new Date(y, m - 1, d).toLocaleDateString('en-ZA', { weekday: 'short', day: 'numeric', month: 'short', ...(withYear ? { year: 'numeric' } : {}) });
+        }
+        function remIsLate(r) { return !r.done && r.remind_date < remToday(); }
+
+        async function remLoad() {
+            try {
+                const res = await rptFetch(`${API_BASE}/api/reminders`, { headers: API_HEADERS });
+                if (!res.ok) throw new Error('load failed');
+                remList = await res.json();
+            } catch (err) {
+                console.error(err);
+                rptToast('Could not load your reminders. Please try again.', 'error');
+            }
+        }
+
+        // ---- Dashboard box ----
+        async function loadDashReminders() {
+            await remLoad();
+            renderDashReminders();
+            if (!remAnnounced) {
+                remAnnounced = true;
+                const t = remToday();
+                const late = remList.filter(remIsLate).length;
+                const today = remList.filter(r => !r.done && r.remind_date === t).length;
+                if (late || today) {
+                    const parts = [];
+                    if (today) parts.push(`${today} reminder${today === 1 ? '' : 's'} for today`);
+                    if (late) parts.push(`${late} overdue`);
+                    rptToast(`You have ${parts.join(' and ')}.`, 'warn');
+                }
+            }
+        }
+        function remRowHtml(r, showDate) {
+            const late = remIsLate(r);
+            const when = [showDate ? remNiceDate(r.remind_date) : '', r.remind_time || ''].filter(Boolean).join(' at ');
+            return `<div class="rem-row ${r.done ? 'done' : ''}">
+                <input type="checkbox" ${r.done ? 'checked' : ''} onchange="remToggle(${r.id}, this.checked)" title="Tick when done">
+                <div style="flex:1; min-width:0;">
+                    <div class="rem-title">${rptEsc(r.title)}</div>
+                    ${when || late ? `<div class="rem-meta ${late ? 'late' : ''}">${late ? 'Overdue · ' : ''}${rptEsc(when)}</div>` : ''}
+                    ${r.note ? `<div class="rem-meta">${rptEsc(r.note)}</div>` : ''}
+                </div>
+                <button class="rem-icon" onclick="remOpenModal(${r.id})" title="Edit"><i class="fas fa-pen"></i></button>
+                <button class="rem-icon del" onclick="remDelete(${r.id})" title="Delete"><i class="fas fa-trash"></i></button>
+            </div>`;
+        }
+        function renderDashReminders() {
+            const t = remToday(), end = remAddDays(t, 7);
+            const open = remList.filter(r => !r.done);
+            const late = open.filter(r => r.remind_date < t);
+            const today = open.filter(r => r.remind_date === t);
+            const soon = open.filter(r => r.remind_date > t && r.remind_date <= end);
+            const group = (label, cls, arr, showDate) => arr.length ? `<div class="dash-rem-group ${cls}">${label}</div>${arr.slice(0, 8).map(r => remRowHtml(r, showDate)).join('')}` : '';
+            const html = group('Overdue', 'late', late, true) + group('Today', '', today, false) + group('Next 7 days', '', soon, true);
+            document.getElementById('dashRemindersBody').innerHTML = html ||
+                '<div class="wf-empty">Nothing to remind you about right now. Click "Add" to write a task and its date.</div>';
+        }
+
+        // ---- Calendar page ----
+        async function showCalendarView() {
+            hideAllContentViews();
+            document.getElementById('calendarView').style.display = 'block';
+            if (!calSelected) calSelected = remToday();
+            await remLoad();
+            renderCalendar();
+        }
+        function calMove(n) {
+            calMonth += n;
+            if (calMonth < 0) { calMonth = 11; calYear--; }
+            if (calMonth > 11) { calMonth = 0; calYear++; }
+            renderCalendar();
+        }
+        function calToday() {
+            const d = new Date();
+            calYear = d.getFullYear(); calMonth = d.getMonth(); calSelected = remToday();
+            renderCalendar();
+        }
+        function calSelect(ymd) { calSelected = ymd; renderCalendar(); }
+        function renderCalendar() {
+            document.getElementById('calTitle').innerText = new Date(calYear, calMonth, 1).toLocaleDateString('en-ZA', { month: 'long', year: 'numeric' });
+            const first = new Date(calYear, calMonth, 1);
+            const offset = (first.getDay() + 6) % 7; // week starts on Monday
+            const start = new Date(calYear, calMonth, 1 - offset);
+            const t = remToday();
+            const byDay = {};
+            remList.forEach(r => { (byDay[r.remind_date] = byDay[r.remind_date] || []).push(r); });
+            let html = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(d => `<div class="cal-dow">${d}</div>`).join('');
+            const totalCells = Math.ceil((offset + new Date(calYear, calMonth + 1, 0).getDate()) / 7) * 7; // whole weeks only
+            for (let i = 0; i < totalCells; i++) {
+                const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+                const ymd = remYmd(d);
+                const items = byDay[ymd] || [];
+                const chips = items.slice(0, 2).map(r => `<span class="cal-chip ${r.done ? 'done' : remIsLate(r) ? 'late' : ''}" title="${rptEsc(r.title)}">${rptEsc((r.remind_time ? r.remind_time + ' ' : '') + r.title)}</span>`).join('');
+                const more = items.length > 2 ? `<div class="cal-more">+${items.length - 2} more</div>` : '';
+                html += `<div class="cal-day ${d.getMonth() !== calMonth ? 'other' : ''} ${ymd === t ? 'today' : ''} ${ymd === calSelected ? 'sel' : ''}" onclick="calSelect('${ymd}')" ondblclick="remOpenModal(null, '${ymd}')"><span class="cal-num">${d.getDate()}</span>${chips}${more}</div>`;
+            }
+            document.getElementById('calGrid').innerHTML = html;
+            document.getElementById('calDayTitle').innerText = remNiceDate(calSelected, true);
+            const list = (byDay[calSelected] || []);
+            document.getElementById('calDayList').innerHTML = list.length ? list.map(r => remRowHtml(r, false)).join('')
+                : '<div class="wf-empty">No reminders on this day.<br>Click "Add" to write one.</div>';
+        }
+
+        // ---- Add / edit ----
+        function remOpenModal(id, ymd) {
+            remEditId = id || null;
+            const r = id ? remList.find(x => x.id === id) : null;
+            document.getElementById('remModalTitle').innerText = r ? 'Edit reminder' : 'Add reminder';
+            document.getElementById('rem_title').value = r ? r.title : '';
+            document.getElementById('rem_date').value = r ? r.remind_date : (ymd || (document.getElementById('calendarView').style.display === 'block' && calSelected) || remToday());
+            document.getElementById('rem_time').value = r && r.remind_time ? r.remind_time : '';
+            document.getElementById('rem_note').value = r && r.note ? r.note : '';
+            document.getElementById('remError').style.display = 'none';
+            document.getElementById('remModalOverlay').classList.add('open');
+            setTimeout(() => document.getElementById('rem_title').focus(), 50);
+        }
+        function remCloseModal() { document.getElementById('remModalOverlay').classList.remove('open'); }
+        async function remSave() {
+            const err = document.getElementById('remError');
+            const body = {
+                title: document.getElementById('rem_title').value.trim(),
+                remind_date: document.getElementById('rem_date').value,
+                remind_time: document.getElementById('rem_time').value || null,
+                note: document.getElementById('rem_note').value.trim()
+            };
+            if (!body.title) { err.innerText = 'Please write what you need to remember.'; err.style.display = 'block'; return; }
+            if (!body.remind_date) { err.innerText = 'Please choose a date.'; err.style.display = 'block'; return; }
+            const btn = document.getElementById('remSaveBtn');
+            btn.disabled = true;
+            try {
+                const res = await rptFetch(remEditId ? `${API_BASE}/api/reminders/${remEditId}` : `${API_BASE}/api/reminders`, {
+                    method: remEditId ? 'PUT' : 'POST',
+                    headers: { ...API_HEADERS, 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) { err.innerText = data.error || 'Could not save the reminder.'; err.style.display = 'block'; return; }
+                remCloseModal();
+                await remRefreshViews(data.remind_date);
+                rptToast('Reminder saved.', 'success');
+            } catch (e) {
+                console.error(e);
+                err.innerText = 'Could not save the reminder. Please try again.'; err.style.display = 'block';
+            } finally {
+                btn.disabled = false;
+            }
+        }
+        async function remRefreshViews(selectDate) {
+            await remLoad();
+            if (document.getElementById('calendarView').style.display === 'block') {
+                if (selectDate) {
+                    calSelected = selectDate;
+                    const [y, m] = selectDate.split('-').map(Number);
+                    calYear = y; calMonth = m - 1;
+                }
+                renderCalendar();
+            }
+            renderDashReminders();
+        }
+        async function remToggle(id, done) {
+            try {
+                const res = await rptFetch(`${API_BASE}/api/reminders/${id}`, {
+                    method: 'PUT', headers: { ...API_HEADERS, 'Content-Type': 'application/json' }, body: JSON.stringify({ done })
+                });
+                if (!res.ok) throw new Error('save failed');
+            } catch (e) {
+                console.error(e);
+                rptToast('Could not update the reminder. Please try again.', 'error');
+            }
+            await remRefreshViews();
+        }
+        async function remDelete(id) {
+            if (!(await rptConfirm('Delete this reminder? It goes to the Recycle Bin.'))) return;
+            try {
+                const res = await rptFetch(`${API_BASE}/api/reminders/${id}`, { method: 'DELETE', headers: API_HEADERS });
+                if (!res.ok) throw new Error('delete failed');
+            } catch (e) {
+                console.error(e);
+                rptToast('Could not delete the reminder. Please try again.', 'error');
+                return;
+            }
+            await remRefreshViews();
+        }
+
         const RECYCLE_TYPES = {
+            reminder: 'Reminder',
             employee: 'Employee', training_topic: 'Training topic', training: 'Training', training_column: 'Training column',
             overtime: 'Overtime entry', overtime_taking: 'Overtime taken', rss_training_type: 'RSS training type',
             rss_learner: 'RSS learner', rss_manual: 'Training manual', timesheet_entry: 'Timesheet entry',

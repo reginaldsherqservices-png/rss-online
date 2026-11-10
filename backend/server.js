@@ -185,6 +185,116 @@ app.delete('/api/recycle-bin/:id', async (req, res) => {
   }
 });
 
+// ===== Calendar reminders: each person only ever sees and changes their own =====
+const remindersReady = (async () => {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS reminders (
+      id SERIAL PRIMARY KEY,
+      owner TEXT NOT NULL,
+      title TEXT NOT NULL,
+      note TEXT,
+      remind_date DATE NOT NULL,
+      remind_time VARCHAR(5),
+      done BOOLEAN NOT NULL DEFAULT FALSE,
+      done_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )`);
+  await pool.query('CREATE INDEX IF NOT EXISTS reminders_owner_idx ON reminders (owner, remind_date)');
+})().catch(err => console.error('Could not set up reminders:', err));
+
+const REMINDER_COLS = `id, title, note, to_char(remind_date, 'YYYY-MM-DD') AS remind_date, remind_time, done, done_at`;
+const reminderDateOk = (v) => /^\d{4}-\d{2}-\d{2}$/.test(String(v || '')) && !isNaN(new Date(v + 'T00:00:00Z').getTime());
+const reminderTimeOk = (v) => v === null || v === undefined || v === '' || /^([01]\d|2[0-3]):[0-5]\d$/.test(String(v));
+
+app.get('/api/reminders', async (req, res) => {
+  try {
+    await remindersReady;
+    const who = recycleWho(req);
+    if (!who) return res.json([]);
+    const r = await pool.query(`SELECT ${REMINDER_COLS} FROM reminders WHERE owner = $1 ORDER BY remind_date, remind_time NULLS FIRST, id`, [who]);
+    res.json(r.rows);
+  } catch (err) {
+    console.error('REMINDERS LIST ERROR:', err);
+    res.status(500).json({ error: 'Error loading reminders' });
+  }
+});
+
+app.post('/api/reminders', async (req, res) => {
+  try {
+    await remindersReady;
+    const who = recycleWho(req);
+    if (!who) return res.status(400).json({ error: 'Please log in again.' });
+    const title = String(req.body.title || '').trim().slice(0, 200);
+    const note = String(req.body.note || '').trim().slice(0, 1000) || null;
+    const time = req.body.remind_time ? String(req.body.remind_time) : null;
+    if (!title) return res.status(400).json({ error: 'Please write what the reminder is for.' });
+    if (!reminderDateOk(req.body.remind_date)) return res.status(400).json({ error: 'Please choose a date.' });
+    if (!reminderTimeOk(time)) return res.status(400).json({ error: 'That time is not valid.' });
+    const r = await pool.query(
+      `INSERT INTO reminders (owner, title, note, remind_date, remind_time) VALUES ($1,$2,$3,$4,$5) RETURNING ${REMINDER_COLS}`,
+      [who, title, note, req.body.remind_date, time]);
+    res.json(r.rows[0]);
+  } catch (err) {
+    console.error('REMINDER CREATE ERROR:', err);
+    res.status(500).json({ error: 'Error saving the reminder' });
+  }
+});
+
+// Edit a reminder, or tick / untick it as done. Only the fields sent are changed.
+app.put('/api/reminders/:id', async (req, res) => {
+  try {
+    await remindersReady;
+    const who = recycleWho(req);
+    if (!who) return res.status(400).json({ error: 'Please log in again.' });
+    const b = req.body || {};
+    const sets = [], vals = [];
+    const add = (col, val) => { vals.push(val); sets.push(`${col} = $${vals.length}`); };
+    if (b.title !== undefined) {
+      const t = String(b.title).trim().slice(0, 200);
+      if (!t) return res.status(400).json({ error: 'Please write what the reminder is for.' });
+      add('title', t);
+    }
+    if (b.note !== undefined) add('note', String(b.note).trim().slice(0, 1000) || null);
+    if (b.remind_date !== undefined) {
+      if (!reminderDateOk(b.remind_date)) return res.status(400).json({ error: 'Please choose a date.' });
+      add('remind_date', b.remind_date);
+    }
+    if (b.remind_time !== undefined) {
+      if (!reminderTimeOk(b.remind_time)) return res.status(400).json({ error: 'That time is not valid.' });
+      add('remind_time', b.remind_time ? String(b.remind_time) : null);
+    }
+    if (b.done !== undefined) {
+      add('done', !!b.done);
+      sets.push(b.done ? 'done_at = NOW()' : 'done_at = NULL');
+    }
+    if (!sets.length) return res.status(400).json({ error: 'Nothing to change.' });
+    vals.push(req.params.id, who);
+    const r = await pool.query(
+      `UPDATE reminders SET ${sets.join(', ')} WHERE id = $${vals.length - 1} AND owner = $${vals.length} RETURNING ${REMINDER_COLS}`, vals);
+    if (!r.rows.length) return res.status(404).json({ error: 'Reminder not found.' });
+    res.json(r.rows[0]);
+  } catch (err) {
+    console.error('REMINDER UPDATE ERROR:', err);
+    res.status(500).json({ error: 'Error saving the reminder' });
+  }
+});
+
+app.delete('/api/reminders/:id', async (req, res) => {
+  try {
+    const who = recycleWho(req);
+    if (!who) return res.status(400).json({ error: 'Please log in again.' });
+    await recycleTx(async (db) => {
+      await recycleCapture(db, req, 'reminder', (r) => ({ label: r.title || 'Reminder', detail: r.remind_date ? `Reminder for ${String(r.remind_date).slice(0, 10)}` : null }),
+        [{ table: 'reminders', where: 'id = $1 AND owner = $2', params: [req.params.id, who] }]);
+      await db.query('DELETE FROM reminders WHERE id = $1 AND owner = $2', [req.params.id, who]);
+    });
+    res.json({ success: true });
+  } catch (err) {
+    console.error('REMINDER DELETE ERROR:', err);
+    res.status(500).json({ error: 'Error deleting the reminder' });
+  }
+});
+
 // 1. Login Endpoint
 app.post('/api/login', async (req, res) => {
   const { username, password } = req.body;
