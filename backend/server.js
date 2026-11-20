@@ -1319,7 +1319,7 @@ app.get('/api/trainings/:id/weekly-tasks', async (req, res) => {
       return res.status(404).json({ error: 'Training not found' });
     }
     const weekly = (result.rows[0].extra_data && result.rows[0].extra_data.weekly_tasks) || null;
-    res.json(weekly ? { progress: {}, ...weekly } : { week_start: null, week_end: null, week_label: '', days: {}, progress: {} });
+    res.json(weekly ? { progress: {}, updated: {}, ...weekly } : { week_start: null, week_end: null, week_label: '', days: {}, progress: {}, updated: {} });
   } catch (err) {
     console.error("EXACT WEEKLY TASKS FETCH ERROR:", err);
     res.status(500).json({ error: 'Error fetching weekly tasks' });
@@ -1344,7 +1344,28 @@ app.put('/api/trainings/:id/weekly-tasks', async (req, res) => {
         return (given[i] === null || given[i] === undefined || given[i] === '' || isNaN(n)) ? null : Math.max(0, Math.min(100, Math.round(n)));
       });
     });
-    const weeklyData = { week_start, week_end, week_label: week_label || '', days, progress };
+    // "updated" runs alongside "days" too: updated[day][i] is the date that task was added or its percentage last changed
+    // (empty for tasks that have not changed since the week was first saved).
+    const oldRes = await pool.query("SELECT extra_data->'weekly_tasks' AS w FROM trainings WHERE id = $1", [id]);
+    const oldW = oldRes.rows.length ? oldRes.rows[0].w : null;
+    const todayZA = new Date().toLocaleDateString('en-CA', { timeZone: 'Africa/Johannesburg' });
+    const updated = {};
+    Object.keys(days).forEach(day => {
+      const tasks = Array.isArray(days[day]) ? days[day] : [];
+      const oldTasks = oldW && oldW.days && Array.isArray(oldW.days[day]) ? oldW.days[day] : [];
+      const oldProg = oldW && oldW.progress && Array.isArray(oldW.progress[day]) ? oldW.progress[day] : [];
+      const oldUpd = oldW && oldW.updated && Array.isArray(oldW.updated[day]) ? oldW.updated[day] : [];
+      const used = new Set();
+      updated[day] = tasks.map((t, i) => {
+        if (!oldW) return null;
+        const j = oldTasks.findIndex((o, k) => !used.has(k) && String(o).trim() === String(t).trim());
+        if (j < 0) return todayZA;
+        used.add(j);
+        const was = (oldProg[j] === null || oldProg[j] === undefined) ? null : Number(oldProg[j]);
+        return was === progress[day][i] ? (oldUpd[j] || null) : todayZA;
+      });
+    });
+    const weeklyData = { week_start, week_end, week_label: week_label || '', days, progress, updated };
     const result = await pool.query(
       `UPDATE trainings
        SET extra_data = jsonb_set(COALESCE(extra_data, '{}'::jsonb), ARRAY['weekly_tasks'], $2::jsonb),

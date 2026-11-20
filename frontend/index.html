@@ -2033,7 +2033,7 @@
                 <button class="wf-btn-secondary" onclick="closeWeeklyReport()">Close</button>
                 <button class="wf-btn-secondary" id="reportRefreshBtn" onclick="refreshReportFromTodo()"><i class="fas fa-rotate"></i> Refresh from To-Do List</button>
                 <button class="wf-btn-secondary" onclick="printWeeklyReport()"><i class="fas fa-print"></i> Print / Save as PDF</button>
-                <button class="wf-btn-primary" id="reportSaveBtn" onclick="saveReport()"><i class="fas fa-floppy-disk"></i> Save report</button>
+                <button class="wf-btn-primary" id="reportSaveBtn" onclick="saveReport(false)"><i class="fas fa-floppy-disk"></i> Save report</button>
             </div>
         </div>
     </div>
@@ -4638,7 +4638,7 @@
             const btn = document.getElementById('reportRefreshBtn');
             btn.disabled = true;
             try {
-                if (rsReport.items.some(w => (w.rows || []).some(r => r._writeback))) { if (!(await saveReport())) return; }
+                if (rsReport.items.some(w => (w.rows || []).some(r => r._writeback))) { if (!(await saveReport(true))) return; }
                 const before = rsReport.items.reduce((n, w) => n + (w.changes || []).length, 0);
                 const ids = rsReport.items.map(w => w.training_id);
                 rsReport.items = await buildItemsForTrainings(ids, rsReport.items);
@@ -4655,7 +4655,7 @@
         }
 
         // Saves the report. Any percentage that was changed inside the report is first written back to that task on the To-Do List.
-        async function saveReport() {
+        async function saveReport(keepOpen) {
             if (!rsReport) return false;
             const btn = document.getElementById('reportSaveBtn');
             btn.disabled = true;
@@ -4698,7 +4698,8 @@
                 rsReport.id = r.id;
                 reportDirty = false;
                 document.getElementById('reportSaveBtn').innerHTML = '<i class="fas fa-floppy-disk"></i> Update report';
-                refreshReportBody();
+                if (keepOpen) refreshReportBody();
+                else document.getElementById('weeklyReportOverlay').classList.remove('open');
                 rptToast('The report was saved.', 'success');
                 loadSavedReports();
                 return true;
@@ -8506,6 +8507,7 @@
         let weeklyTrainingEditId = null;
         let weeklyTasksState = {};
         let weeklyProgressState = {};
+        let weeklyUpdatedState = {};
 
         function formatWeekRangeLabel(startDateStr) {
             if (!startDateStr) return '';
@@ -8555,15 +8557,16 @@
                 container.appendChild(block);
                 const existing = weeklyTasksState[day] || [];
                 const existingProgress = weeklyProgressState[day] || [];
+                const existingUpdated = weeklyUpdatedState[day] || [];
                 if (existing.length > 0) {
-                    existing.forEach((taskText, i) => addWeeklyTaskRow(day, taskText, existingProgress[i]));
+                    existing.forEach((taskText, i) => addWeeklyTaskRow(day, taskText, existingProgress[i], existingUpdated[i]));
                 } else {
                     addWeeklyTaskRow(day, '');
                 }
             });
         }
 
-        function addWeeklyTaskRow(day, value, progress) {
+        function addWeeklyTaskRow(day, value, progress, updatedOn) {
             const wrap = document.getElementById(`wt_tasks_${day}`);
             if (!wrap) return;
             const row = document.createElement('div');
@@ -8575,6 +8578,7 @@
                     <input type="number" class="wt-progress-input" min="0" max="100" step="5" value="${pct}" placeholder="0-100" style="width:76px;">
                     <span style="font-size:12px; color:#64748B;">%</span>
                 </span>
+                ${updatedOn && /^\d{4}-\d{2}-\d{2}/.test(updatedOn) ? `<span title="The date this task was added or its percentage last changed" style="font-size:11px; color:#92400E; background:#FEF08A; border-radius:4px; padding:2px 6px; white-space:nowrap;">Updated ${new Date(String(updatedOn).slice(0, 10) + 'T00:00:00').toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' })}</span>` : ''}
                 <button class="lv-col-remove" type="button" onclick="this.parentElement.remove()" title="Remove task">&times;</button>
             `;
             wrap.appendChild(row);
@@ -8590,6 +8594,7 @@
             weeklyTrainingEditId = trainingId || null;
             weeklyTasksState = {};
             weeklyProgressState = {};
+            weeklyUpdatedState = {};
             document.getElementById('wtModalTitle').innerText = trainingId ? 'Edit Weekly Task List' : 'Add Weekly Task List';
             document.getElementById('wtDeleteBtn').style.display = (trainingId && !isTrainingReadOnly) ? 'inline-block' : 'none';
             document.getElementById('weeklyTrainingModalOverlay').classList.add('open');
@@ -8610,6 +8615,7 @@
                     .then(data => {
                         weeklyTasksState = (data && data.days) || {};
                         weeklyProgressState = (data && data.progress) || {};
+                        weeklyUpdatedState = (data && data.updated) || {};
                         const weekStart = (data && data.week_start) ? data.week_start.split('T')[0] : getMostRecentMonday();
                         document.getElementById('wt_week_start').value = weekStart;
                         document.getElementById('wt_week_label_display').innerText = formatWeekRangeLabel(weekStart);
