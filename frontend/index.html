@@ -2299,7 +2299,9 @@
             document.getElementById('rssTrainingSection').style.display = isAdmin ? 'block' : 'none';
             document.getElementById('inboxNavItem').style.display = isAdmin ? 'block' : 'none';
             document.getElementById('recycleNavItem').style.display = 'block';
-            document.getElementById('accountNavItem').style.display = isAdmin ? 'block' : 'none';
+            // The "My Login" menu item is switched off. Set this to true to bring it back; nothing was deleted.
+            const MY_LOGIN_MENU_VISIBLE = false;
+            document.getElementById('accountNavItem').style.display = (isAdmin && MY_LOGIN_MENU_VISIBLE) ? 'block' : 'none';
             // The old checklist Reports menu (Start Report, Weekly Reports, Monthly Reports, Checklist) is switched off.
             // Set this to true to bring it back; nothing was deleted.
             const CHECKLIST_REPORTS_MENU_VISIBLE = false;
