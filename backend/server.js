@@ -318,6 +318,153 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
+// Admin changes their own username and/or password. The current password must be sent, so only the
+// real owner of the account can do it. Reminders and Recycle Bin items follow the new username.
+app.post('/api/account/change', async (req, res) => {
+  const { username, current_password, new_username, new_password } = req.body || {};
+  if (!username || !current_password) return res.status(400).json({ error: 'Please enter your current password.' });
+  const newName = String(new_username || '').trim().slice(0, 100);
+  const newPass = String(new_password || '');
+  if (!newName && !newPass) return res.status(400).json({ error: 'Type a new username or a new password.' });
+  if (newPass && newPass.length < 6) return res.status(400).json({ error: 'The new password must be at least 6 characters.' });
+  try {
+    await remindersReady;
+    const out = await recycleTx(async (db) => {
+      const u = await db.query('SELECT id, username, role FROM users WHERE username = $1 AND password = $2 FOR UPDATE', [username, current_password]);
+      if (!u.rows.length) return { status: 401, body: { error: 'Your current password is not correct.' } };
+      const user = u.rows[0];
+      if (user.role !== 'admin') return { status: 403, body: { error: 'Only an admin can change their login here.' } };
+      const finalName = newName || user.username;
+      const renamed = finalName !== user.username;
+      if (renamed) {
+        const dup = await db.query('SELECT 1 FROM users WHERE LOWER(username) = LOWER($1) AND id <> $2', [finalName, user.id]);
+        if (dup.rows.length) return { status: 409, body: { error: 'That username is already used by someone else. Choose another one.' } };
+      }
+      await db.query('UPDATE users SET username = $1, password = $2 WHERE id = $3', [finalName, newPass || current_password, user.id]);
+      if (renamed) {
+        await db.query('UPDATE reminders SET owner = $1 WHERE owner = $2', [finalName, user.username]);
+        await db.query('UPDATE recycle_bin SET deleted_by = $1 WHERE deleted_by = $2', [finalName, user.username]);
+      }
+      return { status: 200, body: { success: true, username: finalName } };
+    });
+    res.status(out.status).json(out.body);
+  } catch (err) {
+    console.error('ACCOUNT CHANGE ERROR:', err);
+    if (err.code === '23505') return res.status(409).json({ error: 'That username is already used by someone else. Choose another one.' });
+    res.status(500).json({ error: 'Error saving your login' });
+  }
+});
+
+// ===== Admin "Forgot password" (admin accounts only) =====
+// The admin types their ID number. If it matches an admin account (either the ID saved in My Login or the ID on
+// the linked employee profile), they get a short-lived one-time ticket and can then set a new username/password.
+const crypto = require('crypto');
+const adminResetReady = (async () => {
+  try { await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_id_hash TEXT'); }
+  catch (e) { console.error('ADMIN RESET SETUP ERROR:', e.message); }
+})();
+const ADMIN_RESET_PEPPER = process.env.RESET_PEPPER || 'rss-online-admin-reset';
+const adminResetTickets = new Map();   // ticket -> { userId, exp }
+const adminResetFails = new Map();     // ip -> { n, until }
+function normId(v) { return String(v || '').replace(/[\s-]/g, ''); }
+function hashId(v) { return crypto.createHash('sha256').update(ADMIN_RESET_PEPPER + ':' + normId(v)).digest('hex'); }
+function clientIp(req) { return String(req.headers['x-forwarded-for'] || req.ip || '').split(',')[0].trim() || 'unknown'; }
+function resetBlocked(ip) { const f = adminResetFails.get(ip); return !!(f && f.until && f.until > Date.now()); }
+function resetFail(ip) {
+  const f = adminResetFails.get(ip) || { n: 0, until: 0 };
+  f.n += 1;
+  if (f.n >= 5) { f.until = Date.now() + 15 * 60 * 1000; f.n = 0; }
+  adminResetFails.set(ip, f);
+}
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of adminResetTickets) if (v.exp < now) adminResetTickets.delete(k);
+  for (const [k, v] of adminResetFails) if (v.until && v.until < now) adminResetFails.delete(k);
+}, 60 * 1000).unref();
+
+// Admin saves the ID number used for "Forgot password" (needs the current password).
+app.post('/api/account/reset-id', async (req, res) => {
+  const { username, current_password, id_number } = req.body || {};
+  const id = normId(id_number);
+  if (!username || !current_password) return res.status(400).json({ error: 'Please log out and log in again, then try again.' });
+  if (id.length < 6 || id.length > 20) return res.status(400).json({ error: 'Please type a valid ID number.' });
+  try {
+    await adminResetReady;
+    const u = await pool.query('SELECT id, role FROM users WHERE username = $1 AND password = $2', [username, current_password]);
+    if (!u.rows.length) return res.status(401).json({ error: 'Your current password is not correct.' });
+    if (u.rows[0].role !== 'admin') return res.status(403).json({ error: 'Only an admin can do this.' });
+    await pool.query('UPDATE users SET reset_id_hash = $1 WHERE id = $2', [hashId(id), u.rows[0].id]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('RESET ID SAVE ERROR:', err);
+    res.status(500).json({ error: 'Could not save the ID number' });
+  }
+});
+
+// Step 1: check the ID number.
+app.post('/api/admin/forgot/verify', async (req, res) => {
+  const ip = clientIp(req);
+  if (resetBlocked(ip)) return res.status(429).json({ error: 'Too many tries. Please wait 15 minutes and try again.' });
+  const id = normId((req.body || {}).id_number);
+  const bad = () => { resetFail(ip); return res.status(400).json({ error: 'Details not recognised.' }); };
+  if (id.length < 6 || id.length > 20) return bad();
+  try {
+    await adminResetReady;
+    const h = hashId(id);
+    const r = await pool.query(
+      `SELECT u.id, u.reset_id_hash, e.id_number AS emp_id
+         FROM users u LEFT JOIN employees e ON e.id = u.employee_id
+        WHERE u.role = 'admin'`);
+    const hit = r.rows.find(x => (x.reset_id_hash && x.reset_id_hash === h) || (x.emp_id && hashId(x.emp_id) === h));
+    if (!hit) return bad();
+    adminResetFails.delete(ip);
+    const ticket = crypto.randomBytes(24).toString('hex');
+    adminResetTickets.set(ticket, { userId: hit.id, exp: Date.now() + 10 * 60 * 1000 });
+    res.json({ ticket });
+  } catch (err) {
+    console.error('FORGOT VERIFY ERROR:', err);
+    res.status(500).json({ error: 'Server error. Please try again.' });
+  }
+});
+
+// Step 2: set the new username and/or password.
+app.post('/api/admin/forgot/reset', async (req, res) => {
+  const { ticket, new_username, new_password } = req.body || {};
+  const t = adminResetTickets.get(String(ticket || ''));
+  if (!t || t.exp < Date.now()) return res.status(400).json({ error: 'This step has expired. Please start again.' });
+  const newName = String(new_username || '').trim().slice(0, 100);
+  const newPass = String(new_password || '');
+  if (!newName && !newPass) return res.status(400).json({ error: 'Type a new password (and a new username if you want one).' });
+  if (newPass && newPass.length < 6) return res.status(400).json({ error: 'The new password must be at least 6 characters.' });
+  try {
+    await remindersReady;
+    const out = await recycleTx(async (db) => {
+      const u = await db.query('SELECT id, username, role FROM users WHERE id = $1 FOR UPDATE', [t.userId]);
+      if (!u.rows.length || u.rows[0].role !== 'admin') return { status: 403, body: { error: 'Only an admin can do this.' } };
+      const user = u.rows[0];
+      const finalName = newName || user.username;
+      const renamed = finalName !== user.username;
+      if (renamed) {
+        const dup = await db.query('SELECT 1 FROM users WHERE LOWER(username) = LOWER($1) AND id <> $2', [finalName, user.id]);
+        if (dup.rows.length) return { status: 409, body: { error: 'That username is already used by someone else. Choose another one.' } };
+      }
+      if (newPass) await db.query('UPDATE users SET username = $1, password = $2 WHERE id = $3', [finalName, newPass, user.id]);
+      else await db.query('UPDATE users SET username = $1 WHERE id = $2', [finalName, user.id]);
+      if (renamed) {
+        await db.query('UPDATE reminders SET owner = $1 WHERE owner = $2', [finalName, user.username]);
+        await db.query('UPDATE recycle_bin SET deleted_by = $1 WHERE deleted_by = $2', [finalName, user.username]);
+      }
+      return { status: 200, body: { success: true, username: finalName } };
+    });
+    if (out.status === 200) adminResetTickets.delete(String(ticket));
+    res.status(out.status).json(out.body);
+  } catch (err) {
+    console.error('FORGOT RESET ERROR:', err);
+    if (err.code === '23505') return res.status(409).json({ error: 'That username is already used by someone else. Choose another one.' });
+    res.status(500).json({ error: 'Error saving your login' });
+  }
+});
+
 // 2. Get Tasks for a Specific User
 app.get('/api/tasks/:userId', async (req, res) => {
   const { userId } = req.params;
@@ -1172,7 +1319,7 @@ app.get('/api/trainings/:id/weekly-tasks', async (req, res) => {
       return res.status(404).json({ error: 'Training not found' });
     }
     const weekly = (result.rows[0].extra_data && result.rows[0].extra_data.weekly_tasks) || null;
-    res.json(weekly || { week_start: null, week_end: null, week_label: '', days: {} });
+    res.json(weekly ? { progress: {}, ...weekly } : { week_start: null, week_end: null, week_label: '', days: {}, progress: {} });
   } catch (err) {
     console.error("EXACT WEEKLY TASKS FETCH ERROR:", err);
     res.status(500).json({ error: 'Error fetching weekly tasks' });
@@ -1186,7 +1333,18 @@ app.put('/api/trainings/:id/weekly-tasks', async (req, res) => {
     return res.status(400).json({ error: 'week_start, week_end and days are required' });
   }
   try {
-    const weeklyData = { week_start, week_end, week_label: week_label || '', days };
+    // "progress" runs alongside "days": progress[day][i] is how far along (0-100) the i-th task of that day is.
+    const rawProgress = (req.body && req.body.progress && typeof req.body.progress === 'object') ? req.body.progress : {};
+    const progress = {};
+    Object.keys(days).forEach(day => {
+      const tasks = Array.isArray(days[day]) ? days[day] : [];
+      const given = Array.isArray(rawProgress[day]) ? rawProgress[day] : [];
+      progress[day] = tasks.map((_, i) => {
+        const n = Number(given[i]);
+        return (given[i] === null || given[i] === undefined || given[i] === '' || isNaN(n)) ? null : Math.max(0, Math.min(100, Math.round(n)));
+      });
+    });
+    const weeklyData = { week_start, week_end, week_label: week_label || '', days, progress };
     const result = await pool.query(
       `UPDATE trainings
        SET extra_data = jsonb_set(COALESCE(extra_data, '{}'::jsonb), ARRAY['weekly_tasks'], $2::jsonb),
@@ -3100,6 +3258,146 @@ async function syncLearnedFromWeekly(employeeId) {
 }
 
 const LEARNED_COLS = `id, employee_id, topic, source_text, learned, to_char(learned_date,'YYYY-MM-DD') AS learned_date, source`;
+
+// ===== Saved reports (the Reports tab on RSS In-House Training) =====
+// A report is made from the Weekly To-Do List (one week = a weekly report, several weeks = a monthly report).
+// The person can add a comment next to each topic and save it; it then stays in the "Saved reports" list.
+const savedReportsReady = (async () => {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS rss_saved_reports (
+      id SERIAL PRIMARY KEY,
+      employee_id INTEGER NOT NULL,
+      report_key TEXT NOT NULL,
+      title TEXT NOT NULL,
+      report_type TEXT NOT NULL DEFAULT 'weekly',
+      period_start DATE,
+      period_end DATE,
+      training_ids JSONB NOT NULL DEFAULT '[]'::jsonb,
+      items JSONB NOT NULL DEFAULT '[]'::jsonb,
+      created_by TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )`);
+  await pool.query('CREATE UNIQUE INDEX IF NOT EXISTS rss_saved_reports_uq ON rss_saved_reports (employee_id, report_key)');
+})().catch(err => console.error('Could not set up saved reports:', err));
+
+const SAVED_REPORT_COLS = `id, employee_id, title, report_type, to_char(period_start,'YYYY-MM-DD') AS period_start, to_char(period_end,'YYYY-MM-DD') AS period_end, training_ids, items, created_at, updated_at`;
+const srText = (v, n) => String(v == null ? '' : v).slice(0, n);
+const srDate = (v) => (/^\d{4}-\d{2}-\d{2}$/.test(String(v || '')) ? String(v) : null);
+
+// Keeps only what a report may contain, so nothing odd can be stored.
+function srCleanItems(items) {
+  const weeks = Array.isArray(items) ? items.slice(0, 20) : [];
+  return weeks.map(w => ({
+    training_id: parseInt(w && w.training_id, 10) || null,
+    week_label: srText(w && w.week_label, 120),
+    week_start: srDate(w && w.week_start),
+    week_end: srDate(w && w.week_end),
+    changes: (Array.isArray(w && w.changes) ? w.changes.slice(0, 100) : []).map(c => ({ date: srDate(c && c.date), text: srText(c && c.text, 300) })).filter(c => c.text),
+    rows: (Array.isArray(w && w.rows) ? w.rows.slice(0, 300) : []).map(r => {
+      const n = Number(r && r.pct);
+      const has = !(r == null || r.pct === null || r.pct === undefined || r.pct === '' || isNaN(n));
+      return {
+        day: srText(r && r.day, 20), date: srDate(r && r.date), task: srText(r && r.task, 300),
+        pct: has ? Math.max(0, Math.min(100, Math.round(n))) : null,
+        comment: srText(r && r.comment, 2000), key: srText(r && r.key, 300),
+        updated_on: srDate(r && r.updated_on),
+        was: (r && r.was !== null && r.was !== undefined && r.was !== '' && !isNaN(Number(r.was))) ? Math.max(0, Math.min(100, Math.round(Number(r.was)))) : null
+      };
+    })
+  }));
+}
+
+app.get('/api/saved-reports', async (req, res) => {
+  const employeeId = parseInt(req.query.employee_id, 10);
+  if (!employeeId) return res.status(400).json({ error: 'employee_id is required' });
+  try {
+    await savedReportsReady;
+    const r = await pool.query(
+      `SELECT id, title, report_type, to_char(period_start,'YYYY-MM-DD') AS period_start, to_char(period_end,'YYYY-MM-DD') AS period_end,
+              training_ids, jsonb_array_length(training_ids) AS weeks, updated_at
+         FROM rss_saved_reports WHERE employee_id = $1 ORDER BY COALESCE(period_start, created_at::date) DESC, id DESC`, [employeeId]);
+    res.json(r.rows);
+  } catch (err) {
+    console.error('SAVED REPORTS LIST ERROR:', err);
+    res.status(500).json({ error: 'Error loading the saved reports' });
+  }
+});
+
+app.get('/api/saved-reports/:id', async (req, res) => {
+  const employeeId = parseInt(req.query.employee_id, 10);
+  if (!employeeId) return res.status(400).json({ error: 'employee_id is required' });
+  try {
+    await savedReportsReady;
+    const r = await pool.query(`SELECT ${SAVED_REPORT_COLS} FROM rss_saved_reports WHERE id = $1 AND employee_id = $2`, [req.params.id, employeeId]);
+    if (!r.rows.length) return res.status(404).json({ error: 'This report was not found.' });
+    res.json(r.rows[0]);
+  } catch (err) {
+    console.error('SAVED REPORT LOAD ERROR:', err);
+    res.status(500).json({ error: 'Error loading the report' });
+  }
+});
+
+// Saves a report. Saving the same weeks again replaces the earlier copy (one saved report per set of weeks).
+app.post('/api/saved-reports', async (req, res) => {
+  const b = req.body || {};
+  const employeeId = parseInt(b.employee_id, 10);
+  const ids = [...new Set((Array.isArray(b.training_ids) ? b.training_ids : []).map(n => parseInt(n, 10)).filter(n => n > 0))].sort((a, c) => a - c);
+  if (!employeeId || !ids.length) return res.status(400).json({ error: 'Please choose at least one week.' });
+  const title = srText(b.title, 200).trim() || 'Report';
+  const type = b.report_type === 'monthly' ? 'monthly' : 'weekly';
+  try {
+    await savedReportsReady;
+    const r = await pool.query(
+      `INSERT INTO rss_saved_reports (employee_id, report_key, title, report_type, period_start, period_end, training_ids, items, created_by)
+       VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,$8::jsonb,$9)
+       ON CONFLICT (employee_id, report_key) DO UPDATE
+         SET title = EXCLUDED.title, report_type = EXCLUDED.report_type, period_start = EXCLUDED.period_start, period_end = EXCLUDED.period_end,
+             training_ids = EXCLUDED.training_ids, items = EXCLUDED.items, updated_at = NOW()
+       RETURNING ${SAVED_REPORT_COLS}`,
+      [employeeId, ids.join('-'), title, type, srDate(b.period_start), srDate(b.period_end), JSON.stringify(ids), JSON.stringify(srCleanItems(b.items)), recycleWho(req)]);
+    res.json(r.rows[0]);
+  } catch (err) {
+    console.error('SAVED REPORT SAVE ERROR:', err);
+    res.status(500).json({ error: 'Error saving the report' });
+  }
+});
+
+// Updates a saved report (the comments, and the tasks if they were refreshed).
+app.put('/api/saved-reports/:id', async (req, res) => {
+  const b = req.body || {};
+  const employeeId = parseInt(b.employee_id, 10);
+  if (!employeeId) return res.status(400).json({ error: 'employee_id is required' });
+  try {
+    await savedReportsReady;
+    const r = await pool.query(
+      `UPDATE rss_saved_reports SET items = $3::jsonb, title = COALESCE(NULLIF($4,''), title), updated_at = NOW()
+        WHERE id = $1 AND employee_id = $2 RETURNING ${SAVED_REPORT_COLS}`,
+      [req.params.id, employeeId, JSON.stringify(srCleanItems(b.items)), srText(b.title, 200).trim()]);
+    if (!r.rows.length) return res.status(404).json({ error: 'This report was not found.' });
+    res.json(r.rows[0]);
+  } catch (err) {
+    console.error('SAVED REPORT UPDATE ERROR:', err);
+    res.status(500).json({ error: 'Error updating the report' });
+  }
+});
+
+app.delete('/api/saved-reports/:id', async (req, res) => {
+  const employeeId = parseInt(req.query.employee_id, 10);
+  if (!employeeId) return res.status(400).json({ error: 'employee_id is required' });
+  try {
+    await savedReportsReady;
+    await recycleTx(async (db) => {
+      await recycleCapture(db, req, 'saved_report', (r) => ({ label: r.title || 'Report', detail: r.report_type === 'monthly' ? 'Monthly report' : 'Weekly report' }),
+        [{ table: 'rss_saved_reports', where: 'id = $1 AND employee_id = $2', params: [req.params.id, employeeId] }]);
+      await db.query('DELETE FROM rss_saved_reports WHERE id = $1 AND employee_id = $2', [req.params.id, employeeId]);
+    });
+    res.json({ success: true });
+  } catch (err) {
+    console.error('SAVED REPORT DELETE ERROR:', err);
+    res.status(500).json({ error: 'Error deleting the report' });
+  }
+});
 
 app.get('/api/learned-entries', async (req, res) => {
   const { employee_id } = req.query;
