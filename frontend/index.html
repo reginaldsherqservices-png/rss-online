@@ -385,7 +385,7 @@
                     </button>
                 </div>
                 <button class="submit-btn" onclick="handleLogin()">Sign In</button>
-                <div id="adminForgotWrap" style="display:none; text-align:center; margin-top:16px;">
+                <div id="adminForgotWrap" style="display:block; text-align:center; margin-top:16px;">
                     <a href="#" onclick="afOpen(); return false;" style="font-size:13.5px; color:var(--sherq-blue); text-decoration:underline;">Forgot password?</a>
                 </div>
             </div>
@@ -1307,7 +1307,7 @@
                     <div class="wf-field"><label>Password</label><input type="password" id="acct_cur_password" readonly style="background:#F3F4F6;"></div>
                     <label style="font-size:13px; color:var(--ink-soft); display:flex; gap:6px; align-items:center;"><input type="checkbox" id="acct_show" style="width:auto;" onchange="acctShow(this.checked)"> Show password</label>
                     <div id="acctMissing" style="display:none; color:#B45309; font-size:13px;">Your password is not available right now. Please log out and log in again.</div>
-                    <div class="wf-field" style="border-top:1px solid #E5E7EB; padding-top:12px;">
+                    <div class="wf-field" style="display:none; border-top:1px solid #E5E7EB; padding-top:12px;">
                         <label>ID number <span style="font-weight:400; color:var(--ink-soft);">(used if you forget your password)</span></label>
                         <div style="display:flex; gap:8px;"><input type="text" id="acct_resetid" autocomplete="off" inputmode="numeric" placeholder="Type your ID number" style="flex:1;"><button class="wf-btn-secondary" id="acctIdBtn" onclick="acctSaveId()">Save ID</button></div>
                     </div>
@@ -1341,13 +1341,25 @@
             </div>
             <div id="afStep1">
                 <div class="wf-modal-body" style="grid-template-columns: 1fr;">
-                    <p style="margin:0; font-size:13.5px; color:var(--ink-soft);">To confirm it is really you, type your ID number.</p>
-                    <div class="wf-field"><label>ID number</label><input type="text" id="af_id" autocomplete="off" inputmode="numeric" onkeydown="if(event.key==='Enter')afVerify()"></div>
+                    <p style="margin:0; font-size:13.5px; color:var(--ink-soft);">Type the admin's email address. We will email a 6-digit PIN to it.</p>
+                    <div class="wf-field"><label>Email address</label><input type="email" id="af_email" autocomplete="off" onkeydown="if(event.key==='Enter')afRequest()"></div>
                     <div id="afErr1" style="display:none; color:#DC2626; font-size:13px;"></div>
                 </div>
                 <div class="wf-modal-footer">
                     <button class="wf-btn-secondary" onclick="afClose()">Cancel</button>
-                    <button class="wf-btn-primary" id="afVerifyBtn" onclick="afVerify()">Continue</button>
+                    <button class="wf-btn-primary" id="afVerifyBtn" onclick="afRequest()">Send PIN</button>
+                </div>
+            </div>
+            <div id="afStepPin" style="display:none;">
+                <div class="wf-modal-body" style="grid-template-columns: 1fr;">
+                    <p style="margin:0; font-size:13.5px; color:var(--ink-soft);">If this is the admin's email address, a 6-digit PIN was sent to it. It works for 10 minutes. Type it here.</p>
+                    <div class="wf-field"><label>PIN</label><input type="text" id="af_pin" autocomplete="off" inputmode="numeric" maxlength="6" style="letter-spacing:6px; font-size:18px;" onkeydown="if(event.key==='Enter')afCheckPin()"></div>
+                    <div id="afErrPin" style="display:none; color:#DC2626; font-size:13px;"></div>
+                    <a href="#" onclick="afResend(); return false;" style="font-size:13px; color:var(--sherq-blue);">Send a new PIN</a>
+                </div>
+                <div class="wf-modal-footer">
+                    <button class="wf-btn-secondary" onclick="afClose()">Cancel</button>
+                    <button class="wf-btn-primary" id="afPinBtn" onclick="afCheckPin()">Continue</button>
                 </div>
             </div>
             <div id="afStep2" style="display:none;">
@@ -2299,8 +2311,8 @@
             document.getElementById('rssTrainingSection').style.display = isAdmin ? 'block' : 'none';
             document.getElementById('inboxNavItem').style.display = isAdmin ? 'block' : 'none';
             document.getElementById('recycleNavItem').style.display = 'block';
-            // The "My Login" menu item is switched off. Set this to true to bring it back; nothing was deleted.
-            const MY_LOGIN_MENU_VISIBLE = false;
+            // The "My Login" menu item (the admin sees their own login here). Set this to false to hide it.
+            const MY_LOGIN_MENU_VISIBLE = true;
             document.getElementById('accountNavItem').style.display = (isAdmin && MY_LOGIN_MENU_VISIBLE) ? 'block' : 'none';
             // The old checklist Reports menu (Start Report, Weekly Reports, Monthly Reports, Checklist) is switched off.
             // Set this to true to bring it back; nothing was deleted.
@@ -2741,50 +2753,84 @@
         function isAdminLoginLink() { return location.hash.toLowerCase() === '#admin' || /\/admin\/?$/i.test(location.pathname); }
         function applyAdminLoginLink() {
             const on = isAdminLoginLink();
-            document.getElementById('adminForgotWrap').style.display = on ? 'block' : 'none';
             document.getElementById('loginKicker').innerText = on ? 'Admin Portal' : 'Staff Portal';
             document.getElementById('loginTitle').innerText = on ? 'Admin Sign In' : 'Sign In';
         }
         window.addEventListener('hashchange', applyAdminLoginLink);
         document.addEventListener('DOMContentLoaded', applyAdminLoginLink);
         let afTicket = null;
+        let afEmail = '';
+        function afShow(step) {
+            document.getElementById('afStep1').style.display = step === 1 ? 'block' : 'none';
+            document.getElementById('afStepPin').style.display = step === 'pin' ? 'block' : 'none';
+            document.getElementById('afStep2').style.display = step === 2 ? 'block' : 'none';
+            document.getElementById('afTitle').innerText = step === 2 ? 'Set a new login' : 'Forgot password';
+        }
         function afOpen() {
-            afTicket = null;
-            ['af_id', 'af_user', 'af_pw1', 'af_pw2'].forEach(id => { document.getElementById(id).value = ''; });
+            afTicket = null; afEmail = '';
+            ['af_email', 'af_pin', 'af_user', 'af_pw1', 'af_pw2'].forEach(id => { document.getElementById(id).value = ''; });
             document.getElementById('af_show').checked = false;
             ['af_pw1', 'af_pw2'].forEach(id => { document.getElementById(id).type = 'password'; });
-            document.getElementById('afErr1').style.display = 'none';
-            document.getElementById('afErr2').style.display = 'none';
-            document.getElementById('afStep1').style.display = 'block';
-            document.getElementById('afStep2').style.display = 'none';
-            document.getElementById('afTitle').innerText = 'Forgot password';
+            ['afErr1', 'afErrPin', 'afErr2'].forEach(id => { document.getElementById(id).style.display = 'none'; });
+            afShow(1);
             document.getElementById('afModalOverlay').classList.add('open');
-            setTimeout(() => document.getElementById('af_id').focus(), 50);
+            setTimeout(() => document.getElementById('af_email').focus(), 50);
         }
-        function afClose() { afTicket = null; document.getElementById('afModalOverlay').classList.remove('open'); }
-        async function afVerify() {
-            const err = document.getElementById('afErr1');
+        function afClose() { afTicket = null; afEmail = ''; document.getElementById('afModalOverlay').classList.remove('open'); }
+
+        // Step 1: ask for the PIN to be emailed.
+        async function afRequest(isResend) {
+            const err = document.getElementById(isResend ? 'afErrPin' : 'afErr1');
             const fail = (m) => { err.innerText = m; err.style.display = 'block'; };
-            const id = document.getElementById('af_id').value.trim();
-            if (!id) return fail('Please type your ID number.');
+            err.style.display = 'none';
+            const email = isResend ? afEmail : document.getElementById('af_email').value.trim();
+            if (!email || !email.includes('@')) return fail('Please type a valid email address.');
             const btn = document.getElementById('afVerifyBtn');
             btn.disabled = true;
             try {
-                const res = await fetch(`${API_BASE}/api/admin/forgot/verify`, {
+                const res = await fetch(`${API_BASE}/api/forgot/request`, {
                     method: 'POST', headers: { 'Content-Type': 'application/json', ...API_HEADERS },
-                    body: JSON.stringify({ id_number: id })
+                    body: JSON.stringify({ email })
                 });
                 const data = await res.json().catch(() => ({}));
-                if (!res.ok) return fail(data.error || 'Could not check your ID number. Please try again.');
+                if (!res.ok) return fail(data.error || 'Could not send the PIN. Please try again.');
+                afEmail = email;
+                afShow('pin');
+                document.getElementById('af_pin').value = '';
+                if (isResend) { const e = document.getElementById('afErrPin'); e.innerText = 'A new PIN was sent.'; e.style.color = '#15803D'; e.style.display = 'block'; }
+                else document.getElementById('afErrPin').style.color = '#DC2626';
+                setTimeout(() => document.getElementById('af_pin').focus(), 50);
+            } catch (e) {
+                console.error(e);
+                fail('Could not send the PIN. Please try again.');
+            } finally {
+                btn.disabled = false;
+            }
+        }
+        function afResend() { afRequest(true); }
+
+        // Step 2: check the PIN.
+        async function afCheckPin() {
+            const err = document.getElementById('afErrPin');
+            const fail = (m) => { err.innerText = m; err.style.color = '#DC2626'; err.style.display = 'block'; };
+            const pin = document.getElementById('af_pin').value.trim();
+            if (!/^\d{6}$/.test(pin)) return fail('Please type the 6-digit PIN from the email.');
+            const btn = document.getElementById('afPinBtn');
+            btn.disabled = true;
+            try {
+                const res = await fetch(`${API_BASE}/api/forgot/verify-pin`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json', ...API_HEADERS },
+                    body: JSON.stringify({ email: afEmail, pin })
+                });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) return fail(data.error || 'Could not check the PIN. Please try again.');
                 afTicket = data.ticket;
-                document.getElementById('afErr1').style.display = 'none';
-                document.getElementById('afStep1').style.display = 'none';
-                document.getElementById('afStep2').style.display = 'block';
-                document.getElementById('afTitle').innerText = 'Set a new login';
+                err.style.display = 'none';
+                afShow(2);
                 setTimeout(() => document.getElementById('af_user').focus(), 50);
             } catch (e) {
                 console.error(e);
-                fail('Could not check your ID number. Please try again.');
+                fail('Could not check the PIN. Please try again.');
             } finally {
                 btn.disabled = false;
             }

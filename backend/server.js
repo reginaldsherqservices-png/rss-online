@@ -401,28 +401,90 @@ app.post('/api/account/reset-id', async (req, res) => {
   }
 });
 
-// Step 1: check the ID number.
-app.post('/api/admin/forgot/verify', async (req, res) => {
+// Step 1: the person types the admin's email address. A 6-digit PIN is emailed, but only if that is the admin's email.
+// Any other email address is told that only the admin may change the password, and no PIN is sent.
+const ADMIN_RESET_EMAIL = String(process.env.ADMIN_RESET_EMAIL || 'milly.reginald@sherq.co.za').trim().toLowerCase();
+const adminResetPins = new Map();      // email -> { hash, exp, tries, last }
+const pinHash = (email, pin) => crypto.createHmac('sha256', ADMIN_RESET_PEPPER).update(email + ':' + pin).digest('hex');
+let mailTransport = null;
+function getMailTransport() {
+  if (mailTransport) return mailTransport;
+  if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) return null;
+  const nodemailer = require('nodemailer');
+  const port = parseInt(process.env.SMTP_PORT, 10) || 587;
+  mailTransport = nodemailer.createTransport({
+    host: process.env.SMTP_HOST, port, secure: port === 465,
+    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+  });
+  return mailTransport;
+}
+async function sendResetPin(to, pin) {
+  // For testing on your own computer only: RESET_PIN_TO_CONSOLE=true prints the PIN in the server window instead of emailing it.
+  if (process.env.RESET_PIN_TO_CONSOLE === 'true') { console.log(`[TEST ONLY] Reset PIN for ${to}: ${pin}`); return true; }
+  const t = getMailTransport();
+  if (!t) return false;
+  await t.sendMail({
+    from: process.env.MAIL_FROM || process.env.SMTP_USER,
+    to,
+    subject: 'Your RSS Online reset PIN',
+    text: `Your PIN to reset your RSS Online login is ${pin}.\n\nIt works for 10 minutes. If you did not ask for this, you can ignore this email.`,
+    html: `<p>Your PIN to reset your RSS Online login is:</p><p style="font-size:26px; letter-spacing:6px; font-weight:bold;">${pin}</p><p>It works for 10 minutes. If you did not ask for this, you can ignore this email.</p>`
+  });
+  return true;
+}
+
+app.post('/api/forgot/request', async (req, res) => {
   const ip = clientIp(req);
   if (resetBlocked(ip)) return res.status(429).json({ error: 'Too many tries. Please wait 15 minutes and try again.' });
-  const id = normId((req.body || {}).id_number);
-  const bad = () => { resetFail(ip); return res.status(400).json({ error: 'Details not recognised.' }); };
-  if (id.length < 6 || id.length > 20) return bad();
+  const email = String((req.body || {}).email || '').trim().toLowerCase();
+  if (!email || email.length > 200 || !email.includes('@')) return res.status(400).json({ error: 'Please type a valid email address.' });
+  const same = { success: true };
+  try {
+    if (email !== ADMIN_RESET_EMAIL) { resetFail(ip); return res.status(403).json({ error: 'This is not the admin email. Only the admin is allowed to change the password.' }); }
+    const prev = adminResetPins.get(email);
+    if (prev && Date.now() - prev.last < 60 * 1000) return res.status(429).json({ error: 'A PIN was just sent. Please wait a minute before asking for another one.' });
+    if (!getMailTransport() && process.env.RESET_PIN_TO_CONSOLE !== 'true') {
+      console.error('FORGOT PASSWORD: email is not set up (SMTP_HOST, SMTP_USER and SMTP_PASS are missing).');
+      return res.status(503).json({ error: 'Sending emails is not set up yet. Please contact the person who looks after the system.' });
+    }
+    const pin = String(crypto.randomInt(0, 1000000)).padStart(6, '0');
+    await sendResetPin(email, pin);
+    adminResetPins.set(email, { hash: pinHash(email, pin), exp: Date.now() + 10 * 60 * 1000, tries: 0, last: Date.now() });
+    res.json(same);
+  } catch (err) {
+    console.error('FORGOT REQUEST ERROR:', err);
+    res.status(500).json({ error: 'Could not send the email. Please try again later.' });
+  }
+});
+
+// Step 2: check the PIN that was emailed. If it is right, the person gets a one-time ticket for step 3.
+app.post('/api/forgot/verify-pin', async (req, res) => {
+  const ip = clientIp(req);
+  if (resetBlocked(ip)) return res.status(429).json({ error: 'Too many tries. Please wait 15 minutes and try again.' });
+  const email = String((req.body || {}).email || '').trim().toLowerCase();
+  const pin = String((req.body || {}).pin || '').replace(/\s/g, '');
+  const bad = (msg) => { resetFail(ip); return res.status(400).json({ error: msg || 'That PIN is not correct, or it has expired.' }); };
+  if (!/^\d{6}$/.test(pin)) return bad('Please type the 6-digit PIN from the email.');
   try {
     await adminResetReady;
-    const h = hashId(id);
-    const r = await pool.query(
-      `SELECT u.id, u.reset_id_hash, e.id_number AS emp_id
-         FROM users u LEFT JOIN employees e ON e.id = u.employee_id
-        WHERE u.role = 'admin'`);
-    const hit = r.rows.find(x => (x.reset_id_hash && x.reset_id_hash === h) || (x.emp_id && hashId(x.emp_id) === h));
-    if (!hit) return bad();
+    const rec = adminResetPins.get(email);
+    if (!rec || rec.exp < Date.now()) return bad();
+    rec.tries += 1;
+    if (rec.tries > 5) { adminResetPins.delete(email); return bad('Too many wrong PINs. Please ask for a new PIN.'); }
+    if (rec.hash !== pinHash(email, pin)) return bad();
+    adminResetPins.delete(email);
     adminResetFails.delete(ip);
+    // Which account is it? The admin whose employee profile has this email, otherwise the only admin account.
+    const r = await pool.query(
+      `SELECT u.id, e.email AS emp_email FROM users u LEFT JOIN employees e ON e.id = u.employee_id WHERE u.role = 'admin'`);
+    let hit = r.rows.find(x => x.emp_email && String(x.emp_email).trim().toLowerCase() === email);
+    if (!hit && r.rows.length === 1) hit = r.rows[0];
+    if (!hit) return res.status(409).json({ error: 'No admin login matches this email. Please contact the person who looks after the system.' });
     const ticket = crypto.randomBytes(24).toString('hex');
     adminResetTickets.set(ticket, { userId: hit.id, exp: Date.now() + 10 * 60 * 1000 });
     res.json({ ticket });
   } catch (err) {
-    console.error('FORGOT VERIFY ERROR:', err);
+    console.error('FORGOT PIN ERROR:', err);
     res.status(500).json({ error: 'Server error. Please try again.' });
   }
 });
