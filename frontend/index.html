@@ -1496,7 +1496,7 @@
 
     <!-- LEAVE HISTORY MODAL -->
     <div class="wf-modal-overlay" id="leaveHistoryModalOverlay">
-        <div class="wf-modal" style="max-width: 640px;">
+        <div class="wf-modal" style="max-width: 720px;">
             <div class="wf-modal-header">
                 <h2>Leave History</h2>
                 <button class="wf-modal-close" onclick="closeLeaveHistoryModal()">✕</button>
@@ -1511,6 +1511,7 @@
                                 <th>Days</th>
                                 <th>Reason</th>
                                 <th>Status</th>
+                                <th></th>
                             </tr>
                         </thead>
                         <tbody id="lvHistoryBody"></tbody>
@@ -3092,7 +3093,7 @@
             overtime: 'Overtime entry', overtime_taking: 'Overtime taken', rss_training_type: 'RSS training type',
             rss_learner: 'RSS learner', rss_manual: 'Training manual', timesheet_entry: 'Timesheet entry',
             report_template: 'Checklist', report_submission: 'Weekly report', monthly_report: 'Monthly report',
-            finance_client: 'Finance client', finance_document: 'Invoice / Quote', finance_statement: 'Client statement', learned_entry: 'Learning Log entry', saved_report: 'Saved report'
+            finance_client: 'Finance client', finance_document: 'Invoice / Quote', finance_statement: 'Client statement', learned_entry: 'Learning Log entry', saved_report: 'Saved report', leave_request: 'Leave request'
         };
         function recycleTypeName(t) { return RECYCLE_TYPES[t] || t; }
 
@@ -6913,9 +6914,25 @@
                         <span class="lv-status-badge status-${req.status}">${req.status}</span>
                         ${req.status === 'Rejected' && req.admin_comment ? `<div style="font-size:11.5px; color:#DC2626; margin-top:4px;">${req.admin_comment}</div>` : ''}
                     </td>
+                    <td style="text-align:right;">${(currentUserRole === 'admin' || req.status !== 'Approved') ? `<button type="button" class="wf-btn-secondary" title="Delete this leave request" style="padding:4px 9px;" onclick="event.stopPropagation(); deleteLeaveRequest(${req.id})"><i class="fas fa-trash"></i></button>` : ''}</td>
                 `;
                 tbody.appendChild(row);
             });
+        }
+
+        // Deletes a leave request from the history. It goes to the Recycle Bin.
+        async function deleteLeaveRequest(id) {
+            if (!(await rptConfirm('Delete this leave request? It will go to the Recycle Bin.'))) return;
+            try {
+                const res = await rptFetch(`${API_BASE}/api/leave/${id}`, { method: 'DELETE', headers: API_HEADERS });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) { rptToast(data.error || 'Could not delete the leave request.', 'error'); return; }
+                rptToast('The leave request was moved to the Recycle Bin.', 'success');
+                await fetchLeaveForEmployee(viewingLeaveEmployeeId || currentUserEmployeeId);
+            } catch (err) {
+                console.error('Delete leave error:', err);
+                rptToast('Could not delete the leave request.', 'error');
+            }
         }
 
         // Formats a number the South African way (comma as decimal separator), e.g. 1.25 -> "1,25"

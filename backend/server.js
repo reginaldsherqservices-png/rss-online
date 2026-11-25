@@ -1094,6 +1094,36 @@ app.patch('/api/leave/:requestId/reject', async (req, res) => {
   }
 });
 
+// Delete a leave request from the Leave History. It goes to the Recycle Bin, so it can be restored.
+// An admin can delete any request. Everyone else can delete only their own, and not one that is already Approved.
+app.delete('/api/leave/:requestId', async (req, res) => {
+  try {
+    await recycleReady;
+    const role = String(req.headers['x-user-role'] || '').toLowerCase();
+    const out = await recycleTx(async (db) => {
+      const r = await db.query('SELECT id, employee_id, status FROM leave_requests WHERE id = $1 FOR UPDATE', [req.params.requestId]);
+      if (!r.rows.length) return { status: 404, body: { error: 'This leave request was not found.' } };
+      const lr = r.rows[0];
+      if (role !== 'admin') {
+        const who = recycleWho(req);
+        const u = who ? await db.query('SELECT employee_id FROM users WHERE username = $1', [who]) : { rows: [] };
+        if (!u.rows.length || u.rows[0].employee_id !== lr.employee_id) return { status: 403, body: { error: 'You can only delete your own leave requests.' } };
+        if (lr.status === 'Approved') return { status: 403, body: { error: 'An approved leave request can only be deleted by an admin.' } };
+      }
+      await recycleCapture(db, req, 'leave_request', async (row, d) => ({
+        label: `${row.leave_type || 'Leave'} request`,
+        detail: [await rbEmployeeName(d, row.employee_id), row.start_date ? `${String(row.start_date).slice(0, 10)} to ${String(row.end_date).slice(0, 10)}` : ''].filter(Boolean).join(' · ')
+      }), [{ table: 'leave_requests', where: 'id = $1', params: [lr.id] }]);
+      await db.query('DELETE FROM leave_requests WHERE id = $1', [lr.id]);
+      return { status: 200, body: { success: true } };
+    });
+    res.status(out.status).json(out.body);
+  } catch (err) {
+    console.error('LEAVE DELETE ERROR:', err);
+    res.status(500).json({ error: 'Error deleting the leave request' });
+  }
+});
+
 // ============ TRAININGS ============
 
 app.get('/api/trainings', async (req, res) => {
